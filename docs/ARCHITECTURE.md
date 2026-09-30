@@ -1,0 +1,332 @@
+# POVO – AI Guidance: architecture and contracts
+
+This document is the single source of truth for how the four parts fit together: `frontend/`, `backend/`, `n8n/` and `databricks/`.
+Behaviour comes from [POC_FUNCTIONAL_SPEC.md](POC_FUNCTIONAL_SPEC.md).
+Conventions follow the Mosaic platform standard (`D:\Workspace\Mosaic\MOSAIC_ARCHITECTURE_PROMPT.md`) and the standalone-app pattern used by XR-CONVERSION.
+The Mosaic Admin Control Center, UI registry and auto-save framework are **not** part of this standalone app.
+
+## 1. Topology
+
+```
+Browser ──► Posit Connect (Windows VM, Okta SSO)
+             ├── content: POVO AI Guidance (static SPA, frontend/dist, base './')
+             └── content: POVO AI Guidance API (FastAPI, backend/)  ──► Databricks SQL Warehouse
+                                                                 │      catalog ${DATABRICKS_CATALOG}
+                                                                 │        ├── bronze  (read only)
+                                                                 │        └── app     (read/write)
+                                                                 └──► n8n (Docker) ──► Azure OpenAI
+n8n schedule ──► backend /api/v1/jobs/* (service token)
+```
+
+- The browser **never** calls n8n or Databricks. The backend owns every number.
+- n8n is used for LLM work, which the backend calls through webhooks, and for scheduled jobs, which call the backend.
+- If n8n is unavailable or `AI_ENABLED=false`, every AI feature falls back to the deterministic POC rules. The app always works without it.
+- Both Posit content items are on the same host:port, which makes them the same origin, so no CORS is needed in production. Posit injects the identity header on both.
+
+| Component | Local dev port |
+|---|---|
+| backend (uvicorn) | **8030** |
+| frontend (vite) | **5175** |
+| n8n (docker-compose, host) | **5680** → container 5678 |
+
+## 2. Repository layout
+
+```
+POVO-AI-GUIDANCE/
+  POVO_AI_Guidance_Step3_37.html   finalized POC (reference only)
+  README.md
+  docker-compose.yml               n8n only (local dev)
+  docs/  ARCHITECTURE.md  POC_FUNCTIONAL_SPEC.md  DEPLOYMENT.md
+  databricks/
+    ddl/        00_catalog_schemas.sql 01_bronze_tables.sql 02_app_tables.sql   (${catalog} placeholder)
+    seed/       generate_seed_data.py  content/*.json  output/ (generated CSV, gitignored)
+    scripts/    deploy_schema.py  load_seed_data.py  check_databricks.py
+    README.md
+  backend/     (Mosaic layout)
+    main.py  requirements.txt  pytest.ini  .env.example  README.md
+    api/  core/  database/  schema/  helpers/  registry/  tests/
+  frontend/    (Mosaic layout + Tailwind 4)
+  n8n/         *.json workflow exports, README.md, tools/
+```
+
+## 3. Identity, impersonation and permissions
+
+- **Real user**
+  - The backend reads the `RStudio-Connect-Credentials` header, which holds a JSON `{"user": "<username>", "groups": [...]}` or a plain username/email.
+  - It matches the value to `DIM_EMPLOYEE.USERNAME`, falling back to `EMAIL`.
+  - In development only (`ENVIRONMENT != production`), a missing header falls back to `DEV_FALLBACK_USERNAME` (default `vturano`). The Vite dev proxy also injects the header from `VITE_DEV_USER`.
+  - The app has no login page, no JWT and no tokens.
+- **Unknown or inactive users** get 403 with the message "Your account is not set up for POVO AI Guidance".
+- **Permissions** are role-based and declared in `backend/registry/permissions_seed.py`:
+  - `REP` gets `guidance.view` and `call.assess`.
+  - `MANAGER` gets `guidance.view`, `call.assess` and `user.impersonate`.
+  - Every endpoint is guarded server-side.
+- **Impersonation**
+  - The frontend sends `X-Impersonate-Employee-Id: <employee_id>` on every request while impersonating. The value is kept in Redux and persisted to `sessionStorage`.
+  - The backend honours the header only when the real user has `user.impersonate`. Otherwise it returns 403.
+  - The effective user's `HOME_TERRITORY_ID` scopes **every** data query. The territory is never taken from a request parameter.
+  - `POST /api/v1/impersonation` (start) and `DELETE /api/v1/impersonation` (exit) are audited.
+  - Data written while impersonating records both `REP_EMPLOYEE_ID` (effective) and `ACTED_BY_EMPLOYEE_ID` (real).
+- **Record scoping**
+  - Any `hcp_id`, `account_id` or `call_id` outside the effective territory returns 404.
+  - A call belongs to its effective rep: another rep gets 404, while a manager impersonating that rep can see it.
+
+## 4. Databricks schema
+
+- **Catalog:** configurable with `DATABRICKS_CATALOG`, default `povo_ai_guidance`. The final name is not confirmed yet.
+- **Schemas:**
+  - `DATABRICKS_SCHEMA=bronze` holds source-like reference data. The app only reads it.
+  - `DATABRICKS_APP_SCHEMA=app` holds the app's writable tables. Write permission is granted on these only.
+- **Naming and types:**
+  - Table and column names are UPPERCASE, with `DIM_`, `FCT_`, `REF_` and `APP_` prefixes.
+  - All tables are Delta. Dates are `DATE` and moments are `TIMESTAMP` (UTC).
+  - JSON payloads are `STRING`.
+  - Delta does not enforce primary keys. The keys below are logical, and upserts use `MERGE`.
+
+### 4.1 `bronze`: reference data (read only, regenerated by the seeder)
+
+| Table | Columns (key first) |
+|---|---|
+| **DIM_TERRITORY** | TERRITORY_ID STRING (`NE-POR`), TERRITORY_NAME (`Portland, ME territory`), CITY, STATE, REGION (`Northeast`), TIME_ZONE (`America/New_York`) |
+| **DIM_EMPLOYEE** | EMPLOYEE_ID STRING (`p250544`), NETWORK_ID STRING (`3351`), USERNAME (`vturano`), EMAIL, FIRST_NAME, LAST_NAME, FULL_NAME, INITIALS, BUSINESS_UNIT (`COMMERCIAL`), ROLE_CODE (`REP`\|`MANAGER`), ROLE_TITLE (`POVO Sales Representative` / `Manager, Field Sales Enablement`), ACCESS_LEVEL (`Rep level, 1 territory` / `Team level, POVO team, 8 territories`), ACCESS_REGIONS (`Northeast`), HOME_TERRITORY_ID, IS_ACTIVE BOOLEAN |
+| **DIM_ACCOUNT** | ACCOUNT_ID STRING, TERRITORY_ID, ACCOUNT_NAME, CITY, STATE, ZIP, CLAIMS_HS_PATIENTS INT, CLAIMS_POVO_PATIENTS INT, CLAIMS_MAIN_FOCUS STRING (focus code), IS_CLAIMS_ONLY BOOLEAN (no affiliated HCP) |
+| **DIM_HCP** | HCP_ID STRING (`H000123`), NPI STRING, FIRST_NAME, LAST_NAME, DEGREE (`MD`\|`DO`\|`NP`\|`PA`), ROLE_TYPE (`HCP`\|`NP`\|`PA`), SPECIALTY (`Dermatology`\|`Rheumatology`\|`General Surgery`), ACCOUNT_ID, PARENT_HCP_ID (the physician, for NP/PA; null for HCP), TERRITORY_ID, CITY, STATE, ZIP |
+| **FCT_HCP_METRICS** | HCP_ID, AS_OF_DATE DATE, HS_PATIENTS_12M INT, HS_VISITS_PER_MONTH INT, JAK_PATIENTS INT, POVO_PATIENTS INT, INCYTECARES_ENROLLED_PATIENTS INT. The backend uses the latest AS_OF_DATE per HCP. |
+| **DIM_CALL_PLAN_TARGET** | PLAN_YEAR INT, TERRITORY_ID, HCP_ID, DECILE INT (1–10), TIER_CODE (`SH`\|`MED`\|`LOW`, null for D1), SEGMENT_CODE (`imm`\|`conv`\|`exp`), COMPETITIVE_FOCUS (`cosentyx`\|`bimzelx`\|`humira`\|`jak`\|`conventional`), IS_IN_CALL_PLAN BOOLEAN (D2–D10), HS_RANK INT (1 = highest HS volume in the territory) |
+| **REF_TIER** | TIER_CODE, TIER_NAME (`Super High`\|`Medium`\|`Low`), DECILE_MIN, DECILE_MAX, CALLS_PER_YEAR, REACH_GOAL_PCT, SORT_ORDER |
+| **REF_SEGMENT** | SEGMENT_CODE, SHORT_NAME, FULL_NAME, DESCRIPTION, COLOR_HEX, SORT_ORDER |
+| **REF_COMPETITIVE_FOCUS** | FOCUS_CODE, LABEL (`Cosentyx`, `Bimzelx`, `Humira`, `JAK`, `Conventional therapy`), COLOR_HEX, SORT_ORDER |
+| **FCT_INTERACTION** | INTERACTION_ID STRING, HCP_ID, TERRITORY_ID, EMPLOYEE_ID (nullable; the rep, for channel `rep`), INTERACTION_DATE DATE, CHANNEL_CODE (`rep`\|`adfa`\|`opz`\|`msl`\|`spkr`\|`pr`), INTERACTION_TYPE (`Direct call`, `ADFA visit`, `Opz Sales call`, `MSL visit`, `Speaker program`, `PR visit`), POVO_DISCUSSED BOOLEAN, SUMMARY STRING |
+| **FCT_POVO_ACTIVITY** | ACTIVITY_ID STRING, TERRITORY_ID, HCP_ID, PATIENT_KEY STRING (anonymised token, never PHI), EVENT_DATE DATE, EVENT_TYPE (`PEF`\|`NRX`\|`NEW_PATIENT`). `NEW_PATIENT` is the first paid script. |
+| **FCT_TERRITORY_GOAL** | TERRITORY_ID, GOAL_YEAR INT, GOAL_MONTH INT, METRIC_CODE (`PEF`\|`NRX`\|`NEW_PATIENTS`), GOAL_VALUE INT |
+| **REF_US_HOLIDAY** | HOLIDAY_DATE DATE, HOLIDAY_NAME |
+| **REF_TALKING_POINT** | POINT_ID STRING, CONTENT_VERSION STRING, CATEGORY (`messaging`\|`objection`\|`closing`), VARIANT (`initial`\|`next_call`\|`extra`\|`peer`), PILLAR STRING, AUDIENCE (`HCP`\|`NP`\|`PA`\|`ALL`), SEGMENT_CODE (`imm`\|`conv`\|`exp`\|`ALL`), WRITER_STATE (`writer`\|`non_writer`\|`ALL`), TEXT_TEMPLATE STRING, DETAIL_TEMPLATE STRING (insight or response), NEXT_CALL_TEMPLATE STRING, SORT_ORDER INT, MLR_CODE STRING, IS_ACTIVE BOOLEAN |
+| **REF_OBJECTION_RULE** | RULE_ID STRING, AUDIENCE, SEGMENT_CODE (or `ALL`), MIN_DECILE INT, MAX_DECILE INT, WRITER_STATE, OBJECTION_POINT_IDS STRING (ordered, comma-separated POINT_IDs), PRIORITY INT (lowest wins) |
+| **REF_COMPLIANCE_RULE** | RULE_ID (`off`, `claim`, …), CHIP_LABEL, TITLE, SEVERITY (`high`\|`med`\|`low`), DEDUCTION INT, PATTERN STRING (Python regex, case-insensitive), SUPPRESS_PATTERN STRING (nullable), WHY_TEXT, FIX_TEXT, SORT_ORDER INT, IS_ACTIVE BOOLEAN |
+
+**Content tables** (`REF_TALKING_POINT`, `REF_OBJECTION_RULE`, `REF_COMPLIANCE_RULE`):
+
+- The **backend** owns them as JSON files in `databricks/seed/content/` (`talking_points.json`, `objection_rules.json`, `compliance_rules.json`). Each file is an array of objects whose keys are exactly the column names above.
+- The backend defines the template placeholders and documents them in `databricks/seed/content/README.md`. Templates use `{snake_case}` placeholders, rendered with `str.format_map` over a safe dict.
+- The seeder copies these files into the CSV output unchanged.
+- The text is MLR-approved claim text. The LLM never rewrites it; it can only choose points, order them and write insight lines.
+
+**Dummy-data volume** (deterministic; fixed random seed; `--as-of` defaults to today in America/New_York):
+
+- **Territories and employees**
+  - 8 Northeast territories: Portland ME (`NE-POR`), Boston MA, Hartford CT, Providence RI, Manchester NH, Burlington VT, Worcester MA, Springfield MA.
+  - One rep per territory. Vince Turano (username `vturano`) is the Portland rep and the dev default user; Dana Whitaker (`p250611` / `3418`) is Hartford and Luis Ortega (`p250702` / `3526`) is Providence.
+  - Plus 2 managers: Barbara Drake (`p250544` / `3351` / `bdrake`), home Boston, plus one more. A manager's own view shows their home territory.
+- **Targets per territory:** 142, split by decile like the POC (±15% per territory).
+  - About 50 physicians, each with 0–2 affiliated NP/PA.
+  - 6–8 accounts, plus 2 claims-only accounts.
+  - Names use the POC's Portland names where they exist.
+- **Writers and activity**
+  - About 44 writers per territory, about 28 of them JAK users.
+  - Activity runs from January 1 of the as-of year to the as-of date.
+  - Totals are consistent: `FCT_HCP_METRICS.POVO_PATIENTS` equals the count of `NEW_PATIENT` events per HCP. NRx ≈ 1.2× new patients, PEF ≈ 1.36× new patients.
+- **Goals:** the POC monthly shape for the full year, scaled per territory. PEF goal = ×1.4, NRx goal = ×1.25.
+- **Interactions**
+  - Rep calls follow the tier calls/yr × attainment factor. Reach follows the tier reach factor.
+  - Some Super High and Medium targets have no call for more than 21 days, and a few in-plan targets were never called.
+  - Every physician gets about 4–6 non-rep interactions (ADFA, Opz, MSL, Speaker, PR).
+- **Holidays:** US holidays for the as-of year and the next.
+
+### 4.2 `app`: writable tables
+
+| Table | Columns | Logical key |
+|---|---|---|
+| **APP_CALL** | CALL_ID STRING (uuid4), TERRITORY_ID, REP_EMPLOYEE_ID, ACTED_BY_EMPLOYEE_ID, HCP_ID (primary physician), CALL_DATE DATE, PARTICIPANT_IDS STRING (JSON array of HCP_IDs), STATUS (`planned`\|`assessed`), REVISION_NO INT, CREATED_AT, UPDATED_AT | CALL_ID |
+| **APP_CALL_POINT_ASSESSMENT** | CALL_ID, PARTICIPANT_ID, CATEGORY (`messaging`\|`objection`\|`closing`\|`additional`), POINT_ID (`additional` for the free-text note), POINT_RANK INT, POINT_TEXT STRING (text as shown), WAS_RAISED BOOLEAN, RECEPTION INT (0 = not well, 1 = moderately, 2 = well; null = unset), NOTE STRING, COMPLIANCE_STATUS (`unchecked`\|`passed`\|`flagged`), COMPLIANCE_CHECK_ID, UPDATED_AT, UPDATED_BY | CALL_ID + PARTICIPANT_ID + CATEGORY + POINT_ID |
+| **APP_COMPLIANCE_CHECK** | CHECK_ID STRING, CALL_ID (nullable), PARTICIPANT_ID, CATEGORY, POINT_ID, NOTE_TEXT (original, retained for audit), RESULT_LABEL (`Compliant`\|`Minor issue`\|`Needs review`\|`Non-compliant`), MAX_SEVERITY (nullable), SCORE INT, ISSUES_JSON, SUGGESTED_TEXT, ENGINE (`rules`\|`rules+llm`), SUGGESTION_ACCEPTED BOOLEAN, REP_EMPLOYEE_ID, ACTED_BY_EMPLOYEE_ID, CREATED_AT | CHECK_ID |
+| **APP_CALL_PREP_REVISION** | REVISION_ID STRING, CALL_ID, TERRITORY_ID, HCP_ID (primary), PARTICIPANT_ID, REVISION_NO INT, CALL_DATE DATE, CATEGORY, POINTS_JSON (ordered point list with tags, previous rank and previous text), SUMMARY_TEXT, NEXT_BEST_ACTION, HISTORY_LINE, ENGINE, CREATED_AT | REVISION_ID |
+| **APP_TERRITORY_GUIDANCE_SNAPSHOT** | TERRITORY_ID, SNAPSHOT_DATE DATE, PAYLOAD_JSON, CREATED_AT | TERRITORY_ID + SNAPSHOT_DATE |
+| **APP_AI_CACHE** | CACHE_KEY STRING, KIND, PAYLOAD_JSON, CREATED_AT, EXPIRES_AT | CACHE_KEY |
+| **APP_AUDIT_LOG** | AUDIT_ID STRING, REQUEST_ID STRING (uuid4), ACTED_BY_EMPLOYEE_ID, EFFECTIVE_EMPLOYEE_ID, ACTION (`IMPERSONATE_START`, `IMPERSONATE_END`, `CALL_CREATE`, `ASSESSMENT_SAVE`, `COMPLIANCE_CHECK`, `SUGGESTION_ACCEPT`, `NEXT_CALL_GENERATE`, `JOB_RUN`), MODULE, RECORD_ID, DETAIL_JSON (never secrets, never note text), CREATED_AT | AUDIT_ID |
+| **APP_JOB_RUN** | RUN_ID STRING, JOB_NAME, STARTED_AT, FINISHED_AT, STATUS (`running`\|`success`\|`failed`), DETAIL STRING | RUN_ID |
+
+### 4.3 Local data mode (development and tests without Databricks)
+
+- `DATA_SOURCE=databricks` (the VM) uses `databricks-sql-connector` with native `:name` parameters.
+- `DATA_SOURCE=local` uses DuckDB (`backend/.localdata/povo.duckdb`, gitignored).
+  - The file is attached **as the catalog name**, so the same `catalog.schema.TABLE` SQL works.
+  - Bronze tables are (re)loaded from `databricks/seed/output/<TABLE>.csv` at startup.
+  - App tables are created if missing and persist between restarts.
+- **SQL rules:** portable SQL only — plain SELECT/INSERT/MERGE, no Databricks-only functions. Filter by territory in SQL. Do the heavy metric computation in Python; the data is small per territory. Cache bronze reads per territory in-process (TTL `BRONZE_CACHE_SECONDS`, default 600).
+
+## 5. REST API (FastAPI, `/api/v1`)
+
+Every response uses the Mosaic envelope `{data, status, message, page, limit, total_pages, total_items}`. Errors use the same envelope and never carry a stack trace. JSON keys are snake_case, and dates are ISO `YYYY-MM-DD`. Every request carries an `X-Request-ID` (uuid4), which is validated or regenerated and echoed back.
+
+**Health and session**
+
+- **`GET /health`** (no auth) → `{status, data_source, warehouse: ok|error, n8n: ok|disabled|error, version}`.
+- **`GET /api/v1/me`** → `{signed_in: Employee, effective: Employee, is_impersonating, permissions: [..], territory: Territory, today, data_as_of}`.
+  - `Employee` = `{employee_id, network_id, username, full_name, initials, business_unit, role_code, role_title, access_level, access_regions, home_territory_id, territory_name, region}`.
+  - `Territory` = `{territory_id, territory_name, city, state, region}`.
+  - `data_as_of` = the maximum `FCT_POVO_ACTIVITY.EVENT_DATE`.
+
+**Impersonation**
+
+- **`GET /api/v1/employees/search?q=&limit=8`** (`user.impersonate`) → `Employee[]`. Matches employee ID, network ID, username, part of the name, or part of the territory. `q` must be at least 2 characters.
+- **`POST /api/v1/impersonation`** `{employee_id}` (`user.impersonate`) → `Employee`. Validates and audits. `DELETE /api/v1/impersonation` audits the exit.
+
+**Territory Performance**
+
+- **`GET /api/v1/performance/kpis?period=month|quarter|ytd`** → `{period, period_label, period_start, period_end, remaining_working_days, cards: [{metric_code: PEF|NRX|NEW_PATIENTS, title, unit, goal, achieved, yet_to_achieve, pct_achieved, due_to_date, status: on_track|at_risk}]}`.
+- **`GET /api/v1/performance/guidance`** → `{missed: [{hcp_id, name, display_name, role_type, tier_code, days_since_call}], super_high_not_writing, strong: {best_segment: {segment_code, short_name, trial_pct}, top_writer: {hcp_id, display_name, povo_patients}|null, super_high_reach_pct}, focus: [{hcp_id, name, display_name, role_type, tier_code, reason, score}], source: live|snapshot, generated_at}`.
+- **`GET /api/v1/performance/segmentation`** → `{total_targets, not_writing, segments: [{segment_code, short_name, full_name, description, color_hex, hcp_count, pct, trial_pct, penetration_pct, adoption_pct, reach_pct}]}`.
+- **`GET /api/v1/performance/deciles`** → `{rows: [{decile, tier_code, targets, writers, yet_to_write, hs_patients, execution_pct, reach_pct, early_reach_count, productivity}], tiers: [{tier_code, tier_name, decile_min, decile_max, calls_per_year, reach_goal_pct, targets, writers}], super_high_total, super_high_not_writing}`.
+  - `rows` covers D10 → D2.
+  - `early_reach_count` is the number of targets reached in the first 60 days of the year.
+  - `productivity` is NRx per 10 calls.
+- **`GET /api/v1/performance/new-writers?grain=month|week`** → `{grain, total, range_label, x_axis_label, buckets: [{label, start_date, end_date, jak_writers, non_jak_writers, is_partial}]}`.
+  - A writer is a JAK user when `JAK_PATIENTS > 0`.
+  - Weekly returns the last 12 weeks, each ending on a Friday.
+
+**Targets and accounts**
+
+`Target` = `{hcp_id, name ("Last, First"), display_name ("Dr. Last" for HCP, "First Last" for NP/PA), role_type, degree, specialty, account_id, account_name, city, state, zip, competitive_focus, segment_code, decile, tier_code, is_in_call_plan, hs_patients, jak_patients, povo_patients, last_call_date|null, parent_hcp_id|null, is_must_win}`.
+
+- **`GET /api/v1/targets/must-wins`** → `{territory_name, hs_volume: Target[5], hs_jak: Target[5]}`.
+- **`GET /api/v1/targets`** → paginated `Target[]` (in-plan and not Must-Win).
+  - Parameters: `page`, `limit` (≤ 200, UI default 10), `sort` (default `hs_patients:desc`; whitelist `name`, `decile`, `hs_patients`, `last_call_date`).
+  - Filters are comma-separated lists: `focus`, `segment`, `tier`, `account_id`, `role`.
+- **`GET /api/v1/targets/facets`** → `{focus: [{code, label, color_hex, count}], segment: [{code, label, count}], tier: [{code, label, count}], account: [{code, label, count}], role: [{code, label, count}]}`. Counts are over the Full Call Plan universe.
+- **`GET /api/v1/accounts?page=&limit=&sort=`** → paginated `{account_id, account_name, city, state, zip, hs_patients, povo_patients, target_count, in_plan_count, main_focus, is_claims_only}`. The default sort is `hs_patients:desc`.
+- **`GET /api/v1/accounts/{account_id}/targets`** → `Target[]`.
+
+**Call Prep**
+
+- **`GET /api/v1/targets/{hcp_id}/profile`** → `{primary_hcp_id, preselected_participant_ids, participants: [Participant]}`.
+  - When `hcp_id` is an NP or PA, the primary is the parent physician and both IDs are preselected.
+  - `Participant` = `{hcp_id, role_type, degree, name, display_name, account_name, city, zip, is_primary, stats: {hs_patients, povo_patients, decile, tier_name, rank, rank_of, povo_discussions, last_call_date}, bullets: [string×5], interactions: [{interaction_id, date, channel_code, team_label, type_label, summary, is_new}], interaction_counts: {all, rep, adfa, opz, msl, spkr, pr}}`.
+  - Assessed calls in `APP_CALL` are merged in as `is_new` "Direct call" interactions ("Call assessed"). They update `povo_discussions` and `last_call_date`, and bullet 5 becomes the post-call history line.
+- **`POST /api/v1/call-prep`** `{hcp_id, participant_id, category}` → `{participant_id, category, revision_no, is_revised, revised_from_date|null, banner: {summary, next_best_action}|null, steps: [string×3], heading, points: [{point_id, rank, pillar|null, text, detail|null, detail_label: Insight|Response|null, tags: [string], previous_text|null, previous_rank|null}], source: ai|rules}`.
+  - Returns the top 3 points.
+  - Uses the latest `APP_CALL_PREP_REVISION` for (territory, primary hcp, participant, category) when one exists.
+  - When AI is enabled, calls the n8n call-prep webhook (cached in `APP_AI_CACHE` for 24 h by territory + participant + category + revision + content version). Falls back to rules.
+
+**Calls and assessments**
+
+- **`POST /api/v1/calls`** `{hcp_id, participant_ids}` → `Call`.
+  - Returns the rep's open `planned` call for this HCP if one exists, updating its participants.
+  - Otherwise creates a new call dated today.
+- **`GET /api/v1/calls/{call_id}`** → `Call`.
+  - `Call` = `{call_id, hcp_id, call_date, participant_ids, status, revision_no, assessments: [Assessment]}`.
+  - `Assessment` = `{participant_id, category, point_id, point_rank, point_text, was_raised, reception|null, note, compliance_status, compliance_check_id|null}`.
+- **`GET /api/v1/calls/active?hcp_id=`** → `Call|null`.
+- **`PUT /api/v1/calls/{call_id}/assessments`** `{items: [Assessment without compliance fields]}` → `Call`. This is an upsert used for autosave.
+  - `note` is at most 200 characters (600 for `additional`).
+  - Changing a note resets its compliance status to `unchecked`.
+- **`POST /api/v1/compliance/check`** `{call_id|null, participant_id, category, point_id, point_text, note}` → `{check_id, status: passed|flagged, result_label, max_severity|null, score, issues: [{rule_id, chip, title, severity, why, fix, excerpt}], suggested_text|null, steps: [string×3], engine}`.
+  - Rules run first and are always applied.
+  - The LLM second pass can add issues and improve the rewrite, but can never remove a rules finding.
+  - If a `call_id` is given, the assessment row's `compliance_status` and `compliance_check_id` are updated.
+- **`POST /api/v1/compliance/{check_id}/accept`** → marks `SUGGESTION_ACCEPTED`. The frontend then saves the note and re-checks it.
+- **`POST /api/v1/calls/{call_id}/next-call`**:
+  - Re-checks every non-empty note on the server.
+  - If any note is flagged, it returns **409** `{data: {flags: [{participant_id, category, point_id, chip}]}}`.
+  - If nothing is answered, it returns **422**.
+  - Otherwise it builds and persists a revision for every participant × category, sets the call to `assessed`, increments `REVISION_NO`, and audits.
+  - Response: `{call_id, revision_no, call_date, steps: [string×3], participants: [{participant_id, summary, next_best_action}], source}`.
+
+**Jobs** (header `X-POVO-Service-Token` = `POVO_SERVICE_TOKEN`; compared in constant time; 401 otherwise)
+
+- **`POST /api/v1/jobs/refresh-guidance`** → computes the guidance for every territory, MERGEs it into `APP_TERRITORY_GUIDANCE_SNAPSHOT`, and records `APP_JOB_RUN`. Returns `{run_id, territories, snapshot_date}`.
+- **`POST /api/v1/jobs/purge-ai-cache`** → deletes expired `APP_AI_CACHE` rows and returns `{deleted}`.
+
+## 6. n8n webhooks (called by the backend)
+
+- **Base URL:** `N8N_BASE_URL`. **Timeout:** `N8N_TIMEOUT_SECONDS` (60).
+- **Request:** every POST body carries `request_id`.
+- **Workflow shape:** Webhook (POST, `responseMode: responseNode`) → Code (build prompt) → Azure OpenAI chat model (credential "Azure OpenAI account", temperature 0, JSON output) → Code **Guard** → Respond to Webhook.
+- **Guard node:**
+  - Validates the model output against the candidates it was given.
+  - On failure, returns `{"ok": false, "reason": "..."}`, and the backend falls back to rules.
+  - On success, returns `{"ok": true, ...payload}`.
+
+| Workflow file | Path (env var) | Request | Response payload |
+|---|---|---|---|
+| `POVO AI Guidance - Call Prep v1.json` | `/webhook/povo-call-prep` (`N8N_CALL_PREP_PATH`) | `{request_id, category, participant: {role_type, display_name, decile, tier_name, segment_short_name, competitive_focus_label, hs_patients, povo_patients, jak_patients, povo_discussions, last_call_date}, interactions: [{date, type_label, summary}], candidates: [{point_id, pillar, text, detail}], max_points: 3}` | `{ordered_point_ids: [≤3, subset of the candidates], insights: {point_id: string ≤ 220 chars}}`. Insights are only for messaging; the approved text is never modified. |
+| `POVO AI Guidance - Compliance Check v1.json` | `/webhook/povo-compliance-check` (`N8N_COMPLIANCE_PATH`) | `{request_id, category, point_text, participant_role, note, rule_findings: [{rule_id, title, severity}], allowed_rule_ids: [...14]}` | `{issues: [{rule_id (from allowed_rule_ids), excerpt, why}], suggested_text (≤ 200/600 chars, no PHI, no off-label claims)}` |
+| `POVO AI Guidance - Next Call v1.json` | `/webhook/povo-next-call` (`N8N_NEXT_CALL_PATH`) | `{request_id, participant: {...as in call prep}, call_date, assessments: [{category, point_id, text, reception, note}]}` | `{objection_states: {point_id: open\|resolved}, summary (≤ 240 chars), next_best_action (≤ 200 chars)}` |
+| `POVO AI Guidance - Nightly Guidance Refresh v1.json` | schedule | Cron 05:00 America/New_York, Mon–Fri → HTTP POST `{{$env.POVO_BACKEND_URL}}/api/v1/jobs/refresh-guidance` with `X-POVO-Service-Token: {{$env.POVO_SERVICE_TOKEN}}`, then `/api/v1/jobs/purge-ai-cache` | — |
+
+The backend applies the deterministic revision rules (§7 of the spec). The LLM only supplies the objection open/resolved states, the summary and the next best action, and the regex fallback covers all three.
+
+## 7. Configuration (`backend/.env.example`)
+
+**App**
+
+- `ENVIRONMENT` (development|production|testing), `DEBUG`, `APP_NAME=POVO AI Guidance`, `LOG_LEVEL`, `CORS_ORIGINS` (dev: `http://localhost:5175`).
+- `APP_TIMEZONE=America/New_York`.
+- `DEV_FALLBACK_USERNAME=vturano`, `POSIT_IDENTITY_HEADER=RStudio-Connect-Credentials`.
+
+**Data**
+
+- `DATA_SOURCE=local|databricks`, `LOCAL_DUCKDB_PATH`, `SEED_OUTPUT_DIR`, `BRONZE_CACHE_SECONDS`.
+- `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABRICKS_WAREHOUSE_ID` (http path `/sql/1.0/warehouses/<id>`), `DATABRICKS_CATALOG=povo_ai_guidance`, `DATABRICKS_SCHEMA=bronze`, `DATABRICKS_APP_SCHEMA=app`.
+
+**AI and n8n**
+
+- `AI_ENABLED=true`, `N8N_BASE_URL`, `N8N_CALL_PREP_PATH`, `N8N_COMPLIANCE_PATH`, `N8N_NEXT_CALL_PATH`, `N8N_TIMEOUT_SECONDS`, `AI_CACHE_HOURS=24`.
+- `POVO_SERVICE_TOKEN`.
+
+**Secrets:** only `.env.example` is committed. `.env` and `.env.local` are gitignored and loaded in that order, from the backend folder resolved from `core/config.py`'s own path, not the working directory.
+
+## 8. Frontend (`frontend/`)
+
+**Stack** (Mosaic versions):
+
+- React ^19.2.7, Vite ^8.1.1 with @vitejs/plugin-react ^6.0.3, TypeScript ~6.0.2 (strict and `noUncheckedIndexedAccess`).
+- MUI ^7.3.11 (material, icons-material), @emotion.
+- **Tailwind CSS 4** via `@tailwindcss/vite`, used for layout and spacing. MUI `sx` and the theme are used for component styling.
+- Redux Toolkit ^2.12.0 + react-redux ^9.3.0, with **RTK Query** over the shared axios instance (`axiosBaseQuery`).
+- react-router ^8.3.0 (`createHashRouter`, lazy pages).
+- formik ^2.4.9 + yup ^1.7.1, axios ^1.18.1, dayjs, recharts ^3.9.2, react-hot-toast.
+- @fontsource-variable/heebo and material-symbols (self-hosted; the VM cannot reach Google Fonts).
+- Testing: vitest ^4.1.10, jsdom, @testing-library/react / jest-dom / user-event. ESLint 10 flat config.
+
+**Build and config:**
+
+- `vite.config.ts`: `base: './'`; dev server on port 5175; proxy `/api` and `/health` → `http://127.0.0.1:8030`, injecting `RStudio-Connect-Credentials` from `VITE_DEV_USER`.
+- `constants/constant.ts`: `API_URL = import.meta.env.VITE_API_URL ?? ''`. Production sets it to the backend content URL on Posit.
+
+**Routes** (hash router):
+
+- `#/performance`
+- `#/pre-call` and `#/pre-call/:hcpId`
+- `#/post-call/:hcpId`
+
+Tabs map to routes. The selected target and participants live in Redux (the `callSession` slice), so switching tabs keeps them.
+
+**Folders** (`src/`):
+
+```
+config/axiosConfig.ts         X-Request-ID + X-Impersonate-Employee-Id interceptors, envelope unwrap, error events
+constants/                    constant.ts, labels.ts (all UI strings), colors.ts (tokens from the spec)
+context/theme.ts              getTheme(): MUI theme mirroring the POC tokens, Heebo
+styles/index.css              @import "tailwindcss"; @theme tokens that mirror the MUI theme
+redux/                        store.ts, hooks.ts, api/ (baseApi + one file per module), session/, callSession/
+types/                        api.ts (ApiResponse<T>), models.ts
+hooks/                        useDebounce, useAutoSaveAssessment, …
+components/common/            AppCard, Chip variants (RoleChip, DecileChip, FocusTag, StatusChip), AiSparkle, AiStepper, EmptyState, Loader, SegmentedToggle, DataTable (paginated), ErrorBoundary
+components/forms/             FormInput, FormTextArea, FormCheckbox, ReceptionSlider (Formik-bound)
+components/charts/            DonutChart, DecileBarChart, StackedColumnChart, ChartTooltip (recharts wrappers)
+layouts/                      AppShell (Header, AccountMenu, ImpersonationBar, TabBar)
+features/impersonation/       ImpersonateDialog
+features/performance/         KpiCards, AiGuidancePanel, charts
+features/preCall/             MustWins, CallPlanTable, AccountsTable, Filters, CallPrep/*
+features/postCall/            AssessmentPanel, PointRow, AdditionalNotes, ComplianceDialog, NextCallCta
+pages/                        PerformancePage, PreCallPage, PostCallPage (thin)
+routes/                       router.tsx
+utils/                        format.ts (dates, "HCPs" rule), workingDays.ts, …
+```
+
+## 9. Deployment summary (details in DEPLOYMENT.md)
+
+1. **Databricks.** Run `deploy_schema.py` (creates the catalog if permitted, the schemas and the tables), then `generate_seed_data.py` and `load_seed_data.py`. Grant the app principal SELECT on `bronze` and SELECT/MODIFY on `app`.
+2. **n8n.** Import the 4 workflows. Attach the "Azure OpenAI account" credential. Set `POVO_BACKEND_URL` and `POVO_SERVICE_TOKEN` in the n8n environment. Activate.
+3. **Backend.** `rsconnect deploy fastapi` (entrypoint `main:app`) as Posit content, with env vars set in Posit. Check `/health`.
+4. **Frontend.** Build with `VITE_API_URL=<backend content URL>` and deploy `dist/` as static content. Both content items sit behind Okta SSO.

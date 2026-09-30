@@ -1,0 +1,7 @@
+# Scripts in databricks/scripts (the seed generator itself is pure standard library).
+databricks-sql-connector==4.5.0
+python-dotenv>=1.0
+# IANA time zones for zoneinfo on Windows (--as-of default is today in America/New_York).
+tzdata>=2024.1
+# Tests: python -m pytest databricks/tests
+pytest>=8

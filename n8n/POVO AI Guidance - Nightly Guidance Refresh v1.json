@@ -1,0 +1,173 @@
+{
+  "name": "POVO AI Guidance - Nightly Guidance Refresh v1",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## POVO AI Guidance - Nightly Guidance Refresh v1\n\nRuns **05:00 Mon–Fri, America/New_York** (workflow setting `timezone`).\n\n1. `POST {POVO_BACKEND_URL}/api/v1/jobs/refresh-guidance` → `{run_id, territories, snapshot_date}` (timeout 300 s, 3 tries)\n2. `POST {POVO_BACKEND_URL}/api/v1/jobs/purge-ai-cache` → `{deleted}` (3 tries)\n3. **Summarise Run**: returns a one-line summary; throws (execution marked failed) if either job failed.\n\nBoth calls send `X-POVO-Service-Token: $env.POVO_SERVICE_TOKEN`. n8n needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.\nNo email / chat alerting (out of scope): check the executions list.",
+        "height": 380,
+        "width": 560,
+        "color": 4
+      },
+      "id": "aff1afd6-61f6-4358-ad85-bda7243d41f8",
+      "name": "Read Me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -660,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 5 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "24922b2d-4016-49de-8746-59e530d821ae",
+      "name": "Weekdays 05:00 ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POVO_BACKEND_URL }}/api/v1/jobs/refresh-guidance",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-POVO-Service-Token",
+              "value": "={{ $env.POVO_SERVICE_TOKEN }}"
+            },
+            {
+              "name": "X-Request-Id",
+              "value": "={{ 'n8n-nightly-' + $execution.id + '-refresh' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "32bd327b-8405-407d-9728-98d915af0f30",
+      "name": "Refresh Guidance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POVO_BACKEND_URL }}/api/v1/jobs/purge-ai-cache",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-POVO-Service-Token",
+              "value": "={{ $env.POVO_SERVICE_TOKEN }}"
+            },
+            {
+              "name": "X-Request-Id",
+              "value": "={{ 'n8n-nightly-' + $execution.id + '-purge' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "b2faf1ce-6acb-4165-8ff4-86e8b06a0fcb",
+      "name": "Purge AI Cache",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =============================================================================\n * SUMMARISE RUN - POVO AI Guidance, Nightly Guidance Refresh v1\n *\n * Both HTTP nodes continue on error (after their own retries), so this node\n * always runs and reports both jobs. If either job failed it throws with the\n * summary as the message, so the execution shows as failed in the n8n\n * executions list. There is no email or chat alerting (out of scope).\n *\n * Backend responses (docs/ARCHITECTURE.md section 5):\n *   refresh-guidance -> {run_id, territories, snapshot_date}\n *   purge-ai-cache   -> {deleted}\n * Mosaic-style envelopes ({data: {...}}) are unwrapped as well.\n * ========================================================================== */\nconst pick = (nodeName) => {\n  try {\n    const j = $(nodeName).first().json || {};\n    return j.data && typeof j.data === 'object' && !Array.isArray(j.data) ? Object.assign({}, j, j.data) : j;\n  } catch (e) {\n    return { error: { message: 'node did not run: ' + nodeName } };\n  }\n};\nconst errText = (j) => {\n  if (!j || !j.error) return '';\n  const e = j.error;\n  return String((e && (e.message || e.description)) || e).replace(/\\s+/g, ' ').slice(0, 300);\n};\n\nconst refresh = pick('Refresh Guidance');\nconst purge = pick('Purge AI Cache');\nconst refreshErr = errText(refresh);\nconst purgeErr = errText(purge);\n\nconst summary = {\n  ok: !refreshErr && !purgeErr,\n  finished_at: $now.setZone('America/New_York').toISO(),\n  refresh_guidance: refreshErr\n    ? { ok: false, error: refreshErr }\n    : { ok: true, run_id: refresh.run_id || null, territories: refresh.territories === undefined ? null : refresh.territories, snapshot_date: refresh.snapshot_date || null },\n  purge_ai_cache: purgeErr\n    ? { ok: false, error: purgeErr }\n    : { ok: true, deleted: purge.deleted === undefined ? null : purge.deleted },\n};\n\nsummary.message = [\n  refreshErr\n    ? 'Guidance refresh FAILED: ' + refreshErr\n    : 'Guidance refreshed for ' + (summary.refresh_guidance.territories ?? '?') + ' territories (snapshot ' + (summary.refresh_guidance.snapshot_date || '?') + ', run ' + (summary.refresh_guidance.run_id || '?') + ').',\n  purgeErr\n    ? 'AI cache purge FAILED: ' + purgeErr\n    : 'AI cache purge removed ' + (summary.purge_ai_cache.deleted ?? '?') + ' expired rows.',\n].join(' ');\n\nif (!summary.ok) throw new Error(summary.message);\nreturn [{ json: summary }];\n"
+      },
+      "id": "57d6f1f0-e897-4f85-bce2-1c5ca41eac38",
+      "name": "Summarise Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekdays 05:00 ET": {
+      "main": [
+        [
+          {
+            "node": "Refresh Guidance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh Guidance": {
+      "main": [
+        [
+          {
+            "node": "Purge AI Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Purge AI Cache": {
+      "main": [
+        [
+          {
+            "node": "Summarise Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "executionTimeout": 1200,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "dc0212eb-1d41-4f98-8a81-10b13a42be32",
+  "meta": {
+    "instanceId": "povo-ai-guidance"
+  },
+  "tags": []
+}

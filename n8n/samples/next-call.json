@@ -1,0 +1,25 @@
+{
+  "request_id": "sample-next-call-0001",
+  "participant": {
+    "role_type": "HCP",
+    "display_name": "Dr. Sarah Whitfield, MD",
+    "decile": 9,
+    "tier_name": "Tier 1",
+    "segment_short_name": "Immediate",
+    "competitive_focus_label": "Humira (adalimumab)",
+    "hs_patients": 48,
+    "povo_patients": 0,
+    "jak_patients": 6,
+    "povo_discussions": 3,
+    "last_call_date": "2026-09-30"
+  },
+  "call_date": "2026-09-30",
+  "assessments": [
+    { "category": "messaging", "point_id": "MSG-EFF-01", "text": "HiSCR50: proven reduction in inflammatory lesions at Week 12, where the primary endpoint was met for both doses in STOP-HS1 and STOP-HS2", "reception": 2, "note": "Engaged with the Week 12 data and asked for the lesion and pain slides" },
+    { "category": "messaging", "point_id": "MSG-SAF-01", "text": "Review the safety profile and lab monitoring from the Prescribing Information", "reception": 1, "note": "Wants to see the lab monitoring schedule again" },
+    { "category": "objection", "point_id": "OBJ-JAK-01", "text": "No head-to-head data; first-and-only oral JAK1 inhibitor for moderate-to-severe HS", "reception": null, "note": "Still concerned about switching stable biologic patients" },
+    { "category": "objection", "point_id": "OBJ-BIO-01", "text": "Selective JAK1 inhibition across multiple HS cytokines; no comparison with biologics", "reception": null, "note": "Addressed; comfortable with the mechanism explanation" },
+    { "category": "closing", "point_id": "CLS-01", "text": "Identify one patient losing control on a biologic for a first POVO start", "reception": 2, "note": "Agreed to review two patients with recurring flares" },
+    { "category": "additional", "point_id": "additional", "text": "", "reception": null, "note": "Office asked for HSTruths.com patient resources; next visit set for the week of October 26" }
+  ]
+}

@@ -1,0 +1,47 @@
+import { useCallback, useEffect } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router';
+import EmptyState from '../components/common/EmptyState';
+import { preCallPath } from '../constants/constant';
+import { LABELS } from '../constants/labels';
+import CallPlanSection from '../features/preCall/CallPlanSection';
+import CallPrepSection from '../features/preCall/CallPrep/CallPrepSection';
+import MustWins from '../features/preCall/MustWins';
+import { selectSelectedHcpId } from '../redux/callSession/callSessionSelectors';
+import { targetSelected } from '../redux/callSession/callSessionSlice';
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+
+/** Tab 2: Must-Wins and Call Plan Targets side by side (0.8 : 1.6), Call Prep below. */
+const PreCallPage = () => {
+  const { hcpId } = useParams();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const selectedHcpId = useAppSelector(selectSelectedHcpId);
+
+  // Sync: the URL is the source of truth for the selected target (deep links, back/forward).
+  useEffect(() => {
+    if (hcpId && hcpId !== selectedHcpId) dispatch(targetSelected({ hcpId, scroll: true }));
+  }, [dispatch, hcpId, selectedHcpId]);
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      dispatch(targetSelected({ hcpId: id, scroll: true }));
+      navigate(preCallPath(id));
+    },
+    [dispatch, navigate],
+  );
+
+  if (!hcpId && selectedHcpId) return <Navigate to={preCallPath(selectedHcpId)} replace />;
+  const current = hcpId ?? null;
+
+  return (
+    <div className="flex flex-col gap-4" data-testid="pre-call-page">
+      <div className="grid grid-cols-[minmax(0,.8fr)_minmax(0,1.6fr)] items-stretch gap-4 max-bp1700:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] max-bp1180:grid-cols-1">
+        <MustWins selectedId={current} onSelect={handleSelect} />
+        <CallPlanSection selectedId={current} onSelect={handleSelect} />
+      </div>
+      {current ? <CallPrepSection hcpId={current} /> : <EmptyState message={LABELS.preCall.selectHint} variant="hint" />}
+    </div>
+  );
+};
+
+export default PreCallPage;

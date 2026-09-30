@@ -1,0 +1,17 @@
+# POVO AI Guidance API. Floors follow the Mosaic platform standard.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+httpx>=0.28
+# Databricks SQL Warehouse driver (DATA_SOURCE=databricks). PINNED EXACTLY, as in
+# Mosaic: the VM runs this version and the native :named parameter support we
+# rely on is version-sensitive. Imported lazily, so local mode never loads it.
+databricks-sql-connector==4.5.0
+# Local data mode (DATA_SOURCE=local): the same catalog.schema.TABLE SQL on a file.
+duckdb>=1.0
+# IANA time zones on Windows (zoneinfo has no system database there).
+tzdata>=2024.1
+pytest>=8.0
+anyio>=4.0

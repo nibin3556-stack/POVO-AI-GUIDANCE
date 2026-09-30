@@ -1,0 +1,35 @@
+# Local n8n for POVO AI Guidance (development only).
+#   docker compose up -d        -> http://localhost:5680
+# Values come from ./.env (copy .env.example). Workflows live in n8n/*.json;
+# see n8n/README.md for import, credential and activation steps.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: povo-n8n
+    restart: unless-stopped
+
+    ports:
+      - "5680:5678"
+
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5680/
+      - NODE_ENV=production
+      - TZ=America/New_York
+      - GENERIC_TIMEZONE=America/New_York
+      # Workflows read these through {{ $env.* }}; env access must be allowed.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - POVO_BACKEND_URL=${POVO_BACKEND_URL:-http://host.docker.internal:8030}
+      # - POVO_SERVICE_TOKEN=${POVO_SERVICE_TOKEN:?set POVO_SERVICE_TOKEN in .env (same value as backend/.env)}
+
+    # Lets the container reach the backend on the host (uvicorn :8030) on Linux too.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      - povo_n8n_data:/home/node/.n8n
+
+volumes:
+  povo_n8n_data:

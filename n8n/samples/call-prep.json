@@ -1,0 +1,30 @@
+{
+  "request_id": "sample-call-prep-0001",
+  "category": "messaging",
+  "participant": {
+    "role_type": "HCP",
+    "display_name": "Dr. Sarah Whitfield, MD",
+    "decile": 9,
+    "tier_name": "Tier 1",
+    "segment_short_name": "Immediate",
+    "competitive_focus_label": "Humira (adalimumab)",
+    "hs_patients": 48,
+    "povo_patients": 0,
+    "jak_patients": 6,
+    "povo_discussions": 2,
+    "last_call_date": "2026-09-02"
+  },
+  "interactions": [
+    { "date": "2026-09-02", "type_label": "Direct call", "summary": "POVO discussed" },
+    { "date": "2026-08-19", "type_label": "MSL visit", "summary": "Answered lab monitoring questions (reactive)" },
+    { "date": "2026-07-28", "type_label": "PR visit", "summary": "Left HSTruths.com patient resources" }
+  ],
+  "candidates": [
+    { "point_id": "MSG-EFF-01", "pillar": "Efficacy", "text": "HiSCR50: proven reduction in inflammatory lesions at Week 12, where the primary endpoint was met for both doses in STOP-HS1 and STOP-HS2", "detail": "Lead with the HiSCR50 result, then share the lesion and pain data" },
+    { "point_id": "MSG-SAF-01", "pillar": "Safety", "text": "Review the safety profile and lab monitoring from the Prescribing Information", "detail": "Open with safety when monitoring questions came up" },
+    { "point_id": "MSG-SEG-IMM-01", "pillar": "Immediate segment", "text": "Studied before and after biologics; about 63% of STOP-HS patients were biologic naive", "detail": "Review which biologic-experienced patients are losing control" },
+    { "point_id": "MSG-MOA-01", "pillar": "Mechanism", "text": "Selective JAK1 inhibition across multiple HS cytokines, in a once-daily pill", "detail": "" },
+    { "point_id": "MSG-LP-01", "pillar": "Lesions and pain", "text": "Once-daily pill with 45 mg and 75 mg doses; dose per the Prescribing Information", "detail": "" }
+  ],
+  "max_points": 3
+}

@@ -1,0 +1,12 @@
+{
+  "request_id": "sample-compliance-0001",
+  "category": "messaging",
+  "point_text": "HiSCR50: proven reduction in inflammatory lesions at Week 12, where the primary endpoint was met for both doses in STOP-HS1 and STOP-HS2",
+  "participant_role": "HCP",
+  "note": "Dr basically loved it, said POVO is way better than Humira. Asked about using it for alopecia. Pt John D. had a rash last month.",
+  "rule_findings": [
+    { "rule_id": "claim", "title": "Unbalanced or comparative claim", "severity": "med" },
+    { "rule_id": "fill", "title": "Filler wording", "severity": "low" }
+  ],
+  "allowed_rule_ids": ["off", "claim", "ae", "phi", "vulgar", "lang", "price", "sens", "irr", "fill", "gib", "vague", "ph", "rel"]
+}

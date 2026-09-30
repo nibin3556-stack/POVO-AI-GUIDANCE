@@ -1,0 +1,92 @@
+"""The approved content library: talking points, objection rules, compliance rules.
+
+Read from the REF_ tables through the warehouse (Databricks, or the local
+DuckDB loaded from the seeder's CSVs). The backend OWNS the source JSON in
+databricks/seed/content/, and the seeder copies it unchanged; if the REF_
+tables are empty (the seeder has not run yet), the JSON files are read
+directly, so a fresh checkout and the pure-logic tests still work.
+
+Cached in-process like the bronze data: content changes only on a re-seed.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import os
+import threading
+import time
+from dataclasses import dataclass
+from typing import Optional
+
+from core.config import get_settings
+from database.tables import bronze
+from database.warehouse import get_warehouse
+
+logger = logging.getLogger("povo.content")
+
+FILES = {"REF_TALKING_POINT": "talking_points.json", "REF_OBJECTION_RULE": "objection_rules.json",
+         "REF_COMPLIANCE_RULE": "compliance_rules.json"}
+
+
+@dataclass
+class Library:
+    points: dict[str, dict]
+    objection_rules: list[dict]
+    compliance_rules: list[dict]
+    content_version: str
+    source: str
+
+    def point(self, point_id: str) -> Optional[dict]:
+        return self.points.get(point_id)
+
+
+_lock = threading.Lock()
+_cache: tuple[float, Optional[Library]] = (0.0, None)
+
+
+def _is_active(row: dict) -> bool:
+    v = row.get("IS_ACTIVE")
+    return v is None or v is True or str(v).lower() in ("true", "1", "t", "yes")
+
+
+def _from_json(table: str) -> list[dict]:
+    path = os.path.join(get_settings().content_dir, FILES[table])
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _read(table: str) -> tuple[list[dict], str]:
+    try:
+        rows = get_warehouse().query(f"SELECT * FROM {bronze(table)}")
+    except Exception:  # noqa: BLE001 - a missing table falls back to the JSON the backend owns
+        logger.warning("Could not read %s from the warehouse; using the content JSON", table, exc_info=True)
+        rows = []
+    if rows:
+        return rows, "warehouse"
+    return _from_json(table), "json"
+
+
+def get_library() -> Library:
+    global _cache
+    loaded, lib = _cache
+    if lib is not None and time.time() - loaded < get_settings().bronze_cache_seconds:
+        return lib
+    tp, src1 = _read("REF_TALKING_POINT")
+    obj, _ = _read("REF_OBJECTION_RULE")
+    comp, _ = _read("REF_COMPLIANCE_RULE")
+    points = {r["POINT_ID"]: r for r in tp if _is_active(r)}
+    versions = sorted({str(r.get("CONTENT_VERSION") or "") for r in points.values()} - {""})
+    lib = Library(points=points,
+                  objection_rules=sorted(obj, key=lambda r: int(r.get("PRIORITY") or 0)),
+                  compliance_rules=sorted([r for r in comp if _is_active(r)],
+                                          key=lambda r: int(r.get("SORT_ORDER") or 0)),
+                  content_version=versions[-1] if versions else "2026.1", source=src1)
+    with _lock:
+        _cache = (time.time(), lib)
+    return lib
+
+
+def clear_library_cache() -> None:
+    global _cache
+    with _lock:
+        _cache = (0.0, None)

@@ -1,0 +1,11 @@
+{
+  "request_id": "sample-compliance-0002",
+  "category": "additional",
+  "point_text": "",
+  "participant_role": "NP",
+  "note": "Office manager asked what POVO will cost patients and whether we have coupons. NP wants HSTruths.com resources for new starts. Next visit set for the week of October 26.",
+  "rule_findings": [
+    { "rule_id": "price", "title": "Pricing, samples or incentives", "severity": "med" }
+  ],
+  "allowed_rule_ids": ["off", "claim", "ae", "phi", "vulgar", "lang", "price", "sens", "irr", "fill", "gib", "vague", "ph", "rel"]
+}

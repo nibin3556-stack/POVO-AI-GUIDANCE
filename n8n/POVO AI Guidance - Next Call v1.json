@@ -1,0 +1,343 @@
+{
+  "name": "POVO AI Guidance - Next Call v1",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## POVO AI Guidance - Next Call v1\n\nReads the post-call assessment and returns the open/resolved state of every objection, a ≤240-character summary and a ≤200-character next best action. The backend applies the deterministic revision rules (Retained / Changed / Removed / New) itself.\n\nResponse: `{ok:true, objection_states:{point_id: open|resolved}, summary, next_best_action}` or `{ok:false, reason}`.\n### Flow\nWebhook → Build Prompt → Request Valid? → LLM chain (Azure OpenAI gpt-4.1, temperature 0, JSON) + Structured Output Parser → Guard → Respond to Webhook.\n- Contract break → **Reject Request** → `{ok:false, reason}`\n- Model error / timeout / unparseable output → chain error output → **Model Failed** → `{ok:false, reason}`\n- Guard failure → `{ok:false, reason}`; success → `{ok:true, ...payload}`\n\nOn any `ok:false` the backend falls back to the deterministic POC rules.\n\n### Setup\n- Attach the **Azure OpenAI account** credential to *Azure OpenAI Chat Model* (deployment `gpt-4.1`).\n- Path `POST /webhook/povo-next-call`. One active workflow per path: bump the version in the workflow name, never keep two files on one path.",
+        "height": 520,
+        "width": 560,
+        "color": 4
+      },
+      "id": "b4e81e46-d01c-4331-9ab4-067655b1cc01",
+      "name": "Read Me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -660,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "povo-next-call",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "062379dd-3a40-4a95-b326-71b3e1a756c7",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "e1ea02e0-f544-4bd3-be43-c651ff3a0186"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =============================================================================\n * BUILD PROMPT - POVO AI Guidance, Next Call v1\n *\n * Contract (docs/ARCHITECTURE.md section 6):\n *   request  {request_id, participant:{...as in call prep}, call_date,\n *             assessments:[{category, point_id, text, reception, note}]}\n *   response {ok:true, objection_states:{point_id: open|resolved},\n *             summary (<=240), next_best_action (<=200)} | {ok:false, reason}\n *\n * The backend applies the deterministic revision rules (spec section 7:\n * Retained / Changed / Removed / New, reordering). The model only supplies\n * the objection open/resolved states, the summary and the next best action;\n * the backend's regex fallback covers all three.\n * ========================================================================== */\nconst body = ($input.first().json || {}).body || {};\nconst reject = (reason) => [{ json: { valid: false, reason: String(reason).slice(0, 200) } }];\nconst str = (v) => (v === null || v === undefined ? '' : String(v)).replace(/\\s+/g, ' ').trim();\n\nconst requestId = str(body.request_id);\nif (!requestId) return reject('missing request_id');\nconst participant = body.participant && typeof body.participant === 'object' ? body.participant : null;\nif (!participant) return reject('missing participant');\nconst callDate = str(body.call_date);\nif (!callDate) return reject('missing call_date');\n\nconst assessments = (Array.isArray(body.assessments) ? body.assessments : [])\n  .filter((a) => a && str(a.point_id))\n  .map((a) => ({\n    category: str(a.category).toLowerCase().replace(/s$/, ''),\n    point_id: str(a.point_id),\n    text: str(a.text),\n    reception: a.reception,\n    note: str(a.note),\n  }));\nif (!assessments.length) return reject('no assessments');\n\n// Reception is stored as 0/1/2 (APP_CALL_POINT_ASSESSMENT.RECEPTION); labels are accepted too.\nconst RECEPTION = { 0: 'Not well received', 1: 'Moderately received', 2: 'Well received' };\nfunction receptionLabel(r) {\n  if (r === null || r === undefined || r === '') return 'not rated';\n  if (RECEPTION[r] !== undefined) return RECEPTION[r];\n  const s = str(r).toLowerCase();\n  if (/not/.test(s)) return RECEPTION[0];\n  if (/moderate/.test(s)) return RECEPTION[1];\n  if (/well/.test(s)) return RECEPTION[2];\n  return 'not rated';\n}\n\nconst objectionIds = [];\nassessments.forEach((a) => { if (a.category === 'objection' && !objectionIds.includes(a.point_id)) objectionIds.push(a.point_id); });\n\nconst name = str(participant.display_name) || 'the participant';\nconst role = str(participant.role_type) || 'HCP';\n\nconst SYSTEM_PROMPT = [\n  'You write the next-call guidance in POVO AI Guidance, the field-sales guidance tool for POVO,',\n  \"Incyte's oral selective JAK1 inhibitor for moderate-to-severe hidradenitis suppurativa (HS).\",\n  'A POVO Sales Representative has just assessed the call of ' + callDate + ' with ' + name + ' (' + role + '). Read the ASSESSMENTS and return three things.',\n  '',\n  '1. objection_states: one entry for EVERY objection point_id listed under OBJECTION POINT IDS, and no others.',\n  '   state is open when the note says the participant is still concerned, pushed back, was not convinced, or the note gives no sign the objection was settled.',\n  '   state is resolved when the note says the objection was addressed, the participant agreed, or is now comfortable.',\n  '2. summary: at most 240 characters. One or two sentences on how the call went: which messages were well received, which objections are still open, what was agreed.',\n  '3. next_best_action: at most 200 characters. One concrete action for the next call, for example lead with the pillar that was well received (open with safety if safety was questioned), clear the open objection first, confirm the agreed next step.',\n  '',\n  'HARD RULES',\n  '- Use only what is in the ASSESSMENTS. Do not invent what the participant said, agreed or asked for.',\n  '- Never invent clinical claims. No efficacy or safety figures, percentages, doses, trial results or comparisons with other treatments.',\n  '- Never suggest off-label use. Never repeat patient details, pricing or adverse-event details from a note.',\n  '- The point texts are approved (MLR) wording. Never alter or re-word them; refer to a point by its topic instead of quoting it.',\n  '- Tone: plain, professional US English, written to the rep. Name the participant. No hype, no exclamation marks, no emojis, no markdown.',\n  '',\n  'OUTPUT',\n  'Return JSON only, with no prose and no code fences. Fields:',\n  '- objection_states: array of objects with the fields point_id and state (open or resolved); empty when there are no objection point ids.',\n  '- summary: string.',\n  '- next_best_action: string.',\n].join('\\n');\n\nconst line = (label, value) => (str(value) ? '- ' + label + ': ' + str(value) : null);\nconst participantBlock = [\n  line('Name', participant.display_name),\n  line('Role', participant.role_type),\n  line('Decile', participant.decile),\n  line('Segment', participant.segment_short_name),\n  line('Competitive focus', participant.competitive_focus_label),\n  line('HS patients, last 12 months', participant.hs_patients),\n  line('POVO patients', participant.povo_patients),\n  line('POVO discussions', participant.povo_discussions),\n].filter(Boolean).join('\\n');\n\nconst assessmentBlock = assessments.map((a) => [\n  '- point_id: ' + a.point_id,\n  '  category: ' + a.category,\n  '  point: ' + (a.text || '(free-text additional notes)'),\n  a.category === 'objection' ? null : '  reception: ' + receptionLabel(a.reception),\n  '  note: ' + (a.note || '(no note)'),\n].filter(Boolean).join('\\n')).join('\\n');\n\nconst USER_PROMPT = [\n  'CALL DATE: ' + callDate,\n  '',\n  'PARTICIPANT',\n  participantBlock,\n  '',\n  'OBJECTION POINT IDS',\n  objectionIds.length ? objectionIds.map((id) => '- ' + id).join('\\n') : '- none',\n  '',\n  'ASSESSMENTS',\n  assessmentBlock,\n  '',\n  'Return the JSON now.',\n].join('\\n');\n\nreturn [{\n  json: {\n    valid: true,\n    request_id: requestId,\n    objection_ids: objectionIds,\n    // Every number the summary / next best action may legitimately use.\n    fact_text: [callDate, participantBlock, assessmentBlock].join(' '),\n    system_prompt: SYSTEM_PROMPT.replace(/[{}]/g, ''),\n    user_prompt: USER_PROMPT,\n  },\n}];\n"
+      },
+      "id": "9d0f528d-4b02-458e-9af9-285860d64c2a",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "86242012-bbcb-4101-8e1c-7ee4ffb4051a",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4ec0c396-1bff-46e0-8e23-1f4217fea614",
+      "name": "Request Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_prompt }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $json.system_prompt }}"
+            }
+          ]
+        }
+      },
+      "id": "0500611f-4588-49a0-acfe-c3634c7a3c70",
+      "name": "Next Call Writer (LLM)",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        700,
+        -100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "azureOpenAiApi",
+        "model": "gpt-4.1",
+        "options": {
+          "temperature": 0,
+          "maxTokens": 600,
+          "responseFormat": "json_object",
+          "timeout": 25000,
+          "maxRetries": 1
+        }
+      },
+      "id": "6e93ca9e-49f8-43ee-8262-3bccc9d89dc7",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        620,
+        140
+      ],
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "REPLACE_WITH_YOUR_AZURE_OPENAI_CRED_ID",
+          "name": "Azure OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"objection_states\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"point_id\": {\n            \"type\": \"string\"\n          },\n          \"state\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"open\",\n              \"resolved\"\n            ]\n          }\n        },\n        \"required\": [\n          \"point_id\",\n          \"state\"\n        ]\n      }\n    },\n    \"summary\": {\n      \"type\": \"string\"\n    },\n    \"next_best_action\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"objection_states\",\n    \"summary\",\n    \"next_best_action\"\n  ]\n}"
+      },
+      "id": "ac6187a7-68ab-4c2f-9d23-b3b7cf1cd612",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =============================================================================\n * GUARD - POVO AI Guidance, Next Call v1\n *\n * Response is exactly one of:\n *   {ok:true,  objection_states:{point_id: \"open\"|\"resolved\"},\n *              summary, next_best_action}\n *   {ok:false, reason}\n *\n * Hard failures (ok:false, the backend uses its regex fallback):\n *   - output not readable as JSON\n *   - objection_states does not cover exactly the objection point_ids given,\n *     or a state other than open / resolved\n *   - summary empty or over 240 characters; next_best_action empty or over 200\n *   - a claim-like number (%, mg, weeks, p-value, fold) that is not in the\n *     assessments given\n * ========================================================================== */\nconst ctx = $('Build Prompt').first().json;\nconst raw = $input.first().json || {};\nconst fail = (reason) => [{ json: { ok: false, reason: String(reason).slice(0, 200) } }];\n\nfunction unwrap(value) {\n  let v = value;\n  for (let i = 0; i < 4; i += 1) {\n    if (typeof v === 'string') {\n      const s = v.replace(/^\\s*```(?:json)?/i, '').replace(/```\\s*$/, '').trim();\n      try { v = JSON.parse(s); } catch (e) { return null; }\n      continue;\n    }\n    if (v && typeof v === 'object' && !Array.isArray(v) && v.output !== undefined && Object.keys(v).length <= 2) { v = v.output; continue; }\n    if (v && typeof v === 'object' && !Array.isArray(v) && v.text !== undefined && Object.keys(v).length === 1) { v = v.text; continue; }\n    break;\n  }\n  return v && typeof v === 'object' && !Array.isArray(v) ? v : null;\n}\n\ntry {\n  if (raw.error) return fail('model_error: ' + (raw.error.message || raw.error));\n  const out = unwrap(raw);\n  if (!out) return fail('model output is not a JSON object');\n\n  /* ------------------------------------------------ objection states -- */\n  const expected = ctx.objection_ids || [];\n  let entries = [];\n  if (Array.isArray(out.objection_states)) {\n    entries = out.objection_states.filter(Boolean).map((e) => [String(e.point_id || '').trim(), e.state]);\n  } else if (out.objection_states && typeof out.objection_states === 'object') {\n    entries = Object.keys(out.objection_states).map((k) => [k.trim(), out.objection_states[k]]);\n  } else if (expected.length) {\n    return fail('objection_states missing');\n  }\n  const states = {};\n  for (const [id, stateRaw] of entries) {\n    if (!expected.includes(id)) return fail('objection_states has unknown point_id: ' + (id || '(empty)'));\n    if (states[id]) return fail('objection_states repeats point_id: ' + id);\n    const state = String(stateRaw || '').trim().toLowerCase();\n    if (state !== 'open' && state !== 'resolved') return fail('objection state for ' + id + ' is not open or resolved');\n    states[id] = state;\n  }\n  const missing = expected.filter((id) => !states[id]);\n  if (missing.length) return fail('objection_states missing point_id: ' + missing.join(', '));\n\n  /* ------------------------------------------------ text fields -- */\n  const clean = (s) => String(s || '').replace(/\\s+/g, ' ').trim();\n  const summary = clean(out.summary);\n  const nba = clean(out.next_best_action);\n  if (!summary) return fail('summary missing');\n  if (summary.length > 240) return fail('summary is ' + summary.length + ' characters; limit is 240');\n  if (!nba) return fail('next_best_action missing');\n  if (nba.length > 200) return fail('next_best_action is ' + nba.length + ' characters; limit is 200');\n\n  const known = new Set((String(ctx.fact_text).match(/\\d[\\d,]*(?:\\.\\d+)?/g) || []).map((t) => t.replace(/,/g, '')));\n  const claimRe = /(\\d[\\d,]*(?:\\.\\d+)?)\\s*(%|percent|mg|milligram|weeks?|wks?|-?fold)/gi;\n  for (const text of [summary, nba]) {\n    let m;\n    while ((m = claimRe.exec(text)) !== null) {\n      if (!known.has(m[1].replace(/,/g, ''))) return fail('claim-like number not in the assessments: ' + m[0]);\n    }\n    if (/\\bp\\s*[<=]\\s*0?\\.\\d/i.test(text)) return fail('p-value not in the assessments');\n  }\n\n  return [{ json: { ok: true, objection_states: states, summary, next_best_action: nba } }];\n} catch (e) {\n  return fail('guard_error: ' + (e && e.message ? e.message : e));\n}\n"
+      },
+      "id": "30789ea8-b4b4-4934-9d39-f177aa42946b",
+      "name": "Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* MODEL FAILED\n * The LLM chain's error output: Azure OpenAI timed out, refused, or returned\n * something the Structured Output Parser could not read. Answer at once with\n * {ok:false, reason} so the backend falls back to the POC rules well inside\n * N8N_TIMEOUT_SECONDS instead of waiting for the execution to die. */\nconst e = $input.first().json || {};\nconst err = e.error;\nconst msg = (err && (err.message || err.description)) || (typeof err === 'string' ? err : '') || e.message || 'model call failed';\nreturn [{ json: { ok: false, reason: 'model_error: ' + String(msg).replace(/\\s+/g, ' ').slice(0, 180) } }];\n"
+      },
+      "id": "d981bd23-d6f3-4fc0-927f-d3084cd45010",
+      "name": "Model Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* REJECT REQUEST\n * The request broke the webhook contract (docs/ARCHITECTURE.md section 6).\n * Answer {ok:false, reason}; the backend falls back to the POC rules. */\nconst r = $input.first().json || {};\nreturn [{ json: { ok: false, reason: 'invalid_request: ' + String(r.reason || 'unknown').slice(0, 180) } }];\n"
+      },
+      "id": "9db63095-db69-4157-8eb3-7c92467e4e88",
+      "name": "Reject Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-N8N-Execution-Id",
+                "value": "={{ $execution.id }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e92c488c-bb5a-4bcc-af68-3fe553ebbf9c",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Next Call Writer (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next Call Writer (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Guard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Model Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Next Call Writer (LLM)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Next Call Writer (LLM)",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model Failed": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reject Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "executionTimeout": 55,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "9952f697-9f34-4222-85ea-223c0994e226",
+  "meta": {
+    "instanceId": "povo-ai-guidance"
+  },
+  "tags": []
+}

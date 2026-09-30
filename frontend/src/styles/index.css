@@ -1,0 +1,198 @@
+/* MUI styles go in the `mui` layer (StyledEngineProvider enableCssLayer) so
+   Tailwind utilities, declared later, win over them. */
+@layer theme, base, mui, components, utilities;
+@import 'tailwindcss';
+
+/* Height-based compact modes from the POC (short laptop screens). */
+@custom-variant short (@media (max-height: 820px));
+@custom-variant tall (@media (min-height: 821px));
+
+@theme {
+  --font-sans: 'Heebo Variable', 'Heebo', system-ui, sans-serif;
+
+  /* Width breakpoints from the POC; used as max-bp*: variants. */
+  --breakpoint-bp640: 640px;
+  --breakpoint-bp760: 760px;
+  --breakpoint-bp900: 900px;
+  --breakpoint-bp1180: 1180px;
+  --breakpoint-bp1400: 1400px;
+  --breakpoint-bp1500: 1500px;
+  --breakpoint-bp1700: 1700px;
+
+  /* Tokens mirror constants/colors.ts and the MUI theme. */
+  --color-bg: #d9e2ec;
+  --color-ink: #0f1f33;
+  --color-ink2: #1e3350;
+  --color-ink3: #334155;
+  --color-blue: #156cb4;
+  --color-blued: #115088;
+  --color-navy: #12406e;
+  --color-sky: #2388d4;
+  --color-bluet: #eaf3fb;
+  --color-bluet2: #c7ddf0;
+  --color-line: #c4cfdc;
+  --color-line2: #d5dee8;
+  --color-warn: #b45309;
+  --color-warnb: #f59e0b;
+  --color-warnbg: #fef3c7;
+  --color-warnbd: #f0c26b;
+  --color-warndk: #92400e;
+  --color-green: #15803d;
+  --color-greenb: #2fa84f;
+  --color-greenbg: #e9f5ee;
+  --color-greenbd: #bfe0cb;
+  --color-purple: #6d5bd0;
+  --color-purple2: #5a48b8;
+  --color-purplel: #7c6bd6;
+  --color-purplet: #f1eefc;
+  --color-purplebd: #d8d0f5;
+  --color-teal: #0e8a8a;
+  --color-npgreen: #0b6b57;
+  --color-red: #dc2626;
+  --color-red2: #b91c1c;
+  --color-redbg: #fef2f2;
+  --color-redbd: #f3b4b4;
+  --color-card: #fcfdfe;
+  --color-soft: #f7fafd;
+
+  --shadow-e1: 0 1px 3px rgba(16, 40, 80, 0.1);
+  --shadow-e2: 0 4px 14px rgba(16, 40, 80, 0.12);
+  --shadow-pop: 0 10px 28px rgba(8, 22, 44, 0.18);
+  --shadow-menu: 0 14px 36px rgba(8, 22, 44, 0.22);
+
+  --animate-cta-pulse: cta-pulse 1.9s ease-in-out infinite;
+  --animate-ai-glow: ai-glow-p 1.4s ease-in-out infinite;
+  --animate-ai-glow-green: ai-glow-g 2s ease-in-out infinite;
+  --animate-ai-pulse: ai-pulse 1.3s ease-in-out infinite;
+  --animate-ai-spin: spin 1.6s linear infinite;
+  --animate-ai-box: ai-box 1.6s ease-in-out infinite;
+  --animate-ai-dot: ai-dot 1s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.25s ease;
+  --animate-red-pulse: red-pulse 1.3s ease-in-out infinite;
+  --animate-chip-pulse: chip-pulse 1.3s ease-in-out infinite;
+  --animate-tag-glow: tag-glow 1.8s ease-in-out 4;
+  --animate-card-glow: card-glow 2s ease-in-out 3;
+  --animate-green-glow: green-glow 1.6s ease-in-out infinite;
+  --animate-pop-in: pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+
+  @keyframes cta-pulse {
+    0%, 100% { transform: none; box-shadow: 0 6px 18px rgba(109, 91, 208, 0.32); }
+    50% { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(109, 91, 208, 0.45); }
+  }
+  @keyframes ai-glow-p {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(109, 91, 208, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(109, 91, 208, 0.22), 0 0 12px rgba(109, 91, 208, 0.4); }
+  }
+  @keyframes ai-glow-g {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.22), 0 0 12px rgba(21, 128, 61, 0.35); }
+  }
+  @keyframes ai-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(109, 91, 208, 0.45); }
+    50% { transform: scale(1.06); box-shadow: 0 0 0 7px rgba(109, 91, 208, 0); }
+  }
+  @keyframes ai-box {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(109, 91, 208, 0); border-color: #d8d0f5; }
+    50% { box-shadow: 0 0 0 3px rgba(109, 91, 208, 0.14), 0 6px 18px rgba(109, 91, 208, 0.18); border-color: #b7a9f0; }
+  }
+  @keyframes ai-dot {
+    0%, 100% { opacity: 0.25; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-3px); }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes red-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    50% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.25), 0 0 12px rgba(220, 38, 38, 0.55); }
+  }
+  @keyframes chip-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.55); }
+    50% { transform: scale(1.12); box-shadow: 0 0 0 6px rgba(21, 128, 61, 0); }
+  }
+  @keyframes tag-glow {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.08); filter: brightness(1.18); }
+  }
+  @keyframes card-glow {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(109, 91, 208, 0.55), 0 6px 16px rgba(109, 91, 208, 0.18); }
+    50% { box-shadow: 0 0 0 4px rgba(109, 91, 208, 0.35), 0 10px 26px rgba(109, 91, 208, 0.32); }
+  }
+  @keyframes green-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(21, 128, 61, 0.15); }
+  }
+  @keyframes pop-in {
+    0% { transform: scale(0.94); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15.7px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  svg text {
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  /* Material Symbols Rounded ligature icons (bundled by the material-symbols package). */
+  .ms {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    display: inline-block;
+    white-space: nowrap;
+    font-feature-settings: 'liga';
+    user-select: none;
+  }
+  /* The AI "sweep" highlight across the activity box. */
+  .ai-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: translateX(-120%);
+    animation: ai-sweep 1.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes ai-sweep {
+    to { transform: translateX(320%); }
+  }
+  /* The vertical connector behind the talking point cards. */
+  .point-rail::before {
+    content: '';
+    position: absolute;
+    left: 25px;
+    top: 16px;
+    bottom: 16px;
+    width: 2px;
+    background: linear-gradient(#c7ddf0, #d8d0f5);
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: var(--color-bluet2);
+    border-radius: 5px;
+  }
+}

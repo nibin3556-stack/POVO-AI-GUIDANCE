@@ -1,0 +1,29 @@
+# Secrets: only *.env.example files are committed.
+.env
+.env.local
+**/.env
+**/.env.local
+!**/.env.example
+
+# Python
+**/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+backend/.localdata/
+
+# Generated seed output (deterministic; regenerate with databricks/seed/generate_seed_data.py)
+databricks/seed/output/
+
+# Node
+**/node_modules/
+frontend/dist/
+*.tsbuildinfo
+coverage/
+
+# Posit / editors / OS
+rsconnect-python/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

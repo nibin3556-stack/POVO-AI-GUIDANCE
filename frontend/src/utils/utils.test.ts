@@ -1,0 +1,131 @@
+import { describe, expect, it } from 'vitest';
+import { call, target } from '../test/fixtures';
+import { additionalKey, anyAnswered, callToFormValues, changedInputs, countAnswered, countNotes, itemKey, toInputs } from './assessment';
+import { isChanged, orderParticipants, replacesRemoved, revealKey, showsPreviousText, tagTone } from './callPrep';
+import { chipList, complianceLevel, firstPlaceholderRange, markExcerpts, severityCounts, splitPlaceholders } from './compliance';
+import { cx } from './cx';
+import { formatLongDate, formatMD, formatMDY, formatNumber, formatShortMD, nameInitials, splitHcps, splitMatch, truncate } from './format';
+import { receptionFromX, stepReception } from './reception';
+import { stepperState } from './steps';
+import { countActiveFilters, EMPTY_FILTERS, filterAccounts, filterParams, focusLabel, nextRoles, nextSort, passesFilters, sortParam, targetFullName, toggleValue } from './targets';
+import { flaggedResult, profile, accounts } from '../test/fixtures';
+
+describe('format', () => {
+  it('formats ISO dates', () => {
+    expect(formatLongDate('2026-10-13')).toBe('October 13, 2026');
+    expect(formatMDY('2026-10-13')).toBe('10/13/2026');
+    expect(formatMD('2026-10-03')).toBe('10/03');
+    expect(formatShortMD('2026-10-09')).toBe('10/9');
+    expect(formatMDY(null)).toBe('');
+  });
+  it('keeps the lowercase s of HCPs', () => {
+    expect(splitHcps('12 HCPS')).toEqual([{ text: '12 HCPS', lowercase: false }]);
+    expect(splitHcps('3 of 5 HCPs yet')).toEqual([
+      { text: '3 of 5 HCP', lowercase: false },
+      { text: 's', lowercase: true },
+      { text: ' yet', lowercase: false },
+    ]);
+  });
+  it('splits matches, truncates and formats numbers', () => {
+    expect(splitMatch('Dana Whitaker', 'whit')).toEqual({ before: 'Dana ', match: 'Whit', after: 'aker' });
+    expect(splitMatch('Dana', 'zz')).toBeNull();
+    expect(truncate('abcdefghij', 6)).toBe('abcd…');
+    expect(formatNumber(1234.56)).toBe('1,234.6');
+    expect(nameInitials('Winters, John')).toBe('WI');
+  });
+});
+
+describe('targets', () => {
+  it('builds names, labels and sort params', () => {
+    expect(targetFullName(target())).toBe('Dr. Winters, John, MD');
+    expect(targetFullName(target({ role_type: 'PA', display_name: 'Kristen Casey' }))).toBe('Kristen Casey, PA');
+    expect(focusLabel('conventional')).toBe('Conventional therapy');
+    expect(sortParam({ key: 'decile', direction: 'asc' })).toBe('decile:asc');
+    expect(nextSort({ key: 'decile', direction: 'desc' }, 'decile')).toEqual({ key: 'decile', direction: 'asc' });
+    expect(nextSort({ key: 'decile', direction: 'asc' }, 'hs_patients')).toEqual({ key: 'hs_patients', direction: 'desc' });
+  });
+  it('serialises and applies filters', () => {
+    const filters = { ...EMPTY_FILTERS, focus: ['jak', 'humira'], account: ['A1'] };
+    expect(filterParams(filters)).toEqual({ focus: 'jak,humira', account_id: 'A1' });
+    expect(countActiveFilters(filters)).toBe(2);
+    expect(toggleValue(['a'], 'a')).toEqual([]);
+    expect(passesFilters(target(), filters)).toBe(true);
+    expect(passesFilters(target({ competitive_focus: 'cosentyx' }), filters)).toBe(false);
+    expect(filterAccounts(accounts, { ...EMPTY_FILTERS, focus: ['humira'] }).map((a) => a.account_id)).toEqual(['A9']);
+  });
+  it('toggles roles with empty meaning all', () => {
+    expect(nextRoles([], 'NP')).toEqual(['HCP', 'PA']);
+    expect(nextRoles(['HCP', 'PA'], 'NP')).toEqual([]);
+  });
+});
+
+describe('assessment', () => {
+  const withRows = call({
+    assessments: [
+      { participant_id: 'H2', category: 'messaging', point_id: 'M1', point_rank: 1, point_text: 't', was_raised: true, reception: 2, note: 'ok', compliance_status: 'passed', compliance_check_id: 'K' },
+      { participant_id: 'H2', category: 'additional', point_id: 'additional', point_rank: 0, point_text: '', was_raised: true, reception: null, note: 'extra', compliance_status: 'unchecked', compliance_check_id: null },
+    ],
+  });
+  it('maps a call to form values and back', () => {
+    const values = callToFormValues(withRows);
+    expect(values.additional_note).toBe('extra');
+    expect(values.items[itemKey('H2', 'messaging', 'M1')]?.reception).toBe(2);
+    expect(toInputs(values, 'H2')).toHaveLength(2);
+    expect(additionalKey('H2')).toBe('H2|additional|additional');
+  });
+  it('counts and diffs', () => {
+    const before = callToFormValues(withRows);
+    const key = itemKey('H2', 'messaging', 'M1');
+    const after = { ...before, items: { ...before.items, [key]: { ...before.items[key]!, note: 'changed' } } };
+    expect(changedInputs(before, after, 'H2')).toHaveLength(1);
+    expect(changedInputs(before, before, 'H2')).toHaveLength(0);
+    expect(countAnswered(after, 'H2')).toBe(1);
+    expect(countAnswered(after, 'H2', 'closing')).toBe(0);
+    expect(anyAnswered(after)).toBe(true);
+    expect(countNotes(after)).toBe(2);
+  });
+});
+
+describe('callPrep and compliance', () => {
+  it('maps revision tags to tones', () => {
+    expect(tagTone('Retained · well received')).toBe('res');
+    expect(tagTone('Changed')).toBe('upd');
+    expect(tagTone('▲ was #3')).toBe('mv');
+    expect(tagTone('Still open · address first')).toBe('open');
+    expect(tagTone('New')).toBe('new');
+    expect(tagTone('New AI suggestion')).toBe('nai');
+    const point = { point_id: 'x', rank: 1, pillar: null, text: 't', detail: null, detail_label: null, tags: ['New · replaces a removed message'], previous_text: 'old', previous_rank: 1 } as const;
+    expect(replacesRemoved({ ...point, tags: [...point.tags] })).toBe(true);
+    expect(showsPreviousText({ ...point, tags: [] }, 'objection')).toBe(false);
+    expect(showsPreviousText({ ...point, tags: [] }, 'messaging')).toBe(true);
+    expect(isChanged({ ...point, tags: [] })).toBe(false);
+    expect(revealKey('H2', 'closing', 2)).toBe('H2|closing|2');
+    expect(orderParticipants(profile.participants, ['N11', 'H2']).map((p) => p.hcp_id)).toEqual(['N11', 'H2']);
+  });
+  it('summarises compliance issues', () => {
+    expect(complianceLevel(flaggedResult.issues, 'high')).toBe('bad');
+    expect(complianceLevel([{ ...flaggedResult.issues[0]!, severity: 'low' }])).toBe('ok');
+    expect(severityCounts(flaggedResult.issues)).toEqual({ high: 1, med: 0, low: 0 });
+    expect(markExcerpts('well damn it', ['damn'])).toEqual([
+      { text: 'well ', marked: false },
+      { text: 'damn', marked: true },
+      { text: ' it', marked: false },
+    ]);
+    expect(splitPlaceholders('a [b] c').map((p) => p.marked)).toEqual([false, true, false]);
+    expect(firstPlaceholderRange('x [y]')).toEqual([2, 5]);
+    expect(chipList(flaggedResult.issues)).toBe('Vulgar');
+  });
+});
+
+describe('small helpers', () => {
+  it('cx, reception and steps', () => {
+    expect(cx('a', false, null, 'b')).toBe('a b');
+    expect(receptionFromX(0, 0, 100)).toBe(0);
+    expect(receptionFromX(55, 0, 100)).toBe(1);
+    expect(receptionFromX(200, 0, 100)).toBe(2);
+    expect(stepReception(null, 1)).toBe(1);
+    expect(stepReception(2, 1)).toBe(2);
+    expect(stepReception(1, -1)).toBe(0);
+    expect(stepperState(['a', 'b'], 2).map((s) => s.state)).toEqual(['done', 'run']);
+  });
+});

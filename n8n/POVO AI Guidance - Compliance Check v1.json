@@ -1,0 +1,343 @@
+{
+  "name": "POVO AI Guidance - Compliance Check v1",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## POVO AI Guidance - Compliance Check v1\n\nSecond pass after the backend's 14 deterministic rules. Finds ADDITIONAL issues only (rule ids from `allowed_rule_ids`, excerpt quoted from the note) and drafts a compliant rewrite (≤200 characters, 600 for `additional`) that keeps the rep's facts and uses the approved redirect phrases.\n\nResponse: `{ok:true, issues:[{rule_id, excerpt, why}], suggested_text}` or `{ok:false, reason}`. The Guard rejects unknown rule ids, over-long rewrites and PHI (DOB, MRN, SSN, phone, email).\n### Flow\nWebhook → Build Prompt → Request Valid? → LLM chain (Azure OpenAI gpt-4.1, temperature 0, JSON) + Structured Output Parser → Guard → Respond to Webhook.\n- Contract break → **Reject Request** → `{ok:false, reason}`\n- Model error / timeout / unparseable output → chain error output → **Model Failed** → `{ok:false, reason}`\n- Guard failure → `{ok:false, reason}`; success → `{ok:true, ...payload}`\n\nOn any `ok:false` the backend falls back to the deterministic POC rules.\n\n### Setup\n- Attach the **Azure OpenAI account** credential to *Azure OpenAI Chat Model* (deployment `gpt-4.1`).\n- Path `POST /webhook/povo-compliance-check`. One active workflow per path: bump the version in the workflow name, never keep two files on one path.",
+        "height": 520,
+        "width": 560,
+        "color": 4
+      },
+      "id": "699115d8-faff-459c-801a-26a45b31ee69",
+      "name": "Read Me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -660,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "povo-compliance-check",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "100351d7-14a7-44a3-a7b7-a3c829c61025",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "db25f73f-0703-4afb-9468-0a5bb2ffd7d6"
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =============================================================================\n * BUILD PROMPT - POVO AI Guidance, Compliance Check v1\n *\n * Contract (docs/ARCHITECTURE.md section 6):\n *   request  {request_id, category, point_text, participant_role, note,\n *             rule_findings:[{rule_id, title, severity}], allowed_rule_ids:[...14]}\n *   response {ok:true, issues:[{rule_id, excerpt, why}], suggested_text}\n *            | {ok:false, reason}\n *\n * The deterministic regex rules in the backend are the guaranteed floor. This\n * is the second pass: the model looks for ADDITIONAL issues only and drafts a\n * compliant rewrite. It never replaces or overrules a rule finding.\n * ========================================================================== */\nconst body = ($input.first().json || {}).body || {};\nconst reject = (reason) => [{ json: { valid: false, reason: String(reason).slice(0, 200) } }];\nconst str = (v) => (v === null || v === undefined ? '' : String(v)).replace(/\\s+/g, ' ').trim();\n\n/* The 14 compliance rules (docs/POC_FUNCTIONAL_SPEC.md section 6). */\nconst RULES = [\n  { id: 'off',    chip: 'Off-label',      severity: 'high', title: 'Off-label or unapproved use', look: 'uses, doses, populations or indications other than moderate-to-severe HS in adults; unapproved dosing' },\n  { id: 'claim',  chip: 'Claim',          severity: 'med',  title: 'Unbalanced or comparative claim', look: 'superlatives, \"best\", \"safest\", \"better than\", guarantees, head-to-head comparisons, efficacy without balance' },\n  { id: 'ae',     chip: 'Adverse event',  severity: 'high', title: 'Possible adverse event (report to Pharmacovigilance within 24 h)', look: 'a patient who had a side effect, reaction, infection, lab abnormality, hospitalization or other harm while on a product' },\n  { id: 'phi',    chip: 'Patient ID',     severity: 'high', title: 'Patient identifier', look: 'patient names or initials, dates of birth, ages with dates, record numbers, phone numbers, emails, addresses' },\n  { id: 'vulgar', chip: 'Vulgar',         severity: 'high', title: 'Vulgar language', look: 'profanity or crude wording, including masked profanity' },\n  { id: 'lang',   chip: 'Unprofessional', severity: 'med',  title: 'Unprofessional wording', look: 'insults, sarcasm, slang, disparaging remarks about the HCP, office or competitors' },\n  { id: 'price',  chip: 'Pricing',        severity: 'med',  title: 'Pricing, samples or incentives', look: 'prices, discounts, coupons, copay amounts, free product, gifts, meals or other incentives' },\n  { id: 'sens',   chip: 'Personal',       severity: 'med',  title: 'Sensitive or personal information', look: 'personal life details about the HCP or staff: health, family, religion, politics, finances' },\n  { id: 'irr',    chip: 'Off topic',      severity: 'low',  title: 'Information unrelated to the call', look: 'content unrelated to HS care, POVO or the call, such as sports, weather or travel chat' },\n  { id: 'fill',   chip: 'Filler',         severity: 'low',  title: 'Filler wording', look: 'filler such as \"basically\", \"just\", \"you know\", \"kind of\", \"etc.\"' },\n  { id: 'gib',    chip: 'Not readable',   severity: 'high', title: 'Text is not readable', look: 'keyboard mashing, random characters, text with no readable words' },\n  { id: 'vague',  chip: 'Too vague',      severity: 'med',  title: 'Note is too vague (< 3 words or a generic phrase)', look: 'fewer than 3 words or a generic phrase such as \"good call\" or \"discussed\"' },\n  { id: 'ph',     chip: 'Incomplete',     severity: 'med',  title: 'Note is incomplete (unfilled [brackets])', look: 'unfilled square-bracket placeholders' },\n  { id: 'rel',    chip: 'Unrelated',      severity: 'med',  title: 'Not related to this point', look: 'a note that says nothing about the talking point it is attached to, or about HS or POVO' },\n];\nconst RULE_BY_ID = new Map(RULES.map((r) => [r.id, r]));\n\nconst requestId = str(body.request_id);\nif (!requestId) return reject('missing request_id');\nconst category = str(body.category).toLowerCase().replace(/s$/, '');\nif (!category) return reject('missing category');\nconst note = String(body.note === null || body.note === undefined ? '' : body.note).trim();\nif (!note) return reject('empty note');\n\nconst allowed = (Array.isArray(body.allowed_rule_ids) ? body.allowed_rule_ids : []).map(str).filter(Boolean);\nif (!allowed.length) return reject('missing allowed_rule_ids');\nconst allowedKnown = allowed.filter((id) => RULE_BY_ID.has(id));\nif (!allowedKnown.length) return reject('allowed_rule_ids has no known rule id');\n\nconst findings = (Array.isArray(body.rule_findings) ? body.rule_findings : [])\n  .filter((f) => f && str(f.rule_id))\n  .map((f) => ({ rule_id: str(f.rule_id), title: str(f.title) || (RULE_BY_ID.get(str(f.rule_id)) || {}).title || '', severity: str(f.severity) }));\n\n// 200 characters for a point note, 600 for the \"Additional notes\" textarea.\nconst limit = category === 'additional' ? 600 : 200;\n\nconst SYSTEM_PROMPT = [\n  'You are a pharmaceutical field-sales compliance reviewer for POVO AI Guidance at Incyte.',\n  'POVO is an oral selective JAK1 inhibitor approved for moderate-to-severe hidradenitis suppurativa (HS) in adults.',\n  'A POVO Sales Representative wrote the NOTE below after a call. Deterministic rules have already checked it; what they found is listed under RULE FINDINGS.',\n  '',\n  'YOUR TASK',\n  '1. Find ADDITIONAL compliance issues that the rules missed. Only use rule ids from ALLOWED RULES. Never repeat a rule id that is already in RULE FINDINGS. If there is nothing more to add, return an empty issues array.',\n  '   For each issue give rule_id, excerpt (copied character for character from the NOTE, at most 120 characters) and why (one short sentence).',\n  '2. Write suggested_text: a compliant rewrite of the whole NOTE, at most ' + limit + ' characters, that fixes every rule finding and every issue you added.',\n  '',\n  'REWRITE RULES',\n  \"- Keep the rep's own facts: what was discussed, how the participant responded and the agreed next step. Do not add facts, outcomes, commitments or dates that are not in the NOTE.\",\n  '- Remove off-label details, adverse-event details, patient identifiers (names, initials, dates of birth, record numbers, phone numbers, emails, addresses), pricing, samples and incentives, vulgar or unprofessional wording, personal information, off-topic content and filler.',\n  '- If an off-label use or question came up, write exactly: Off-label question sent to Medical Information',\n  '- If a possible adverse event or other safety information came up, write exactly: Safety information reported to Pharmacovigilance',\n  '- If pricing, cost, coverage or access came up, write exactly: Access questions referred to IncyteCARES',\n  '- Never invent clinical claims. Do not add efficacy or safety statements, numbers, comparisons or trial results.',\n  '- The POINT is approved (MLR) text and is context only. Never alter, quote at length or re-word it.',\n  '- If nothing usable is left, write a short template the rep can complete, with square-bracket placeholders such as [how the participant responded] and [agreed next step].',\n  '- If RULE FINDINGS is empty and you found no issue, return the NOTE unchanged as suggested_text.',\n  '- Tone: a short, factual CRM call note in the past tense, professional US English. No emojis, no markdown.',\n  '',\n  'OUTPUT',\n  'Return JSON only, with no prose and no code fences. Fields:',\n  '- issues: array of objects with the fields rule_id, excerpt and why.',\n  '- suggested_text: string.',\n].join('\\n');\n\nconst ruleTable = allowedKnown\n  .map((id) => { const r = RULE_BY_ID.get(id); return '- ' + r.id + ' | ' + r.title + ' | severity ' + r.severity + ' | look for: ' + r.look; })\n  .join('\\n');\nconst findingBlock = findings.length\n  ? findings.map((f) => '- ' + f.rule_id + ' | ' + f.title + (f.severity ? ' | ' + f.severity : '')).join('\\n')\n  : '- none';\n\nconst USER_PROMPT = [\n  'CATEGORY: ' + category,\n  'PARTICIPANT ROLE: ' + (str(body.participant_role) || 'HCP'),\n  'SUGGESTED TEXT LIMIT: ' + limit + ' characters',\n  '',\n  'POINT (approved text, context only)',\n  str(body.point_text) || '(none: free-text additional notes)',\n  '',\n  'ALLOWED RULES (id | title | severity | what to look for)',\n  ruleTable,\n  '',\n  'RULE FINDINGS (already found by the deterministic rules)',\n  findingBlock,\n  '',\n  'NOTE',\n  note,\n  '',\n  'Return the JSON now.',\n].join('\\n');\n\nreturn [{\n  json: {\n    valid: true,\n    request_id: requestId,\n    category,\n    limit,\n    note,\n    allowed_rule_ids: allowed,\n    finding_rule_ids: findings.map((f) => f.rule_id),\n    system_prompt: SYSTEM_PROMPT.replace(/[{}]/g, ''),\n    user_prompt: USER_PROMPT,\n  },\n}];\n"
+      },
+      "id": "46632686-22a2-45ae-8415-50ad035644bb",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "1bbc7f80-e91c-4796-89c6-9fdaaa7fa72e",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0620eaaa-e275-4229-8c94-59933799f5e9",
+      "name": "Request Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_prompt }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $json.system_prompt }}"
+            }
+          ]
+        }
+      },
+      "id": "1668d23b-ea29-452a-9355-5959091618e7",
+      "name": "Compliance Reviewer (LLM)",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        700,
+        -100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "azureOpenAiApi",
+        "model": "gpt-4.1",
+        "options": {
+          "temperature": 0,
+          "maxTokens": 900,
+          "responseFormat": "json_object",
+          "timeout": 25000,
+          "maxRetries": 1
+        }
+      },
+      "id": "db1e0b7a-d701-4fbd-9ab0-7cb19590f97a",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        620,
+        140
+      ],
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "REPLACE_WITH_YOUR_AZURE_OPENAI_CRED_ID",
+          "name": "Azure OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"issues\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"rule_id\": {\n            \"type\": \"string\"\n          },\n          \"excerpt\": {\n            \"type\": \"string\"\n          },\n          \"why\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"rule_id\",\n          \"excerpt\",\n          \"why\"\n        ]\n      }\n    },\n    \"suggested_text\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"issues\",\n    \"suggested_text\"\n  ]\n}"
+      },
+      "id": "2df62bac-bc7c-4229-8c2a-5c763db1b532",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* =============================================================================\n * GUARD - POVO AI Guidance, Compliance Check v1\n *\n * Response is exactly one of:\n *   {ok:true,  issues:[{rule_id, excerpt, why}], suggested_text}\n *   {ok:false, reason}\n *\n * Hard failures (ok:false, the backend keeps the rules-only result):\n *   - output not readable as JSON\n *   - an issue whose rule_id is not in allowed_rule_ids\n *   - suggested_text missing, empty, or longer than the limit\n *     (200 characters, 600 for category \"additional\")\n *   - suggested_text contains an obvious PHI pattern: date of birth, MRN or\n *     record number, SSN, phone number, email address\n *   - suggested_text mentions off-label use or pricing other than through\n *     the approved redirect phrases\n * Soft clean-ups:\n *   - an issue that repeats a rule the deterministic rules already found is\n *     dropped (the model is asked for ADDITIONAL issues only)\n *   - an issue whose excerpt is not in the note is dropped (not grounded)\n *   - duplicate issues are dropped; \"why\" is capped at 200 characters\n * ========================================================================== */\nconst ctx = $('Build Prompt').first().json;\nconst raw = $input.first().json || {};\nconst fail = (reason) => [{ json: { ok: false, reason: String(reason).slice(0, 200) } }];\n\nfunction unwrap(value) {\n  let v = value;\n  for (let i = 0; i < 4; i += 1) {\n    if (typeof v === 'string') {\n      const s = v.replace(/^\\s*```(?:json)?/i, '').replace(/```\\s*$/, '').trim();\n      try { v = JSON.parse(s); } catch (e) { return null; }\n      continue;\n    }\n    if (v && typeof v === 'object' && !Array.isArray(v) && v.output !== undefined && Object.keys(v).length <= 2) { v = v.output; continue; }\n    if (v && typeof v === 'object' && !Array.isArray(v) && v.text !== undefined && Object.keys(v).length === 1) { v = v.text; continue; }\n    break;\n  }\n  return v && typeof v === 'object' && !Array.isArray(v) ? v : null;\n}\n\nconst APPROVED_PHRASES = [\n  'Off-label question sent to Medical Information',\n  'Safety information reported to Pharmacovigilance',\n  'Access questions referred to IncyteCARES',\n];\n\nfunction phiProblem(text) {\n  const t = String(text);\n  const thisYear = new Date().getFullYear();\n  if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i.test(t)) return 'email address';\n  if (/(\\+?1[\\s.-]?)?\\(?\\b\\d{3}\\)?[\\s.-]\\d{3}[\\s.-]\\d{4}\\b/.test(t)) return 'phone number';\n  if (/\\b\\d{3}-\\d{2}-\\d{4}\\b/.test(t)) return 'social security number';\n  if (/\\b(MRN|medical record|record (number|no\\.?|#)|chart (number|no\\.?|#)|patient id)\\b/i.test(t)) return 'medical record number';\n  if (/\\b(DOB|D\\.O\\.B\\.?|date of birth|birth ?date|born (on|in))\\b/i.test(t)) return 'date of birth';\n  const dates = t.match(/\\b\\d{1,2}[\\/.-]\\d{1,2}[\\/.-](\\d{4})\\b|\\b(\\d{4})-\\d{2}-\\d{2}\\b/g) || [];\n  for (const d of dates) {\n    const y = parseInt((d.match(/\\d{4}/) || ['0'])[0], 10);\n    if (y && y < thisYear - 1) return 'date that looks like a date of birth';\n  }\n  return '';\n}\n\nfunction claimProblem(text) {\n  let t = String(text);\n  APPROVED_PHRASES.forEach((p) => { t = t.split(p).join(' '); });\n  if (/off[\\s-]?label/i.test(t)) return 'off-label wording outside the approved redirect';\n  if (/\\$\\s?\\d|\\b\\d+\\s?(dollars|usd)\\b|\\b(coupon|discount|rebate|free (sample|samples|drug|product|trial))\\b/i.test(t)) return 'pricing or incentive wording';\n  return '';\n}\n\ntry {\n  if (raw.error) return fail('model_error: ' + (raw.error.message || raw.error));\n  const out = unwrap(raw);\n  if (!out) return fail('model output is not a JSON object');\n\n  const allowed = new Set(ctx.allowed_rule_ids);\n  const already = new Set(ctx.finding_rule_ids);\n  const norm = (s) => String(s || '').toLowerCase().replace(/\\s+/g, ' ').trim();\n  const noteNorm = norm(ctx.note);\n\n  const rawIssues = Array.isArray(out.issues) ? out.issues : [];\n  const issues = [];\n  const seen = new Set();\n  for (const item of rawIssues) {\n    if (!item || typeof item !== 'object') continue;\n    const ruleId = String(item.rule_id || '').trim();\n    if (!allowed.has(ruleId)) return fail('issue rule_id not in allowed_rule_ids: ' + (ruleId || '(empty)'));\n    if (already.has(ruleId)) continue;\n    const excerpt = String(item.excerpt || '').replace(/\\s+/g, ' ').trim().slice(0, 160);\n    if (!excerpt || noteNorm.indexOf(norm(excerpt)) < 0) continue;\n    const key = ruleId + '|' + norm(excerpt);\n    if (seen.has(key)) continue;\n    seen.add(key);\n    const why = String(item.why || '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    issues.push({ rule_id: ruleId, excerpt, why });\n  }\n\n  const suggested = String(out.suggested_text || '').replace(/[ \\t]+/g, ' ').trim();\n  if (!suggested) return fail('suggested_text missing');\n  if (suggested.length > ctx.limit) return fail('suggested_text is ' + suggested.length + ' characters; limit is ' + ctx.limit);\n  const phi = phiProblem(suggested);\n  if (phi) return fail('suggested_text contains a possible ' + phi);\n  const claim = claimProblem(suggested);\n  if (claim) return fail('suggested_text contains ' + claim);\n\n  return [{ json: { ok: true, issues, suggested_text: suggested } }];\n} catch (e) {\n  return fail('guard_error: ' + (e && e.message ? e.message : e));\n}\n"
+      },
+      "id": "f1b7d0d9-4cbf-4921-aabc-abd6cd435790",
+      "name": "Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* MODEL FAILED\n * The LLM chain's error output: Azure OpenAI timed out, refused, or returned\n * something the Structured Output Parser could not read. Answer at once with\n * {ok:false, reason} so the backend falls back to the POC rules well inside\n * N8N_TIMEOUT_SECONDS instead of waiting for the execution to die. */\nconst e = $input.first().json || {};\nconst err = e.error;\nconst msg = (err && (err.message || err.description)) || (typeof err === 'string' ? err : '') || e.message || 'model call failed';\nreturn [{ json: { ok: false, reason: 'model_error: ' + String(msg).replace(/\\s+/g, ' ').slice(0, 180) } }];\n"
+      },
+      "id": "c8296894-7794-4314-be86-5cda05423d25",
+      "name": "Model Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* REJECT REQUEST\n * The request broke the webhook contract (docs/ARCHITECTURE.md section 6).\n * Answer {ok:false, reason}; the backend falls back to the POC rules. */\nconst r = $input.first().json || {};\nreturn [{ json: { ok: false, reason: 'invalid_request: ' + String(r.reason || 'unknown').slice(0, 180) } }];\n"
+      },
+      "id": "9533657f-fd2d-40bf-9485-d3d1f9cd9aa9",
+      "name": "Reject Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-N8N-Execution-Id",
+                "value": "={{ $execution.id }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f5b18300-40b5-40d9-9222-6a2b0e24eb25",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Compliance Reviewer (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Reviewer (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Guard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Model Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Compliance Reviewer (LLM)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Compliance Reviewer (LLM)",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model Failed": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reject Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "executionTimeout": 55,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3e393885-975a-46f6-8531-3dde2824a7a3",
+  "meta": {
+    "instanceId": "povo-ai-guidance"
+  },
+  "tags": []
+}
