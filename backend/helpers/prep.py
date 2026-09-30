@@ -34,8 +34,6 @@ from helpers.targets import Universe
 
 logger = logging.getLogger("povo.prep")
 TP_SHOW = 3
-TEAM = {"rep": ("Direct call", "POVO Sales"), "adfa": ("ADFA visit", "ADFA"), "opz": ("Opz Sales call", "Opz Sales"),
-        "msl": ("MSL visit", "MSL"), "spkr": ("Speaker program", "Speaker"), "pr": ("PR visit", "PR")}
 #: Real data carries dozens of rep calls for a Super High target; the POC shows
 #: six cards. The profile returns the most recent ones.
 MAX_INTERACTIONS = 12
@@ -156,7 +154,7 @@ def current_list(u: Universe, primary: dict, p: dict, category: str, request_id:
                           key=lambda i: i["INTERACTION_DATE"] or today(), reverse=True)[:MAX_INTERACTIONS]
             body = {"request_id": request_id, "category": category, "participant": participant_payload(u, p),
                     "interactions": [{"date": i["INTERACTION_DATE"].isoformat() if i["INTERACTION_DATE"] else None,
-                                      "type_label": i.get("INTERACTION_TYPE") or TEAM.get(i["CHANNEL_CODE"], ("",))[0],
+                                      "type_label": i.get("INTERACTION_TYPE") or u.refs.channel(i["CHANNEL_CODE"])["TYPE_LABEL"],
                                       "summary": i.get("SUMMARY") or "POVO discussed"} for i in ints],
                     "candidates": [{"point_id": c["point_id"], "pillar": c["pillar"], "text": c["text"],
                                     "detail": c["detail"]} for c in points],
@@ -233,7 +231,7 @@ def _bullets(u: Universe, p: dict, primary: dict, history: Optional[tuple]) -> l
             f"Decile D{p['decile']} {dot} #{p['_hs_rank']} of {len(u.list)} POVO Targets {dot} about {visits} HS visits a month",
             f"{seg['SHORT_NAME']} Opportunity {dot} primary focus: {u.refs.focus_label(focus)}"
             f"{' (off label in HS)' if focus == 'jak' else ''} {dot} discuss patients like "
-            f"{'Tara' if p.get('segment_code') == 'imm' else 'Marcus'}",
+            f"{seg.get('ARCHETYPE_NAME') or ''}",
             f"{povo} POVO {'patient' if povo == 1 else 'patients'}; {hs - povo} HS patients not yet on POVO" if povo
             else f"No POVO scripts yet; {hs} HS patients still to reach",
             "No direct POVO Sales call yet" if not last else
@@ -272,8 +270,8 @@ def profile(u: Universe, hcp_id: str) -> dict:
     out = []
     for p in participants_of(u, primary):
         ints = [{"interaction_id": i["INTERACTION_ID"], "date": i["INTERACTION_DATE"],
-                 "channel_code": i["CHANNEL_CODE"], "team_label": TEAM.get(i["CHANNEL_CODE"], ("", ""))[1],
-                 "type_label": i.get("INTERACTION_TYPE") or TEAM.get(i["CHANNEL_CODE"], ("",))[0],
+                 "channel_code": i["CHANNEL_CODE"], "team_label": u.refs.channel(i["CHANNEL_CODE"])["TEAM_LABEL"],
+                 "type_label": i.get("INTERACTION_TYPE") or u.refs.channel(i["CHANNEL_CODE"])["TYPE_LABEL"],
                  "summary": i.get("SUMMARY") or "POVO discussed", "is_new": False}
                 for i in u.td.interactions if i["HCP_ID"] == p["hcp_id"]]
         for c in u.app_calls_by_hcp.get(p["hcp_id"], []):
@@ -282,7 +280,7 @@ def profile(u: Universe, hcp_id: str) -> dict:
                          "is_new": True})
         ints.sort(key=lambda x: (x["date"] or today(), x["is_new"]), reverse=True)
         ints = ints[:MAX_INTERACTIONS]
-        counts = {"all": len(ints), **{k: sum(1 for x in ints if x["channel_code"] == k) for k in TEAM}}
+        counts = {"all": len(ints), **{k: sum(1 for x in ints if x["channel_code"] == k) for k in (c["CHANNEL_CODE"] for c in u.refs.channels)}}
         tier = u.refs.tier(p["tier_code"])
         out.append({
             "hcp_id": p["hcp_id"], "role_type": p["role_type"], "degree": p.get("degree"), "name": p["name"],

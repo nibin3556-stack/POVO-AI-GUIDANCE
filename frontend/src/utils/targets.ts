@@ -1,30 +1,10 @@
-import { FOCUS_COLORS, SEGMENT_COLORS } from '../constants/colors';
-import type { Account, Facet, FilterGroup, RoleType, Participant, Target, TargetFilters, TargetSort, TierCode } from '../types/models';
-
-export const TIER_NAMES: Record<TierCode, string> = { SH: 'Super High', MED: 'Medium', LOW: 'Low' };
-
-export const tierName = (code: TierCode | null | undefined): string => (code ? TIER_NAMES[code] : '');
+import type { Account, FilterGroup, RoleType, Participant, Target, TargetFilters, TargetSort } from '../types/models';
 
 /** "Dr. Winters, John, MD" for a physician, "Kristen Casey, PA" for an NP or PA. */
 export const targetFullName = (t: Pick<Target, 'role_type' | 'name' | 'display_name' | 'degree'>): string =>
   t.role_type === 'HCP' ? `Dr. ${t.name}, ${t.degree}` : `${t.display_name}, ${t.role_type}`;
 
 export const participantFullName = (p: Participant): string => targetFullName(p);
-
-export const focusColor = (code: string, facets?: Facet[]): string => {
-  const fromFacet = facets?.find((f) => f.code === code)?.color_hex;
-  return fromFacet ?? FOCUS_COLORS[code.toLowerCase()] ?? '#64748B';
-};
-
-export const focusLabel = (code: string, facets?: Facet[]): string => {
-  const fromFacet = facets?.find((f) => f.code === code)?.label;
-  if (fromFacet) return fromFacet;
-  if (code.toLowerCase() === 'conventional') return 'Conventional therapy';
-  if (code.toLowerCase() === 'jak') return 'JAK';
-  return code.charAt(0).toUpperCase() + code.slice(1);
-};
-
-export const segmentColor = (code: string, hex?: string | null): string => hex || SEGMENT_COLORS[code] || '#156CB4';
 
 export const EMPTY_FILTERS: TargetFilters = { focus: [], segment: [], tier: [], account: [], role: [] };
 
@@ -63,13 +43,11 @@ export const passesFilters = (t: Target, filters: TargetFilters): boolean => {
   );
 };
 
-export const ROLE_TYPES: RoleType[] = ['HCP', 'NP', 'PA'];
-
 /** Empty list = every role shown. Returns the next "shown roles" list after toggling one role. */
-export const nextRoles = (current: string[], role: string): string[] => {
-  const shown = current.length ? current : ROLE_TYPES;
+export const nextRoles = (current: string[], role: string, allRoles: readonly RoleType[]): string[] => {
+  const shown: string[] = current.length ? current : [...allRoles];
   const next = shown.includes(role) ? shown.filter((r) => r !== role) : [...shown, role];
-  return next.length === ROLE_TYPES.length ? [] : next;
+  return next.length === allRoles.length ? [] : next;
 };
 
 

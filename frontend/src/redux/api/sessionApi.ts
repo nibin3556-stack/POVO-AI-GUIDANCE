@@ -1,5 +1,5 @@
 import { EMPLOYEE_SEARCH_LIMIT } from '../../constants/constant';
-import type { Employee, Me } from '../../types/models';
+import type { Employee, Me, Reference } from '../../types/models';
 import { TAGS, baseApi } from './baseApi';
 
 export const sessionApi = baseApi.injectEndpoints({
@@ -7,6 +7,11 @@ export const sessionApi = baseApi.injectEndpoints({
     getMe: build.query<Me, void>({
       query: () => ({ url: '/me' }),
       providesTags: [TAGS.ME],
+    }),
+    /** Lookups rarely change: loaded once per session and kept. */
+    getReference: build.query<Reference, void>({
+      query: () => ({ url: '/reference' }),
+      keepUnusedDataFor: 24 * 60 * 60,
     }),
     searchEmployees: build.query<Employee[], string>({
       query: (q) => ({ url: '/employees/search', params: { q, limit: EMPLOYEE_SEARCH_LIMIT } }),
@@ -23,6 +28,7 @@ export const sessionApi = baseApi.injectEndpoints({
 
 export const {
   useGetMeQuery,
+  useGetReferenceQuery,
   useSearchEmployeesQuery,
   useLazySearchEmployeesQuery,
   useStartImpersonationMutation,

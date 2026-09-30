@@ -1,14 +1,13 @@
 import { memo, useCallback, useMemo } from 'react';
 import AsyncContent from '../../components/common/AsyncContent';
 import DataTable, { type DataColumn } from '../../components/common/DataTable';
-import FocusTag from '../../components/common/FocusTag';
+import CompetitiveFocusTag from '../../components/common/CompetitiveFocusTag';
 import Icon from '../../components/common/Icon';
 import StatusChip from '../../components/common/StatusChip';
 import { LABELS } from '../../constants/labels';
 import { accountToggled } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import type { Account, Facets } from '../../types/models';
-import { focusColor, focusLabel } from '../../utils/targets';
+import type { Account } from '../../types/models';
 import AccountTargets from './AccountTargets';
 
 interface AccountsTableProps {
@@ -16,7 +15,6 @@ interface AccountsTableProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
-  facets: Facets | undefined;
   selectedId: string | null;
   onSelect: (hcpId: string) => void;
 }
@@ -38,7 +36,7 @@ const ClaimsOnlyNote = ({ hs }: { hs: number }) => {
 };
 
 /** Accounts, including claims-only ones; a row expands to its call plan targets. */
-const AccountsTable = ({ accounts, isLoading, error, onRetry, facets, selectedId, onSelect }: AccountsTableProps) => {
+const AccountsTable = ({ accounts, isLoading, error, onRetry, selectedId, onSelect }: AccountsTableProps) => {
   const dispatch = useAppDispatch();
   const openId = useAppSelector((s) => s.callSession.openAccountId);
   const columns = useMemo<DataColumn<Account>[]>(
@@ -64,13 +62,13 @@ const AccountsTable = ({ accounts, isLoading, error, onRetry, facets, selectedId
         width: 'w-[16%]',
         render: (a) => (a.is_claims_only ? <StatusChip variant="risk">{L.noAffiliations}</StatusChip> : L.targetsInPlan(a.target_count, a.in_plan_count)),
       },
-      { key: 'focus', header: L.mainFocus, width: 'w-[14%]', render: (a) => <FocusTag label={focusLabel(a.main_focus, facets?.focus)} color={focusColor(a.main_focus, facets?.focus)} /> },
+      { key: 'focus', header: L.mainFocus, width: 'w-[14%]', render: (a) => <CompetitiveFocusTag code={a.main_focus} /> },
     ],
-    [facets, openId],
+    [openId],
   );
   const renderExpanded = useCallback(
-    (a: Account) => (a.is_claims_only ? <ClaimsOnlyNote hs={a.hs_patients} /> : <AccountTargets accountId={a.account_id} focusFacets={facets?.focus} selectedId={selectedId} onSelect={onSelect} />),
-    [facets, onSelect, selectedId],
+    (a: Account) => (a.is_claims_only ? <ClaimsOnlyNote hs={a.hs_patients} /> : <AccountTargets accountId={a.account_id} selectedId={selectedId} onSelect={onSelect} />),
+    [onSelect, selectedId],
   );
   return (
     <AsyncContent isLoading={isLoading} error={error} onRetry={onRetry}>

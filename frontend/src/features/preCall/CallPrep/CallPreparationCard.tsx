@@ -1,10 +1,10 @@
-import { memo, useCallback, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, type ReactNode } from 'react';
 import AsyncContent from '../../../components/common/AsyncContent';
 import EmptyState from '../../../components/common/EmptyState';
 import Icon from '../../../components/common/Icon';
 import SegmentedToggle, { type ToggleOption } from '../../../components/common/SegmentedToggle';
-import { CATEGORIES } from '../../../constants/constant';
 import { LABELS } from '../../../constants/labels';
+import { useReference } from '../../../hooks/useReference';
 import { useGetCallPrepQuery } from '../../../redux/api/callPrepApi';
 import { prepCategorySelected, prepParticipantSelected, revealCompleted } from '../../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
@@ -19,7 +19,6 @@ interface CallPreparationCardProps {
 }
 
 const C = LABELS.callPrep;
-const OPTIONS: ToggleOption<Category>[] = CATEGORIES.map((value) => ({ value, label: <span className="min-w-0 [overflow-wrap:anywhere]">{C.categories[value]}</span> }));
 
 const Header = ({ status, pill }: { status?: ReactNode; pill?: ReactNode }) => (
   <header className="flex items-center gap-[9px] border-b border-line2 px-3 py-2 short:py-1.5 tall:px-4 tall:py-[11px]">
@@ -33,6 +32,11 @@ const Header = ({ status, pill }: { status?: ReactNode; pill?: ReactNode }) => (
 /** Card 2: category toggle, role tabs and the AI-prepared talking points (top 3). */
 const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardProps) => {
   const dispatch = useAppDispatch();
+  const ref = useReference();
+  const options = useMemo<ToggleOption<Category>[]>(
+    () => ref.categoryCodes.map((value) => ({ value, label: <span className="min-w-0 [overflow-wrap:anywhere]">{ref.categoryLabel(value)}</span> })),
+    [ref],
+  );
   const category = useAppSelector((s) => s.callSession.prepCategory);
   const chosen = useAppSelector((s) => s.callSession.prepParticipantId);
   const revealed = useAppSelector((s) => s.callSession.revealed);
@@ -45,7 +49,7 @@ const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardPro
 
   const controls = (
     <>
-      <SegmentedToggle variant="grid" options={OPTIONS} value={category} onChange={(c) => dispatch(prepCategorySelected(c))} ariaLabel={C.categoryAria} />
+      <SegmentedToggle variant="grid" options={options} value={category} onChange={(c) => dispatch(prepCategorySelected(c))} ariaLabel={C.categoryAria} />
       {active && category && <RoleTabs participants={participants} activeId={active.hcp_id} onSelect={(id) => dispatch(prepParticipantSelected(id))} ariaLabel={C.preparationTitle} />}
     </>
   );

@@ -3,7 +3,7 @@ import { memo, useCallback } from 'react';
 import CheckMark from '../../components/common/CheckMark';
 import FormInput from '../../components/forms/FormInput';
 import ReceptionSlider from '../../components/forms/ReceptionSlider';
-import { NOTE_MAX_LENGTH } from '../../constants/constant';
+import { useReference } from '../../hooks/useReference';
 import { LABELS } from '../../constants/labels';
 import { complianceDialogOpened } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
@@ -30,6 +30,7 @@ interface PointRowProps {
 const PointRow = ({ itemKey, participantId, category, point, index, open, context, onOpenChange }: PointRowProps) => {
   const dispatch = useAppDispatch();
   const { runCheck, registerInput } = useAssessment();
+  const { limits } = useReference().data;
   const [field, , helpers] = useField<AssessmentItemValues | undefined>(`items.${itemKey}`);
   const entry = useAppSelector((s) => s.callSession.compliance[itemKey]);
   const item = field.value;
@@ -103,7 +104,7 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
               <FormInput
                 name={`items.${itemKey}.note`}
                 placeholder={category === 'objection' ? LABELS.postCall.notesObjection : LABELS.postCall.notes}
-                maxLength={NOTE_MAX_LENGTH}
+                maxLength={limits.note_max_length}
                 startIcon="edit_note"
                 onEnter={onEnter}
                 onBlur={(v) => check(v)}

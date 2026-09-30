@@ -1,4 +1,5 @@
 import type {
+  Reference,
   Account,
   Call,
   CallPrep,
@@ -256,3 +257,60 @@ export const flaggedResult: ComplianceResult = {
 };
 
 export const passedResult: ComplianceResult = { ...flaggedResult, check_id: 'K2', status: 'passed', result_label: 'Compliant', max_severity: null, score: 100, issues: [], suggested_text: null };
+
+/** GET /api/v1/reference as the backend serves it (bronze REF_ tables + backend constants). */
+export const reference: Reference = {
+  content_version: '2026.1',
+  tiers: [
+    { code: 'SH', name: 'Super High', decile_min: 7, decile_max: 10, calls_per_year: 40, reach_goal_pct: 95 },
+    { code: 'MED', name: 'Medium', decile_min: 5, decile_max: 6, calls_per_year: 28, reach_goal_pct: 95 },
+    { code: 'LOW', name: 'Low', decile_min: 2, decile_max: 4, calls_per_year: 20, reach_goal_pct: 75 },
+  ],
+  segments: [
+    { code: 'imm', short_name: 'Immediate', full_name: 'HS Biologic and HS JAK Prescribers', description: 'Treating HS patients with biologics and/or oral JAK inhibitors', color_hex: '#156CB4' },
+    { code: 'conv', short_name: 'Conversion', full_name: 'Advanced Therapy Naïve HS Treaters', description: 'No prior biologic', color_hex: '#0E8A8A' },
+    { code: 'exp', short_name: 'Expansion', full_name: 'Broader JAK Prescribers', description: 'Oral JAK inhibitors in non-HS indications', color_hex: '#7C6BD6' },
+  ],
+  competitive_focus: [
+    { code: 'cosentyx', label: 'Cosentyx', color_hex: '#0E8A8A' },
+    { code: 'bimzelx', label: 'Bimzelx', color_hex: '#C2410C' },
+    { code: 'humira', label: 'Humira', color_hex: '#7C3AED' },
+    { code: 'jak', label: 'JAK', color_hex: '#156CB4' },
+    { code: 'conventional', label: 'Conventional therapy', color_hex: '#64748B' },
+  ],
+  role_types: [
+    { code: 'HCP', label: 'HCP' },
+    { code: 'NP', label: 'NP' },
+    { code: 'PA', label: 'PA' },
+  ],
+  interaction_channels: [
+    { code: 'rep', type_label: 'Direct call', team_label: 'POVO Sales' },
+    { code: 'adfa', type_label: 'ADFA visit', team_label: 'ADFA' },
+    { code: 'opz', type_label: 'Opz Sales call', team_label: 'Opz Sales' },
+    { code: 'msl', type_label: 'MSL visit', team_label: 'MSL' },
+    { code: 'spkr', type_label: 'Speaker program', team_label: 'Speaker' },
+    { code: 'pr', type_label: 'PR visit', team_label: 'PR' },
+  ],
+  kpi_metrics: [
+    { code: 'PEF', title: 'Patient Enrollment Forms', unit: 'PEFs' },
+    { code: 'NRX', title: 'NRx', unit: 'new scripts' },
+    { code: 'NEW_PATIENTS', title: 'New POVO Patients', unit: 'patients' },
+  ],
+  categories: [
+    { code: 'messaging', label: 'Suggested Messaging' },
+    { code: 'objection', label: 'Potential Objections' },
+    { code: 'closing', label: 'Suggested Closing Statements' },
+  ],
+  reception_scale: [
+    { value: 0, label: 'Not Well Received' },
+    { value: 1, label: 'Moderately Received' },
+    { value: 2, label: 'Well Received' },
+  ],
+  compliance: {
+    rule_count: 14,
+    steps: ['Reading your note', 'Checking against 14 compliance rules', 'Drafting a rewrite'],
+    severity_labels: { high: 'Non-compliant', med: 'Needs review', low: 'Minor issue' },
+  },
+  next_call_steps: ['Reading the post-call assessment', 'Running the AI compliance check on {n} {notes}', 'Drafting next-call talking points'],
+  limits: { points_per_category: 3, note_max_length: 200, additional_note_max_length: 600 },
+};

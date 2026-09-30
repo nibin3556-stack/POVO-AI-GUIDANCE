@@ -10,13 +10,18 @@ import { selectActiveFilterCount, selectFilters } from '../../redux/callSession/
 import { filterToggled, filtersCleared } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import type { Facets, FilterGroup } from '../../types/models';
-import { focusColor, segmentColor } from '../../utils/targets';
+import { useReference } from '../../hooks/useReference';
+import type { ReferenceLookup } from '../../utils/reference';
 
-const TIER_RANGES: Record<string, string> = { SH: 'D10–7', MED: 'D6–5', LOW: 'D4–2' };
+/** "D10–7" from the tier's decile range in the reference data. */
+const tierRange = (ref: ReferenceLookup, code: string): string | undefined => {
+  const tier = ref.tier(code as TierCode);
+  return tier ? `D${tier.decile_max}–${tier.decile_min}` : undefined;
+};
 
-const buildOptions = (facets: Facets): Record<'segment' | 'tier' | 'account', DropdownOption[]> => ({
-  segment: facets.segment.map((f) => ({ value: f.code, label: <SegmentTag label={f.label} color={segmentColor(f.code, f.color_hex)} /> })),
-  tier: facets.tier.map((f) => ({ value: f.code, label: <TierTag tier={f.code as TierCode} label={f.label} range={TIER_RANGES[f.code]} /> })),
+const buildOptions = (facets: Facets, ref: ReferenceLookup): Record<'segment' | 'tier' | 'account', DropdownOption[]> => ({
+  segment: facets.segment.map((f) => ({ value: f.code, label: <SegmentTag label={f.label} color={ref.segmentColor(f.code, f.color_hex)} /> })),
+  tier: facets.tier.map((f) => ({ value: f.code, label: <TierTag tier={f.code as TierCode} label={f.label} range={tierRange(ref, f.code)} /> })),
   account: facets.account.map((f) => ({ value: f.code, label: f.label })),
 });
 
@@ -25,7 +30,8 @@ const CallPlanFilters = ({ facets }: { facets: Facets }) => {
   const dispatch = useAppDispatch();
   const filters = useAppSelector(selectFilters);
   const active = useAppSelector(selectActiveFilterCount);
-  const options = useMemo(() => buildOptions(facets), [facets]);
+  const ref = useReference();
+  const options = useMemo(() => buildOptions(facets, ref), [facets, ref]);
   const toggle = (group: FilterGroup) => (value: string) => dispatch(filterToggled({ group, value }));
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 border-b border-line2 bg-[#FBFCFE] px-3 py-[7px] tall:px-4 tall:py-2.5">
@@ -35,7 +41,7 @@ const CallPlanFilters = ({ facets }: { facets: Facets }) => {
             key={f.code}
             label={f.label}
             count={f.count}
-            color={focusColor(f.code, facets.focus)}
+            color={ref.focusColor(f.code)}
             active={filters.focus.includes(f.code)}
             onToggle={() => toggle('focus')(f.code)}
           />

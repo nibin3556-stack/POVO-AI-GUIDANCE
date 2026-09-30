@@ -1,8 +1,8 @@
 import { memo, useMemo } from 'react';
 import EmptyState from '../../../components/common/EmptyState';
 import StatusChip from '../../../components/common/StatusChip';
-import { INTERACTION_CHANNELS } from '../../../constants/constant';
 import { LABELS } from '../../../constants/labels';
+import { useReference } from '../../../hooks/useReference';
 import type { InteractionFilter, Participant } from '../../../types/models';
 import { cx } from '../../../utils/cx';
 import { formatLongDate } from '../../../utils/format';
@@ -14,10 +14,11 @@ interface InteractionListProps {
 }
 
 const C = LABELS.callPrep;
-const FILTERS: InteractionFilter[] = ['all', ...INTERACTION_CHANNELS];
 
 /** "Interactions with {name}": filter chips with counts, then 3-column interaction cards. */
 const InteractionList = ({ participant, filter, onFilter }: InteractionListProps) => {
+  const ref = useReference();
+  const filters = useMemo<InteractionFilter[]>(() => ['all', ...ref.channelCodes], [ref]);
   const counts = participant.interaction_counts;
   const active = filter !== 'all' && !counts[filter] ? 'all' : filter;
   const shown = useMemo(
@@ -28,7 +29,7 @@ const InteractionList = ({ participant, filter, onFilter }: InteractionListProps
     <div className="mt-auto border-t border-dashed border-line pt-2 tall:pt-3">
       <div className="mb-[5px] text-[11.2px] font-bold uppercase tracking-[.6px] text-ink3">{C.interactionsWith(participant.display_name)}</div>
       <div role="group" aria-label={C.interactionFilterAria} className="mb-2 flex flex-wrap gap-1.5 short:mb-1.5">
-        {FILTERS.map((f) => {
+        {filters.map((f) => {
           const n = f === 'all' ? (counts.all ?? participant.interactions.length) : (counts[f] ?? 0);
           const on = f === active;
           return (
@@ -43,7 +44,7 @@ const InteractionList = ({ participant, filter, onFilter }: InteractionListProps
                 on ? 'border-blued bg-blued text-white' : 'border-[#9EC2E4] bg-[#EEF4FA] text-blued hover:border-blued hover:bg-[#DCEAF7]',
               )}
             >
-              {C.filters[f]}
+              {f === 'all' ? C.filterAll : ref.channelTeam(f)}
               <span className={cx('inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[5px] text-[10.6px]', on ? 'bg-white/25 text-white' : 'bg-white text-blued')}>{n}</span>
             </button>
           );

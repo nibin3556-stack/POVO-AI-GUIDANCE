@@ -140,10 +140,11 @@ function check(file) {
   nodes.filter((n) => /httpRequest$/.test(n.type)).forEach((n) => {
     const hp = (((n.parameters || {}).headerParameters || {}).parameters) || [];
     hp.forEach((h) => {
-      if (/token|key|auth|secret/i.test(h.name) && !/^=/.test(String(h.value))) errors.push('header "' + h.name + '" on ' + n.name + ' is a literal; use {{ $env.* }}');
+      if (/token|key|auth|secret/i.test(h.name)) errors.push('header "' + h.name + '" on ' + n.name + ' carries a secret; use an n8n credential (Header Auth)');
     });
+    /* The backend URL comes from the Settings node (env when allowed, else its default), never a literal per node. */
     const url = String((n.parameters || {}).url || '');
-    if (!/^=\{\{\s*\$env\./.test(url)) errors.push('HTTP node ' + n.name + ' URL must start from an $env variable');
+    if (!/^=\{\{\s*(\$env\.|\$\('Settings'\))/.test(url)) errors.push('HTTP node ' + n.name + " URL must start from $('Settings') or an $env variable");
   });
 
   const summary = nodes.length + ' nodes' + (hooks.length ? ', webhook /' + hooks.map((h) => h.parameters.path).join(',') : ', no webhook');

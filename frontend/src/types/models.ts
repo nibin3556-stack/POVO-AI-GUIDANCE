@@ -412,3 +412,51 @@ export interface NextCallResult {
   participants: { participant_id: string; summary: string; next_best_action: string }[];
   source: 'ai' | 'rules';
 }
+
+/** GET /api/v1/reference: every lookup the screens label and colour data with. */
+export interface ReferenceTier {
+  code: TierCode;
+  name: string;
+  decile_min: number;
+  decile_max: number;
+  calls_per_year: number;
+  reach_goal_pct: number;
+}
+
+export interface ReferenceSegment {
+  code: string;
+  short_name: string;
+  full_name: string;
+  description: string;
+  color_hex: string;
+}
+
+export interface ReferenceOption<C extends string = string> {
+  code: C;
+  label: string;
+}
+
+export interface ReferenceFocus extends ReferenceOption {
+  color_hex: string;
+}
+
+export interface ReferenceChannel {
+  code: ChannelCode;
+  type_label: string;
+  team_label: string;
+}
+
+export interface Reference {
+  content_version: string;
+  tiers: ReferenceTier[];
+  segments: ReferenceSegment[];
+  competitive_focus: ReferenceFocus[];
+  role_types: ReferenceOption<RoleType>[];
+  interaction_channels: ReferenceChannel[];
+  kpi_metrics: { code: string; title: string; unit: string }[];
+  categories: ReferenceOption<Category>[];
+  reception_scale: { value: Reception; label: string }[];
+  compliance: { rule_count: number; steps: string[]; severity_labels: Record<'high' | 'med' | 'low', string> };
+  next_call_steps: string[];
+  limits: { points_per_category: number; note_max_length: number; additional_note_max_length: number };
+}

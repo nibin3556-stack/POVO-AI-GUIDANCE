@@ -57,7 +57,6 @@ const CallPlanSection = ({ selectedId, onSelect }: CallPlanSectionProps) => {
             isLoading={accounts.isLoading}
             error={accounts.error}
             onRetry={() => void accounts.refetch()}
-            facets={facets.data}
             selectedId={selectedId}
             onSelect={onSelect}
           />

@@ -303,3 +303,23 @@ def test_jobs_run_with_empty_body(client):
     d = _data(client.post("/api/v1/jobs/refresh-guidance", headers=h))
     assert d["territories"] == 8 and d["snapshot_date"] == "2026-10-13"
     assert _data(client.post("/api/v1/jobs/purge-ai-cache", headers=h))["deleted"] >= 0
+
+
+def test_reference_lookups(client):
+    d = _data(client.get("/api/v1/reference"))
+    assert [t["name"] for t in d["tiers"]] == ["Super High", "Medium", "Low"]
+    assert {s["code"] for s in d["segments"]} == {"imm", "conv", "exp"}
+    assert {f["code"] for f in d["competitive_focus"]} == {"cosentyx", "bimzelx", "humira", "jak", "conventional"}
+    assert [c["code"] for c in d["categories"]] == ["messaging", "objection", "closing"]
+    assert [r["label"] for r in d["reception_scale"]][2] == "Well Received"
+    assert d["compliance"]["rule_count"] == 14
+    assert d["compliance"]["steps"][1] == "Checking against 14 compliance rules"
+    assert d["limits"] == {"points_per_category": 3, "note_max_length": 200, "additional_note_max_length": 600}
+    assert {c["code"] for c in d["interaction_channels"]} == {"rep", "adfa", "opz", "msl", "spkr", "pr"}
+    assert [m["title"] for m in d["kpi_metrics"]] == ["Patient Enrollment Forms", "NRx", "New POVO Patients"]
+
+
+def test_kpi_cards_follow_ref_kpi_metric(client):
+    d = _data(client.get("/api/v1/performance/kpis?period=month"))
+    assert [(c["metric_code"], c["unit"]) for c in d["cards"]] == [("PEF", "PEFs"), ("NRX", "new scripts"),
+                                                                  ("NEW_PATIENTS", "patients")]

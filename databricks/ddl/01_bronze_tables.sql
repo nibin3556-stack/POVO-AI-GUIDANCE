@@ -111,9 +111,28 @@ CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_SEGMENT (
   FULL_NAME STRING COMMENT 'Full segment name',
   DESCRIPTION STRING COMMENT 'Segment description',
   COLOR_HEX STRING COMMENT 'Chart colour',
+  ARCHETYPE_NAME STRING COMMENT 'Patient archetype the rep discusses for this segment, e.g. Tara',
+  ARCHETYPE_DESC STRING COMMENT 'Archetype description, e.g. losing control on a biologic',
   SORT_ORDER INT COMMENT 'Display order'
 ) USING DELTA
 COMMENT 'Target segments. Logical key SEGMENT_CODE.';
+
+CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_KPI_METRIC (
+  METRIC_CODE STRING NOT NULL COMMENT 'PEF, NRX or NEW_PATIENTS (matches FCT_TERRITORY_GOAL.METRIC_CODE)',
+  EVENT_TYPE STRING COMMENT 'FCT_POVO_ACTIVITY.EVENT_TYPE counted as the actual (PEF, NRX, NEW_PATIENT)',
+  TITLE STRING COMMENT 'KPI card title, e.g. Patient Enrollment Forms',
+  UNIT STRING COMMENT 'Unit shown after the numbers, e.g. PEFs',
+  SORT_ORDER INT COMMENT 'Card order'
+) USING DELTA
+COMMENT 'Territory Performance KPI definitions. Logical key METRIC_CODE.';
+
+CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_INTERACTION_CHANNEL (
+  CHANNEL_CODE STRING NOT NULL COMMENT 'rep, adfa, opz, msl, spkr or pr (matches FCT_INTERACTION.CHANNEL_CODE)',
+  TYPE_LABEL STRING COMMENT 'Interaction card title, e.g. Direct call',
+  TEAM_LABEL STRING COMMENT 'Team shown on the filter chip, e.g. POVO Sales',
+  SORT_ORDER INT COMMENT 'Chip order'
+) USING DELTA
+COMMENT 'Interaction channels and their teams. Logical key CHANNEL_CODE.';
 
 CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_COMPETITIVE_FOCUS (
   FOCUS_CODE STRING NOT NULL COMMENT 'cosentyx, bimzelx, humira, jak or conventional',

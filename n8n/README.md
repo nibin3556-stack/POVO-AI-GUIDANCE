@@ -97,19 +97,22 @@ The Guard drops, without failing the call:
 The Guard fails the call (`ok:false`) when:
 - `objection_states` does not cover **exactly** the objection point_ids given (those with `category: "objection"`);
 - a state is not `open` or `resolved`;
-- a text field is empty or over its limit;
+- a text field is empty, or over its limit and cannot be cut back to a whole sentence or clause of at least 40 characters (a summary or next best action that runs slightly over is trimmed, not rejected);
 - the summary or next best action contains a claim-like number (%, mg, weeks, fold, p-value) that is not in the assessments.
 
 ### Nightly Guidance Refresh v1: schedule
 
 ```
 Weekdays 05:00 ET (Schedule Trigger, cron 0 5 * * 1-5; workflow setting timezone America/New_York)
-  → Refresh Guidance  POST {{$env.POVO_BACKEND_URL}}/api/v1/jobs/refresh-guidance   timeout 300 s, 3 tries
-  → Purge AI Cache    POST {{$env.POVO_BACKEND_URL}}/api/v1/jobs/purge-ai-cache     timeout 120 s, 3 tries
+  → Settings          (Code) backend_url = $env.POVO_BACKEND_URL when env access is allowed, else http://host.docker.internal:8030
+  → Refresh Guidance  POST {backend_url}/api/v1/jobs/refresh-guidance   timeout 300 s, 3 tries
+  → Purge AI Cache    POST {backend_url}/api/v1/jobs/purge-ai-cache     timeout 120 s, 3 tries
   → Summarise Run     (Code)
 ```
 
-- Both requests send `X-POVO-Service-Token: {{$env.POVO_SERVICE_TOKEN}}` and an `X-Request-Id`.
+- Both requests authenticate with the n8n credential **POVO Service Token** (type *Header Auth*: name `X-POVO-Service-Token`, value = the backend's `POVO_SERVICE_TOKEN`), plus an `X-Request-Id`. No env access is needed, so this works on n8n 2.x where `$env` is blocked by default.
+- Create that credential once per n8n instance (*Credentials → New → Header Auth*), and select it on both HTTP nodes after import.
+- The backend must listen where the n8n container can reach it: locally, `uvicorn main:app --host 0.0.0.0 --port 8030`. `127.0.0.1` alone is not reachable from Docker. On the VM, set `POVO_BACKEND_URL`, or edit the default in **Settings**, to the backend content URL.
 - Both continue on error, so the purge still runs if the refresh fails.
 - *Summarise Run* returns `{ok, refresh_guidance:{run_id, territories, snapshot_date}, purge_ai_cache:{deleted}, message}`. It **throws** (the execution is marked failed) if either job failed.
 - There is no email or chat alerting, which is out of scope. Check **Executions** in n8n.
@@ -128,12 +131,13 @@ The compose file sets the n8n environment the workflows need:
 
 | Variable | Value | Why |
 |---|---|---|
-| `POVO_BACKEND_URL` | `http://host.docker.internal:8030` | nightly job → backend (uvicorn on the host) |
-| `POVO_SERVICE_TOKEN` | from `.env` | `X-POVO-Service-Token` on `/api/v1/jobs/*` |
-| `N8N_BLOCK_ENV_ACCESS_IN_NODE` | `false` | **required**, otherwise `{{ $env.* }}` resolves to an error in nodes |
+| `POVO_BACKEND_URL` | `http://host.docker.internal:8030` | optional: overrides the Settings node default |
+| `N8N_BLOCK_ENV_ACCESS_IN_NODE` | `false` | lets the Settings node read `POVO_BACKEND_URL`; without it the default is used |
 | `TZ`, `GENERIC_TIMEZONE` | `America/New_York` | default timezone; the nightly workflow also pins it in its settings |
 
-On the VM, set the same three variables in the n8n container environment. Use the VM's backend URL for `POVO_BACKEND_URL`.
+On the VM, either set `POVO_BACKEND_URL` (with env access allowed) or edit the Settings default. The service token always comes from the **POVO Service Token** credential.
+
+**This machine (2026-09-30):** the POVO workflows run in the `n8n-kam` container at **http://localhost:5679**, not the `n8n` container on 5678, and `backend/.env` points `N8N_BASE_URL` there. The credential **POVO Service Token** exists in that instance.
 
 ## Import, credential, activation
 

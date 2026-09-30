@@ -7,8 +7,9 @@ import { cx } from './cx';
 import { formatLongDate, formatMD, formatMDY, formatNumber, formatShortMD, nameInitials, splitHcps, splitMatch, truncate } from './format';
 import { receptionFromX, stepReception } from './reception';
 import { stepperState } from './steps';
-import { countActiveFilters, EMPTY_FILTERS, filterAccounts, filterParams, focusLabel, nextRoles, nextSort, passesFilters, sortParam, targetFullName, toggleValue } from './targets';
-import { flaggedResult, profile, accounts } from '../test/fixtures';
+import { countActiveFilters, EMPTY_FILTERS, filterAccounts, filterParams, nextRoles, nextSort, passesFilters, sortParam, targetFullName, toggleValue } from './targets';
+import { flaggedResult, profile, accounts, reference } from '../test/fixtures';
+import { buildReferenceLookup, receptionText } from './reference';
 
 describe('format', () => {
   it('formats ISO dates', () => {
@@ -39,7 +40,6 @@ describe('targets', () => {
   it('builds names, labels and sort params', () => {
     expect(targetFullName(target())).toBe('Dr. Winters, John, MD');
     expect(targetFullName(target({ role_type: 'PA', display_name: 'Kristen Casey' }))).toBe('Kristen Casey, PA');
-    expect(focusLabel('conventional')).toBe('Conventional therapy');
     expect(sortParam({ key: 'decile', direction: 'asc' })).toBe('decile:asc');
     expect(nextSort({ key: 'decile', direction: 'desc' }, 'decile')).toEqual({ key: 'decile', direction: 'asc' });
     expect(nextSort({ key: 'decile', direction: 'asc' }, 'hs_patients')).toEqual({ key: 'hs_patients', direction: 'desc' });
@@ -54,8 +54,9 @@ describe('targets', () => {
     expect(filterAccounts(accounts, { ...EMPTY_FILTERS, focus: ['humira'] }).map((a) => a.account_id)).toEqual(['A9']);
   });
   it('toggles roles with empty meaning all', () => {
-    expect(nextRoles([], 'NP')).toEqual(['HCP', 'PA']);
-    expect(nextRoles(['HCP', 'PA'], 'NP')).toEqual([]);
+    const roles = ['HCP', 'NP', 'PA'] as const;
+    expect(nextRoles([], 'NP', roles)).toEqual(['HCP', 'PA']);
+    expect(nextRoles(['HCP', 'PA'], 'NP', roles)).toEqual([]);
   });
 });
 
@@ -127,5 +128,25 @@ describe('small helpers', () => {
     expect(stepReception(2, 1)).toBe(2);
     expect(stepReception(1, -1)).toBe(0);
     expect(stepperState(['a', 'b'], 2).map((s) => s.state)).toEqual(['done', 'run']);
+  });
+});
+
+describe('reference lookups', () => {
+  const ref = buildReferenceLookup(reference);
+  it('labels and colours codes from GET /reference', () => {
+    expect(ref.tierName('SH')).toBe('Super High');
+    expect(ref.tierName(null)).toBe('');
+    expect(ref.focusLabel('conventional')).toBe('Conventional therapy');
+    expect(ref.focusColor('humira')).toBe('#7C3AED');
+    expect(ref.segmentColor('conv')).toBe('#0E8A8A');
+    expect(ref.channelTeam('opz')).toBe('Opz Sales');
+    expect(ref.categoryLabel('objection')).toBe('Potential Objections');
+    expect(ref.roleCodes).toEqual(['HCP', 'NP', 'PA']);
+  });
+  it('fills the next-call steps and reception labels', () => {
+    expect(ref.nextCallSteps(1)[1]).toBe('Running the AI compliance check on 1 note');
+    expect(ref.nextCallSteps(3)[1]).toBe('Running the AI compliance check on 3 notes');
+    expect(receptionText(ref.receptionLabels, 2, 'Not rated')).toBe('Well Received');
+    expect(receptionText(ref.receptionLabels, null, 'Not rated')).toBe('Not rated');
   });
 });

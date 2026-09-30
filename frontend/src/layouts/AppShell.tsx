@@ -8,7 +8,7 @@ import { FORBIDDEN_EVENT, PERMISSIONS } from '../constants/constant';
 import { LABELS } from '../constants/labels';
 import ImpersonateDialog from '../features/impersonation/ImpersonateDialog';
 import { useImpersonation } from '../features/impersonation/useImpersonation';
-import { useGetMeQuery } from '../redux/api/sessionApi';
+import { useGetMeQuery, useGetReferenceQuery } from '../redux/api/sessionApi';
 import { selectSelectedHcpId } from '../redux/callSession/callSessionSelectors';
 import { useAppSelector } from '../redux/hooks';
 import type { ApiError } from '../types/api';
@@ -24,7 +24,11 @@ const accessMessage = (error: unknown): string => {
 
 /** The shell: header, impersonation bar, tabs and the scrolling page area. */
 const AppShell = () => {
-  const { data: me, error, isLoading, refetch } = useGetMeQuery();
+  const { data: me, error: meError, isLoading: meLoading, refetch: refetchMe } = useGetMeQuery();
+  // Pages label and colour data from the reference lookups, so they wait for both.
+  const { data: reference, error: refError, isLoading: refLoading, refetch: refetchRef } = useGetReferenceQuery();
+  const error = meError ?? refError;
+  const isLoading = meLoading || refLoading;
   const selectedHcpId = useAppSelector(selectSelectedHcpId);
   const { start, exit, isStarting, isExiting } = useImpersonation();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -55,10 +59,15 @@ const AppShell = () => {
   const handleExit = useCallback(() => void exit(), [exit]);
 
   if (isLoading) return <Loader fill className="h-full" />;
-  if (error || !me) {
+  const refetch = () => {
+    void refetchMe();
+    void refetchRef();
+  };
+
+  if (error || !me || !reference) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <ErrorState message={accessMessage(error)} onRetry={() => void refetch()} className="max-w-[560px]" />
+        <ErrorState message={accessMessage(error)} onRetry={refetch} className="max-w-[560px]" />
       </div>
     );
   }

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## POVO AI Guidance - Nightly Guidance Refresh v1\n\nRuns **05:00 Mon–Fri, America/New_York** (workflow setting `timezone`).\n\n1. `POST {POVO_BACKEND_URL}/api/v1/jobs/refresh-guidance` → `{run_id, territories, snapshot_date}` (timeout 300 s, 3 tries)\n2. `POST {POVO_BACKEND_URL}/api/v1/jobs/purge-ai-cache` → `{deleted}` (3 tries)\n3. **Summarise Run**: returns a one-line summary; throws (execution marked failed) if either job failed.\n\nBoth calls send `X-POVO-Service-Token: $env.POVO_SERVICE_TOKEN`. n8n needs `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.\nNo email / chat alerting (out of scope): check the executions list.",
+        "content": "## POVO AI Guidance - Nightly Guidance Refresh v1\n\nRuns **05:00 Mon–Fri, America/New_York** (workflow setting `timezone`).\n\n1. **Settings** resolves the backend URL (`POVO_BACKEND_URL` env when allowed, else its default).\n2. `POST {backend}/api/v1/jobs/refresh-guidance` → `{run_id, territories, snapshot_date}` (timeout 300 s, 3 tries)\n3. `POST {backend}/api/v1/jobs/purge-ai-cache` → `{deleted}` (3 tries)\n4. **Summarise Run**: returns a one-line summary; throws (execution marked failed) if either job failed.\n\nBoth calls authenticate with the n8n credential **POVO Service Token** (Header Auth: `X-POVO-Service-Token` = the backend's `POVO_SERVICE_TOKEN`). No env access is required.\nNo email / chat alerting (out of scope): check the executions list.",
         "height": 380,
         "width": 560,
         "color": 4
@@ -39,15 +39,24 @@
     },
     {
       "parameters": {
+        "jsCode": "/* =============================================================================\n * SETTINGS - POVO AI Guidance, Nightly Guidance Refresh v1\n *\n * Where the POVO backend is. POVO_BACKEND_URL from the n8n environment wins\n * when the instance allows env access (N8N_BLOCK_ENV_ACCESS_IN_NODE=false);\n * otherwise the value below is used. On the VM, set the env var or edit the\n * default here to the backend's Posit content URL.\n *\n * The service token is NOT here: it lives in the n8n credential\n * \"POVO Service Token\" (Header Auth, header X-POVO-Service-Token).\n * ========================================================================== */\nconst DEFAULT_BACKEND_URL = 'http://host.docker.internal:8030';\nlet fromEnv = '';\ntry { fromEnv = $env.POVO_BACKEND_URL || ''; } catch (e) { fromEnv = ''; }\nconst backend_url = String(fromEnv || DEFAULT_BACKEND_URL).replace(/\\/+$/, '');\nreturn [{ json: { backend_url } }];"
+      },
+      "id": "93ec5986-21b6-447f-8688-c0d1f4d45702",
+      "name": "Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "={{ $env.POVO_BACKEND_URL }}/api/v1/jobs/refresh-guidance",
+        "url": "={{ $('Settings').first().json.backend_url }}/api/v1/jobs/refresh-guidance",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-POVO-Service-Token",
-              "value": "={{ $env.POVO_SERVICE_TOKEN }}"
-            },
             {
               "name": "X-Request-Id",
               "value": "={{ 'n8n-nightly-' + $execution.id + '-refresh' }}"
@@ -56,32 +65,36 @@
         },
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "32bd327b-8405-407d-9728-98d915af0f30",
       "name": "Refresh Guidance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        240,
+        460,
         0
       ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "POVO Service Token"
+        }
+      }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.POVO_BACKEND_URL }}/api/v1/jobs/purge-ai-cache",
+        "url": "={{ $('Settings').first().json.backend_url }}/api/v1/jobs/purge-ai-cache",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-POVO-Service-Token",
-              "value": "={{ $env.POVO_SERVICE_TOKEN }}"
-            },
             {
               "name": "X-Request-Id",
               "value": "={{ 'n8n-nightly-' + $execution.id + '-purge' }}"
@@ -90,20 +103,28 @@
         },
         "options": {
           "timeout": 120000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "b2faf1ce-6acb-4165-8ff4-86e8b06a0fcb",
       "name": "Purge AI Cache",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        480,
+        700,
         0
       ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "POVO Service Token"
+        }
+      }
     },
     {
       "parameters": {
@@ -114,7 +135,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        720,
+        940,
         0
       ]
     }
@@ -125,7 +146,7 @@
       "main": [
         [
           {
-            "node": "Refresh Guidance",
+            "node": "Settings",
             "type": "main",
             "index": 0
           }
@@ -148,6 +169,17 @@
         [
           {
             "node": "Summarise Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Refresh Guidance",
             "type": "main",
             "index": 0
           }

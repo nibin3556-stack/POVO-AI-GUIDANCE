@@ -7,6 +7,7 @@ import Icon from '../../../components/common/Icon';
 import StatusChip from '../../../components/common/StatusChip';
 import { LABELS } from '../../../constants/labels';
 import { useAiReveal } from '../../../hooks/useAiReveal';
+import { useReference } from '../../../hooks/useReference';
 import type { CallPrep, Category } from '../../../types/models';
 import { formatMDY } from '../../../utils/format';
 import TalkingPointCard from './TalkingPointCard';
@@ -43,6 +44,7 @@ const RevisionBanner = ({ data }: { data: CallPrep }) =>
  */
 const PrepPanel = ({ data, category, animate, onRevealed, renderHeader, controls }: PrepPanelProps) => {
   const handleDone = useCallback(() => onRevealed(), [onRevealed]);
+  const { categoryLabel } = useReference();
   const reveal = useAiReveal(data.steps, data.points.length, animate, handleDone);
   const revised = data.is_revised;
   const pill = revised ? (
@@ -60,7 +62,7 @@ const PrepPanel = ({ data, category, animate, onRevealed, renderHeader, controls
           <Icon name="forum" className="text-[17.9px] text-teal" />
           <b className="font-semibold text-blued">{data.heading}</b>
         </div>
-        {reveal.boxVisible && <AiActivityBox title={C.aiPreparing(C.categories[category])} steps={reveal.steps} fading={reveal.boxFading} />}
+        {reveal.boxVisible && <AiActivityBox title={C.aiPreparing(categoryLabel(category))} steps={reveal.steps} fading={reveal.boxFading} />}
         {!reveal.boxVisible && data.points.length === 0 && <EmptyState message={C.noPoints} />}
         {!reveal.boxVisible && (
           <div className="point-rail relative flex flex-col gap-[7px] tall:gap-2.5">

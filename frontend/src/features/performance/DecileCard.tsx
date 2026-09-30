@@ -29,7 +29,7 @@ const DecileCard = () => {
     <ChartCard
       title={P.decileTitle}
       legend={LEGEND}
-      caption={data ? P.shCaption(data.super_high_not_writing, data.super_high_total) : undefined}
+      caption={data ? P.shCaption(data.super_high_not_writing, data.super_high_total, data.tiers.find((t) => t.tier_code === 'SH')?.tier_name ?? '') : undefined}
       hover={hover}
       tip={tip}
       onLeave={onLeave}

@@ -25,12 +25,18 @@ from helpers.content.library import get_library
 from helpers.dates import now_utc
 from database.warehouse import get_warehouse
 
-STEPS = ["Reading your note", "Checking against 14 compliance rules", "Drafting a rewrite"]
 NOTE_LIMIT = {"additional": 600}
+DEFAULT_NOTE_LIMIT = 200
+
+
+def compliance_steps() -> list[str]:
+    """The modal's three steps. The rule count follows the active rulebook, not a fixed 14."""
+    return ["Reading your note", f"Checking against {len(get_library().compliance_rules)} compliance rules",
+            "Drafting a rewrite"]
 
 
 def note_limit(category: str) -> int:
-    return NOTE_LIMIT.get(category, 200)
+    return NOTE_LIMIT.get(category, DEFAULT_NOTE_LIMIT)
 
 
 def evaluate(note: str, category: str, point_text: str, who: str, ctx_text: str,
@@ -70,7 +76,7 @@ def evaluate(note: str, category: str, point_text: str, who: str, ctx_text: str,
     return {"status": "flagged" if issues else "passed", "result_label": result_label(issues),
             "max_severity": max_severity(issues), "score": score(issues),
             "issues": [issue_out(x) for x in issues], "suggested_text": suggested or None,
-            "steps": list(STEPS), "engine": engine}
+            "steps": compliance_steps(), "engine": engine}
 
 
 def persist(result: dict, call_id: Optional[str], participant_id: str, category: str, point_id: str,

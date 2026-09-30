@@ -8,7 +8,7 @@ import { useSelectTarget } from '../../hooks/useSelectTarget';
 import { useGetGuidanceQuery } from '../../redux/api/performanceApi';
 import type { Guidance, GuidanceFocus } from '../../types/models';
 import { cx } from '../../utils/cx';
-import { tierName } from '../../utils/targets';
+import { useReference } from '../../hooks/useReference';
 
 const P = LABELS.performance;
 
@@ -41,7 +41,13 @@ const FocusButton = memo(({ target, onGo }: { target: GuidanceFocus; onGo: (id: 
 ));
 FocusButton.displayName = 'FocusButton';
 
-const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => void }) => (
+/** The guidance names the top tier by its reference name ("Super High"). */
+const TOP_TIER = 'SH';
+
+const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => void }) => {
+  const { tierName } = useReference();
+  const top = tierName(TOP_TIER);
+  return (
   <div className="grid flex-1 grid-cols-3 gap-[7px] max-bp900:grid-cols-1">
     <Column title={P.missed} tone="miss">
       <ul className="m-0 flex list-none flex-col gap-px p-0">
@@ -52,8 +58,8 @@ const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => vo
           </Item>
         ))}
         {data.super_high_not_writing > 0 && (
-          <Item title={P.shNotWritingTitle}>
-            <b>{P.superHigh(data.super_high_not_writing)}</b>
+          <Item title={P.shNotWritingTitle(top)}>
+            <b>{P.superHigh(data.super_high_not_writing, top)}</b>
             {P.notWriting}
           </Item>
         )}
@@ -72,8 +78,8 @@ const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => vo
             {P.povoPatients(data.strong.top_writer.povo_patients)}
           </Item>
         )}
-        <Item title={P.reachTitle}>
-          {P.superHighReach}
+        <Item title={P.reachTitle(top)}>
+          {P.superHighReach(top)}
           <b>{data.strong.super_high_reach_pct}%</b>
         </Item>
       </ul>
@@ -84,7 +90,8 @@ const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => vo
       ))}
     </Column>
   </div>
-);
+  );
+};
 
 /** AI Guidance: missed opportunities, strong performance, recommended focus (click opens Tab 2). */
 const AiGuidancePanel = () => {

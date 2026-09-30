@@ -2,6 +2,7 @@ import { Tooltip } from '@mui/material';
 import { memo } from 'react';
 import AiSparkle from '../../components/common/AiSparkle';
 import { LABELS } from '../../constants/labels';
+import { useReference } from '../../hooks/useReference';
 import type { ComplianceEntry } from '../../redux/callSession/callSessionSlice';
 import type { Category } from '../../types/models';
 import type { AssessmentItemValues } from '../../utils/assessment';
@@ -46,6 +47,7 @@ const FlagTip = ({ entry }: { entry: ComplianceEntry }) => {
 
 /** Collapsed row summary: red compliance chip (hover for the report), the rating, a note snippet or "Selected". */
 const ResponseChip = ({ item, category, entry }: ResponseChipProps) => {
+  const { receptionLabels } = useReference();
   const note = item.note.trim();
   if (entry?.status === 'flagged') {
     return (
@@ -58,7 +60,7 @@ const ResponseChip = ({ item, category, entry }: ResponseChipProps) => {
     );
   }
   if (category !== 'objection' && item.reception !== null) {
-    return <span className={cx(CHIP, RATING[item.reception])}>{LABELS.postCall.reception[item.reception]}</span>;
+    return <span className={cx(CHIP, RATING[item.reception])}>{receptionLabels[item.reception]}</span>;
   }
   if (note) return <span className={cx(CHIP, 'border-bluet2 bg-bluet text-blued')}>{truncate(note, 48)}</span>;
   return <span className={cx(CHIP, 'border-[#B9C7D6] bg-[#EEF2F7] text-[11px] uppercase tracking-[.4px] text-ink3')}>{LABELS.postCall.selected}</span>;

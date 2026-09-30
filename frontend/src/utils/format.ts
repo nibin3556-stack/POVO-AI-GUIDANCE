@@ -30,7 +30,9 @@ export const formatNumber = (value: number | null | undefined): string => {
   return (Math.round(value * 10) / 10).toLocaleString('en-US');
 };
 
-export const formatPct = (value: number | null | undefined): string => `${Math.round(value ?? 0)}%`;
+/** A missing value shows as a dash, never as a made-up 0%. */
+export const formatPct = (value: number | null | undefined): string =>
+  value === null || value === undefined ? '–' : `${Math.round(value)}%`;
 
 export const truncate = (text: string, max: number): string => {
   const value = text.trim();

@@ -27,10 +27,6 @@ export const EMPLOYEE_SEARCH_LIMIT = 8;
 export const EMPLOYEE_SEARCH_MIN_CHARS = 2;
 export const SEARCH_DEBOUNCE_MS = 250;
 
-/** Talking points shown per category (the spec: top 3 only). */
-export const POINTS_PER_CATEGORY = 3;
-export const NOTE_MAX_LENGTH = 200;
-export const ADDITIONAL_NOTE_MAX_LENGTH = 600;
 export const ADDITIONAL_POINT_ID = 'additional';
 
 /** Timings reproduced from the POC. */
@@ -49,10 +45,6 @@ export const TIMING = {
   SCROLL_DELAY_MS: 120,
   LOOKUP_MIN_MS: 350,
 } as const;
-
-export const CATEGORIES = ['messaging', 'objection', 'closing'] as const;
-
-export const INTERACTION_CHANNELS = ['rep', 'adfa', 'opz', 'msl', 'spkr', 'pr'] as const;
 
 export const ROUTES = {
   PERFORMANCE: '/performance',

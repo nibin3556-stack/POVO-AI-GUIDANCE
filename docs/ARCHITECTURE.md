@@ -94,8 +94,10 @@ POVO-AI-GUIDANCE/
 | **FCT_HCP_METRICS** | HCP_ID, AS_OF_DATE DATE, HS_PATIENTS_12M INT, HS_VISITS_PER_MONTH INT, JAK_PATIENTS INT, POVO_PATIENTS INT, INCYTECARES_ENROLLED_PATIENTS INT. The backend uses the latest AS_OF_DATE per HCP. |
 | **DIM_CALL_PLAN_TARGET** | PLAN_YEAR INT, TERRITORY_ID, HCP_ID, DECILE INT (1–10), TIER_CODE (`SH`\|`MED`\|`LOW`, null for D1), SEGMENT_CODE (`imm`\|`conv`\|`exp`), COMPETITIVE_FOCUS (`cosentyx`\|`bimzelx`\|`humira`\|`jak`\|`conventional`), IS_IN_CALL_PLAN BOOLEAN (D2–D10), HS_RANK INT (1 = highest HS volume in the territory) |
 | **REF_TIER** | TIER_CODE, TIER_NAME (`Super High`\|`Medium`\|`Low`), DECILE_MIN, DECILE_MAX, CALLS_PER_YEAR, REACH_GOAL_PCT, SORT_ORDER |
-| **REF_SEGMENT** | SEGMENT_CODE, SHORT_NAME, FULL_NAME, DESCRIPTION, COLOR_HEX, SORT_ORDER |
+| **REF_SEGMENT** | SEGMENT_CODE, SHORT_NAME, FULL_NAME, DESCRIPTION, COLOR_HEX, ARCHETYPE_NAME (`Tara`, `Marcus`), ARCHETYPE_DESC, SORT_ORDER |
 | **REF_COMPETITIVE_FOCUS** | FOCUS_CODE, LABEL (`Cosentyx`, `Bimzelx`, `Humira`, `JAK`, `Conventional therapy`), COLOR_HEX, SORT_ORDER |
+| **REF_KPI_METRIC** | METRIC_CODE (`PEF`\|`NRX`\|`NEW_PATIENTS`, as in FCT_TERRITORY_GOAL), EVENT_TYPE (the FCT_POVO_ACTIVITY event counted as actual), TITLE, UNIT, SORT_ORDER. Drives the KPI cards. |
+| **REF_INTERACTION_CHANNEL** | CHANNEL_CODE, TYPE_LABEL (`Direct call`, …), TEAM_LABEL (`POVO Sales`, …), SORT_ORDER |
 | **FCT_INTERACTION** | INTERACTION_ID STRING, HCP_ID, TERRITORY_ID, EMPLOYEE_ID (nullable; the rep, for channel `rep`), INTERACTION_DATE DATE, CHANNEL_CODE (`rep`\|`adfa`\|`opz`\|`msl`\|`spkr`\|`pr`), INTERACTION_TYPE (`Direct call`, `ADFA visit`, `Opz Sales call`, `MSL visit`, `Speaker program`, `PR visit`), POVO_DISCUSSED BOOLEAN, SUMMARY STRING |
 | **FCT_POVO_ACTIVITY** | ACTIVITY_ID STRING, TERRITORY_ID, HCP_ID, PATIENT_KEY STRING (anonymised token, never PHI), EVENT_DATE DATE, EVENT_TYPE (`PEF`\|`NRX`\|`NEW_PATIENT`). `NEW_PATIENT` is the first paid script. |
 | **FCT_TERRITORY_GOAL** | TERRITORY_ID, GOAL_YEAR INT, GOAL_MONTH INT, METRIC_CODE (`PEF`\|`NRX`\|`NEW_PATIENTS`), GOAL_VALUE INT |
@@ -165,6 +167,12 @@ Every response uses the Mosaic envelope `{data, status, message, page, limit, to
   - `Employee` = `{employee_id, network_id, username, full_name, initials, business_unit, role_code, role_title, access_level, access_regions, home_territory_id, territory_name, region}`.
   - `Territory` = `{territory_id, territory_name, city, state, region}`.
   - `data_as_of` = the maximum `FCT_POVO_ACTIVITY.EVENT_DATE`.
+
+**Reference data**
+
+- **`GET /api/v1/reference`** → `{content_version, tiers: [{code, name, decile_min, decile_max, calls_per_year, reach_goal_pct}], segments: [{code, short_name, full_name, description, color_hex}], competitive_focus: [{code, label, color_hex}], role_types: [{code, label}], interaction_channels: [{code, type_label, team_label}], categories: [{code, label}], reception_scale: [{value, label}], compliance: {rule_count, steps, severity_labels}, next_call_steps: [template with {n} and {notes}], limits: {points_per_category, note_max_length, additional_note_max_length}}`.
+  - Built from the bronze `REF_` tables and the same backend constants the endpoints enforce.
+  - The shell loads it once, next to `/me`, before any page renders. The frontend holds **no copy** of this business data; codes returned by other endpoints are labelled and coloured through it.
 
 **Impersonation**
 

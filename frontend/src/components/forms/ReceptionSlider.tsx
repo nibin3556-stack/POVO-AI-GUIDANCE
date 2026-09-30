@@ -1,9 +1,11 @@
 import { useField } from 'formik';
 import { memo, useRef, type KeyboardEvent, type PointerEvent } from 'react';
-import { LABELS, receptionLabel } from '../../constants/labels';
+import { LABELS } from '../../constants/labels';
+import { useReference } from '../../hooks/useReference';
 import type { Reception } from '../../types/models';
 import { cx } from '../../utils/cx';
 import { receptionFromX, stepReception } from '../../utils/reception';
+import { receptionText } from '../../utils/reference';
 
 interface ReceptionSliderProps {
   name: string;
@@ -20,6 +22,7 @@ const ReceptionSlider = ({ name, onChange }: ReceptionSliderProps) => {
   const [field, , helpers] = useField<Reception | null>(name);
   const value = field.value ?? null;
   const dragging = useRef(false);
+  const { receptionLabels } = useReference();
 
   const set = (next: Reception) => {
     if (next === value) return;
@@ -50,7 +53,7 @@ const ReceptionSlider = ({ name, onChange }: ReceptionSliderProps) => {
       aria-valuemin={0}
       aria-valuemax={2}
       aria-valuenow={value ?? undefined}
-      aria-valuetext={receptionLabel(value)}
+      aria-valuetext={receptionText(receptionLabels, value, LABELS.postCall.notRated)}
       onKeyDown={onKeyDown}
       className="group px-0.5 pt-1 outline-none"
     >
@@ -73,7 +76,7 @@ const ReceptionSlider = ({ name, onChange }: ReceptionSliderProps) => {
         />
       </div>
       <div className="flex justify-between gap-1.5">
-        {LABELS.postCall.reception.map((label, index) => (
+        {receptionLabels.map((label, index) => (
           <button
             key={label}
             type="button"

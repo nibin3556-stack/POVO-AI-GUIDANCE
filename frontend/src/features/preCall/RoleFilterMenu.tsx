@@ -5,7 +5,8 @@ import RoleChip from '../../components/common/RoleChip';
 import { LABELS } from '../../constants/labels';
 import type { Facet } from '../../types/models';
 import { cx } from '../../utils/cx';
-import { ROLE_TYPES, nextRoles } from '../../utils/targets';
+import { useReference } from '../../hooks/useReference';
+import { nextRoles } from '../../utils/targets';
 
 interface RoleFilterMenuProps {
   selected: string[];
@@ -16,6 +17,7 @@ interface RoleFilterMenuProps {
 /** The funnel in the Name header: show or hide HCPs, NPs and PAs (with counts). */
 const RoleFilterMenu = ({ selected, counts, onChange }: RoleFilterMenuProps) => {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const { roleCodes } = useReference();
   const partial = selected.length > 0;
   return (
     <>
@@ -32,7 +34,7 @@ const RoleFilterMenu = ({ selected, counts, onChange }: RoleFilterMenuProps) => 
       </button>
       <Popover open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { p: 0.75, minWidth: 170 } } }}>
         <div className="px-2 pb-[5px] pt-[3px] text-[11px] font-bold uppercase tracking-[.5px] text-ink3">{LABELS.preCall.showRoles}</div>
-        {ROLE_TYPES.map((role) => {
+        {roleCodes.map((role) => {
           const on = !partial || selected.includes(role);
           return (
             <button
@@ -40,7 +42,7 @@ const RoleFilterMenu = ({ selected, counts, onChange }: RoleFilterMenuProps) => 
               type="button"
               role="menuitemcheckbox"
               aria-checked={on}
-              onClick={() => onChange(nextRoles(selected, role))}
+              onClick={() => onChange(nextRoles(selected, role, roleCodes))}
               className="flex w-full items-center gap-[9px] rounded-[7px] px-2 py-[7px] text-left text-[13px] font-semibold text-ink2 hover:bg-bluet"
             >
               <CheckMark checked={on} size="sm" />

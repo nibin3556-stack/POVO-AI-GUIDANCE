@@ -22,13 +22,6 @@ from datetime import date
 
 from helpers.dates import MONS, MONTHS, WorkCalendar, js_round, month_end, pct
 
-METRICS = [
-    ("PEF", "Patient Enrollment Forms", "PEFs"),
-    ("NRX", "NRx", "new scripts"),
-    ("NEW_PATIENTS", "New POVO Patients", "patients"),
-]
-#: FCT_POVO_ACTIVITY.EVENT_TYPE behind each KPI metric code.
-EVENT_FOR_METRIC = {"PEF": "PEF", "NRX": "NRX", "NEW_PATIENTS": "NEW_PATIENT"}
 PERIODS = ("month", "quarter", "ytd")
 
 
@@ -70,14 +63,19 @@ def metric(goals: list[int], actuals: list[int], months: list[int], today: date,
             "status": "on_track" if act >= js_round(due) else "at_risk"}
 
 
-def monthly_series(td, today: date) -> tuple[dict[str, list[int]], dict[str, list[int]]]:
-    """(goals, actuals) per metric code, 12 months of the current year."""
-    goals = {code: [0] * 12 for code, _, _ in METRICS}
+def monthly_series(td, today: date, metrics: list[dict]) -> tuple[dict[str, list[int]], dict[str, list[int]]]:
+    """(goals, actuals) per metric code, 12 months of the current year.
+
+    `metrics` are REF_KPI_METRIC rows: METRIC_CODE keys the goals, EVENT_TYPE says
+    which FCT_POVO_ACTIVITY events count as the actual. Activity after today is
+    never counted.
+    """
+    goals = {m["METRIC_CODE"]: [0] * 12 for m in metrics}
     for g in td.goals:
         if int(g["GOAL_YEAR"]) == today.year and g["METRIC_CODE"] in goals and 1 <= int(g["GOAL_MONTH"]) <= 12:
             goals[g["METRIC_CODE"]][int(g["GOAL_MONTH"]) - 1] += int(g["GOAL_VALUE"] or 0)
-    actuals = {code: [0] * 12 for code, _, _ in METRICS}
-    by_event = {v: k for k, v in EVENT_FOR_METRIC.items()}
+    actuals = {m["METRIC_CODE"]: [0] * 12 for m in metrics}
+    by_event = {m["EVENT_TYPE"]: m["METRIC_CODE"] for m in metrics}
     for a in td.activity:
         d, code = a["EVENT_DATE"], by_event.get(a["EVENT_TYPE"])
         if code and d and d.year == today.year and d <= today:
@@ -85,13 +83,15 @@ def monthly_series(td, today: date) -> tuple[dict[str, list[int]], dict[str, lis
     return goals, actuals
 
 
-def kpis(td, period: str, today: date, cal: WorkCalendar) -> dict:
+def kpis(td, period: str, today: date, cal: WorkCalendar, metrics: list[dict]) -> dict:
+    """KPI cards in REF_KPI_METRIC order; titles and units come from that table."""
     win = period_window(period, today)
-    goals, actuals = monthly_series(td, today)
+    goals, actuals = monthly_series(td, today, metrics)
     cards = []
-    for code, title, unit in METRICS:
+    for ref in metrics:
+        code = ref["METRIC_CODE"]
         m = metric(goals[code], actuals[code], win["months"], today, cal)
-        cards.append({"metric_code": code, "title": title, "unit": unit, **m})
+        cards.append({"metric_code": code, "title": ref["TITLE"], "unit": ref["UNIT"], **m})
     return {"period": period, "period_label": win["label"], "period_start": win["start"],
             "period_end": win["end"], "remaining_working_days": cal.work_after(today, win["end"]),
             "cards": cards}

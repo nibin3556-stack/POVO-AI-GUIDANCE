@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { assessmentSchema } from './assessmentSchema';
+import { reference } from '../test/fixtures';
+import { buildAssessmentSchema } from './assessmentSchema';
+
+const assessmentSchema = buildAssessmentSchema(reference.limits);
 import { impersonationLookupSchema } from './impersonationSchema';
 
 const item = { participant_id: 'H2', category: 'messaging', point_id: 'M1', point_rank: 1, point_text: 't', was_raised: true, reception: 1, note: 'fine' };

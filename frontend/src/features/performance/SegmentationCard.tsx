@@ -7,7 +7,6 @@ import { useChartHover } from '../../hooks/useChartHover';
 import { useGetSegmentationQuery } from '../../redux/api/performanceApi';
 import type { Segment } from '../../types/models';
 import { cx } from '../../utils/cx';
-import { segmentColor } from '../../utils/targets';
 import { segmentTip } from './chartTips';
 
 const P = LABELS.performance;
@@ -27,7 +26,7 @@ const SegmentLegend = memo(({ segments, activeIndex, onHover }: LegendProps) => 
         onMouseMove={(e) => onHover(index, e.clientX, e.clientY)}
         className={cx('grid grid-cols-[11px_minmax(0,1fr)_auto] items-start gap-[7px] rounded-[7px] px-1 py-[3px]', activeIndex === index && 'bg-[#F1F5FA]')}
       >
-        <i className="mt-[3px] size-[11px] rounded-[3px]" style={{ backgroundColor: segmentColor(s.segment_code, s.color_hex) }} />
+        <i className="mt-[3px] size-[11px] rounded-[3px]" style={{ backgroundColor: s.color_hex }} />
         <span className="text-[12.6px] font-semibold leading-[1.3] text-ink2">{s.full_name}</span>
         <b className="text-[15px] font-bold leading-[1.1] text-ink">{Math.round(s.pct)}%</b>
       </li>
@@ -41,7 +40,7 @@ const SegmentationCard = () => {
   const { data, error, isLoading, refetch } = useGetSegmentationQuery();
   const { hover, onHover, onLeave } = useChartHover();
   const slices = useMemo(
-    () => (data?.segments ?? []).map((s) => ({ key: s.segment_code, value: s.hcp_count, color: segmentColor(s.segment_code, s.color_hex) })),
+    () => (data?.segments ?? []).map((s) => ({ key: s.segment_code, value: s.hcp_count, color: s.color_hex })),
     [data],
   );
   const active = hover ? data?.segments[hover.index] : undefined;

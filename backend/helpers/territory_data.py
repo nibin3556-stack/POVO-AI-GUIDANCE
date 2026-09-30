@@ -33,6 +33,8 @@ class Refs:
     segments: list[dict]
     focus: list[dict]
     holidays: set[date]
+    kpi_metrics: list[dict]
+    channels: list[dict]
 
     def tier(self, code: Optional[str]) -> Optional[dict]:
         return next((t for t in self.tiers if t["TIER_CODE"] == code), None)
@@ -45,7 +47,13 @@ class Refs:
     def segment(self, code: Optional[str]) -> dict:
         return next((s for s in self.segments if s["SEGMENT_CODE"] == code),
                     {"SEGMENT_CODE": code, "SHORT_NAME": code or "", "FULL_NAME": code or "",
-                     "DESCRIPTION": "", "COLOR_HEX": "#64748B", "SORT_ORDER": 99})
+                     "DESCRIPTION": "", "COLOR_HEX": "#64748B", "ARCHETYPE_NAME": "", "ARCHETYPE_DESC": "",
+                     "SORT_ORDER": 99})
+
+    def channel(self, code: Optional[str]) -> dict:
+        """REF_INTERACTION_CHANNEL row; an unknown code shows as itself rather than failing."""
+        return next((c for c in self.channels if c["CHANNEL_CODE"] == code),
+                    {"CHANNEL_CODE": code, "TYPE_LABEL": code or "", "TEAM_LABEL": code or ""})
 
     def focus_label(self, code: Optional[str]) -> str:
         f = next((f for f in self.focus if f["FOCUS_CODE"] == code), None)
@@ -99,7 +107,10 @@ def get_refs() -> Refs:
     focus = sorted(wh.query(f"SELECT * FROM {bronze('REF_COMPETITIVE_FOCUS')}"),
                    key=lambda r: r.get("SORT_ORDER") or 0)
     hol = {to_date(r["HOLIDAY_DATE"]) for r in wh.query(f"SELECT HOLIDAY_DATE FROM {bronze('REF_US_HOLIDAY')}")}
-    value = Refs(emps, terrs, tiers, segs, focus, {h for h in hol if h})
+    kpi = sorted(wh.query(f"SELECT * FROM {bronze('REF_KPI_METRIC')}"), key=lambda r: r.get("SORT_ORDER") or 0)
+    chans = sorted(wh.query(f"SELECT * FROM {bronze('REF_INTERACTION_CHANNEL')}"),
+                   key=lambda r: r.get("SORT_ORDER") or 0)
+    value = Refs(emps, terrs, tiers, segs, focus, {h for h in hol if h}, kpi, chans)
     with _lock:
         _refs = (time.time(), value)
     return value

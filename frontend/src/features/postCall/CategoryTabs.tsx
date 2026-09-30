@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import SegmentedToggle from '../../components/common/SegmentedToggle';
-import { CATEGORIES, POINTS_PER_CATEGORY } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
+import { useReference } from '../../hooks/useReference';
 import type { Category } from '../../types/models';
 
 interface CategoryTabsProps {
@@ -18,18 +18,19 @@ const ACTIVE: Record<Category, string> = {
 
 /** The three categories with "x of 3 selected". */
 const CategoryTabs = ({ value, counts, onChange }: CategoryTabsProps) => {
+  const ref = useReference();
   const options = useMemo(
     () =>
-      CATEGORIES.map((c) => ({
+      ref.categoryCodes.map((c) => ({
         value: c,
         label: (
           <span className="flex flex-col items-center gap-px">
-            <span>{LABELS.callPrep.categories[c]}</span>
-            <em className="text-xs font-semibold not-italic opacity-85">{LABELS.postCall.ofSelected(counts[c], POINTS_PER_CATEGORY)}</em>
+            <span>{ref.categoryLabel(c)}</span>
+            <em className="text-xs font-semibold not-italic opacity-85">{LABELS.postCall.ofSelected(counts[c], ref.data.limits.points_per_category)}</em>
           </span>
         ),
       })),
-    [counts],
+    [counts, ref],
   );
   return (
     <div className="px-4 pt-3">

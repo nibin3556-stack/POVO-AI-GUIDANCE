@@ -2,7 +2,7 @@
  * Every UI string lives here (no hardcoded copy in components). Interpolated
  * strings are small functions. Copy is taken verbatim from the POC / spec.
  */
-import type { Category, ChannelCode, Period, Reception } from '../types/models';
+import type { Period } from '../types/models';
 
 const plural = (n: number, one: string, many: string): string => (n === 1 ? one : many);
 
@@ -77,23 +77,23 @@ export const LABELS = {
     strong: 'Strong performance',
     focus: 'Recommended focus',
     daysNoCall: (days: number) => ` · ${days} days, no call`,
-    superHigh: (n: number) => `${n} Super High`,
+    superHigh: (n: number, tier: string) => `${n} ${tier}`,
     notWriting: ' not writing',
     trialAt: ' trial at ',
     povoPatients: (n: number) => ` · ${n} POVO ${plural(n, 'patient', 'patients')}`,
     mostPovo: 'Most POVO patients in the territory',
-    superHighReach: 'Super High reach ',
+    superHighReach: (tier: string) => `${tier} reach `,
     missedTitle: (name: string, tier: string, days: number) => `${name} · ${tier} · ${days} days since the last call`,
-    shNotWritingTitle: 'Super High targets who have not written POVO yet',
+    shNotWritingTitle: (tier: string) => `${tier} targets who have not written POVO yet`,
     trialTitle: (full: string) => `${full}: trial rate across the segment`,
-    reachTitle: 'Super High targets in the call plan who were called this year',
+    reachTitle: (tier: string) => `${tier} targets in the call plan who were called this year`,
     guidanceEmpty: 'No guidance available yet',
     segmentationTitle: 'Target Segmentation',
     decileTitle: 'POVO Targets by Decile',
     writersTitle: 'New POVO Writers by Segment',
     povoTargets: 'POVO Targets',
     notWritingCaption: (n: number, total: number) => `▼ ${n} of ${total} POVO Targets yet to write POVO`,
-    shCaption: (n: number, total: number) => `▼ ${n} of ${total} Super High HCPs yet to write POVO`,
+    shCaption: (n: number, total: number, tier: string) => `▼ ${n} of ${total} ${tier} HCPs yet to write POVO`,
     writing: 'Writing POVO',
     yetToWrite: 'Yet to write POVO',
     ofHcps: (_writers: number, t: number) => ` of ${t} HCPs`,
@@ -186,11 +186,6 @@ export const LABELS = {
     participants: 'Meeting participants',
     historyTitle: 'Call Participant History',
     preparationTitle: 'Call Preparation',
-    categories: {
-      messaging: 'Suggested Messaging',
-      objection: 'Potential Objections',
-      closing: 'Suggested Closing Statements',
-    } satisfies Record<Category, string>,
     categoryAria: 'Talking point category',
     chooseCategory: 'Choose Suggested Messaging, Potential Objections or Suggested Closing Statements to generate the talking points',
     aiGenerating: 'AI generating',
@@ -208,15 +203,7 @@ export const LABELS = {
     interactionDate: 'Interaction Date',
     newChip: 'New',
     noInteractions: 'No interactions on record',
-    filters: {
-      all: 'All',
-      rep: 'POVO Sales',
-      adfa: 'ADFA',
-      opz: 'Opz Sales',
-      msl: 'MSL',
-      spkr: 'Speaker',
-      pr: 'PR',
-    } satisfies Record<'all' | ChannelCode, string>,
+    filterAll: 'All',
     tiles: {
       hsHcp: 'HS patients, last 12 months',
       hsOther: 'HS patients seen, last 12 months',
@@ -235,7 +222,6 @@ export const LABELS = {
     aiChip: 'AI checks every note for compliance',
     participants: 'Call participants',
     ofSelected: (n: number, t: number) => `${n} of ${t} selected`,
-    reception: ['Not Well Received', 'Moderately Received', 'Well Received'] satisfies [string, string, string],
     sliderAria: 'How the point was received',
     notRated: 'Not rated',
     notes: 'Notes',
@@ -255,11 +241,6 @@ export const LABELS = {
     clearFlags: (n: number) => `Clear ${n} compliance ${plural(n, 'flag', 'flags')} to enable AI Suggestions for Next Call`,
     answerFirst: 'Select at least one point raised on the call to enable AI Suggestions for Next Call',
     aiPreparing: 'AI is preparing suggestions for the next call',
-    nextSteps: (n: number) => [
-      'Reading the post-call assessment',
-      `Running the AI compliance check on ${n} ${plural(n, 'note', 'notes')}`,
-      'Drafting next-call talking points',
-    ],
     nothingAnswered: 'Select at least one point raised on the call first',
     flaggedByServer: (n: number) => `The AI compliance check flagged ${n} ${plural(n, 'note', 'notes')}. Clear the flags first`,
     saveFailed: 'Your latest changes could not be saved. They will be retried with the next change.',
@@ -273,8 +254,6 @@ export const LABELS = {
   compliance: {
     title: 'AI Compliance Check',
     drag: 'Drag to move',
-    steps: ['Reading your note', 'Checking against 14 compliance rules', 'Drafting a rewrite'],
-    levels: { high: 'Non-compliant', med: 'Needs review', low: 'Minor issue' },
     issuesFound: (k: number, ctx: string) => `${k} ${plural(k, 'issue', 'issues')} found in ${ctx}`,
     high: 'High',
     medium: 'Medium',
@@ -297,6 +276,3 @@ export const LABELS = {
     next: 'Next',
   },
 } as const;
-
-export const receptionLabel = (value: Reception | null): string =>
-  value === null ? LABELS.postCall.notRated : LABELS.postCall.reception[value];

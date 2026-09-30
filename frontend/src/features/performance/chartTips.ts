@@ -5,12 +5,11 @@ import { CHART_COLORS, COLORS } from '../../constants/colors';
 import { LABELS } from '../../constants/labels';
 import type { DecileRow, Deciles, Grain, NewWriters, Segment, Segmentation, Tier, WriterBucket } from '../../types/models';
 import { formatLongDate, formatMDY, formatNumber, formatShortMD } from '../../utils/format';
-import { segmentColor } from '../../utils/targets';
 
 const T = LABELS.performance.tip;
 
 export const segmentTip = (segment: Segment, data: Segmentation): ChartTip => {
-  const color = segmentColor(segment.segment_code, segment.color_hex);
+  const color = segment.color_hex;
   return {
     title: T.opportunity(segment.short_name),
     rows: [

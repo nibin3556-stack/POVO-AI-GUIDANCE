@@ -62,7 +62,10 @@ COLUMNS: dict[str, list[str]] = {
                              "SEGMENT_CODE", "COMPETITIVE_FOCUS", "IS_IN_CALL_PLAN", "HS_RANK"],
     "REF_TIER": ["TIER_CODE", "TIER_NAME", "DECILE_MIN", "DECILE_MAX", "CALLS_PER_YEAR",
                  "REACH_GOAL_PCT", "SORT_ORDER"],
-    "REF_SEGMENT": ["SEGMENT_CODE", "SHORT_NAME", "FULL_NAME", "DESCRIPTION", "COLOR_HEX", "SORT_ORDER"],
+    "REF_SEGMENT": ["SEGMENT_CODE", "SHORT_NAME", "FULL_NAME", "DESCRIPTION", "COLOR_HEX",
+                    "ARCHETYPE_NAME", "ARCHETYPE_DESC", "SORT_ORDER"],
+    "REF_KPI_METRIC": ["METRIC_CODE", "EVENT_TYPE", "TITLE", "UNIT", "SORT_ORDER"],
+    "REF_INTERACTION_CHANNEL": ["CHANNEL_CODE", "TYPE_LABEL", "TEAM_LABEL", "SORT_ORDER"],
     "REF_COMPETITIVE_FOCUS": ["FOCUS_CODE", "LABEL", "COLOR_HEX", "SORT_ORDER"],
     "FCT_INTERACTION": ["INTERACTION_ID", "HCP_ID", "TERRITORY_ID", "EMPLOYEE_ID", "INTERACTION_DATE",
                         "CHANNEL_CODE", "INTERACTION_TYPE", "POVO_DISCUSSED", "SUMMARY"],
@@ -105,11 +108,31 @@ TIERS = [
 
 SEGMENTS = [
     ("imm", "Immediate", "HS Biologic and HS JAK Prescribers",
-     "Treating HS patients with biologics and/or oral JAK inhibitors", "#156CB4"),
+     "Treating HS patients with biologics and/or oral JAK inhibitors", "#156CB4",
+     "Tara", "losing control on a biologic"),
     ("conv", "Conversion", "Advanced Therapy Naïve HS Treaters",
-     "Managing HS patients with no prior biologic or oral JAK inhibitor use for HS", "#0E8A8A"),
+     "Managing HS patients with no prior biologic or oral JAK inhibitor use for HS", "#0E8A8A",
+     "Marcus", "stuck on conventional therapy"),
     ("exp", "Expansion", "Broader JAK Prescribers",
-     "Prescribing oral JAK inhibitors in non-HS indications", "#7C6BD6"),
+     "Prescribing oral JAK inhibitors in non-HS indications", "#7C6BD6",
+     "Marcus", "stuck on conventional therapy"),
+]
+
+# KPI definitions shown on the Territory Performance cards (METRIC_CODE matches FCT_TERRITORY_GOAL).
+KPI_METRICS = [
+    ("PEF", "PEF", "Patient Enrollment Forms", "PEFs"),
+    ("NRX", "NRX", "NRx", "new scripts"),
+    ("NEW_PATIENTS", "NEW_PATIENT", "New POVO Patients", "patients"),
+]
+
+# Interaction channels: the card type and the team shown on the filter chips.
+INTERACTION_CHANNELS = [
+    ("rep", "Direct call", "POVO Sales"),
+    ("adfa", "ADFA visit", "ADFA"),
+    ("opz", "Opz Sales call", "Opz Sales"),
+    ("msl", "MSL visit", "MSL"),
+    ("spkr", "Speaker program", "Speaker"),
+    ("pr", "PR visit", "PR"),
 ]
 
 FOCUS = [
@@ -120,10 +143,7 @@ FOCUS = [
     ("conventional", "Conventional therapy", "#64748B"),
 ]
 
-INTERACTION_TYPES = {
-    "rep": "Direct call", "adfa": "ADFA visit", "opz": "Opz Sales call",
-    "msl": "MSL visit", "spkr": "Speaker program", "pr": "PR visit",
-}
+INTERACTION_TYPES = {code: type_label for code, type_label, _team in INTERACTION_CHANNELS}
 
 # Short, realistic one-line summaries (POC XFV lists plus "POVO discussed" variants).
 REP_SUMMARIES = [
@@ -534,9 +554,16 @@ class SeedGenerator:
         for i, (code, name, dmin, dmax, calls, reach, _a, _r) in enumerate(TIERS, 1):
             self.tables["REF_TIER"].append(dict(TIER_CODE=code, TIER_NAME=name, DECILE_MIN=dmin, DECILE_MAX=dmax,
                                                 CALLS_PER_YEAR=calls, REACH_GOAL_PCT=reach, SORT_ORDER=i))
-        for i, (code, short, full, desc, color) in enumerate(SEGMENTS, 1):
+        for i, (code, short, full, desc, color, arch, arch_desc) in enumerate(SEGMENTS, 1):
             self.tables["REF_SEGMENT"].append(dict(SEGMENT_CODE=code, SHORT_NAME=short, FULL_NAME=full,
-                                                   DESCRIPTION=desc, COLOR_HEX=color, SORT_ORDER=i))
+                                                   DESCRIPTION=desc, COLOR_HEX=color, ARCHETYPE_NAME=arch,
+                                                   ARCHETYPE_DESC=arch_desc, SORT_ORDER=i))
+        for i, (code, event, title, unit) in enumerate(KPI_METRICS, 1):
+            self.tables["REF_KPI_METRIC"].append(dict(METRIC_CODE=code, EVENT_TYPE=event, TITLE=title, UNIT=unit,
+                                                      SORT_ORDER=i))
+        for i, (code, type_label, team) in enumerate(INTERACTION_CHANNELS, 1):
+            self.tables["REF_INTERACTION_CHANNEL"].append(dict(CHANNEL_CODE=code, TYPE_LABEL=type_label,
+                                                               TEAM_LABEL=team, SORT_ORDER=i))
         for i, (code, label, color) in enumerate(FOCUS, 1):
             self.tables["REF_COMPETITIVE_FOCUS"].append(dict(FOCUS_CODE=code, LABEL=label, COLOR_HEX=color,
                                                              SORT_ORDER=i))

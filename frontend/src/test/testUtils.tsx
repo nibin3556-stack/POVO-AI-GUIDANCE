@@ -8,10 +8,23 @@ import { RouterProvider, createMemoryRouter } from 'react-router';
 import { vi } from 'vitest';
 import axiosInstance from '../config/axiosConfig';
 import { getTheme } from '../context/theme';
+import { sessionApi } from '../redux/api/sessionApi';
 import { setupStore, type AppStore, type RootState } from '../redux/store';
+import { reference } from './fixtures';
 import type { ApiError } from '../types/api';
 
 const theme = getTheme();
+
+/**
+ * The app shell loads GET /api/v1/reference before any page renders, so every
+ * test store starts with it cached, just like the running app.
+ */
+export const withReference = (store: AppStore): AppStore => {
+  store.dispatch(sessionApi.util.upsertQueryEntries([{ endpointName: 'getReference', arg: undefined, value: reference }]));
+  return store;
+};
+
+export const referenceStore = (preloadedState?: Partial<RootState>): AppStore => withReference(setupStore(preloadedState));
 
 export interface MockRoute {
   method?: string;
@@ -36,7 +49,8 @@ export const mockApi = (routes: MockRoute[]) =>
   vi.spyOn(axiosInstance, 'request').mockImplementation(async (config) => {
     const method = config.method ?? 'get';
     const url = config.url ?? '';
-    const route = routes.find((r) => matches(r, method, url));
+    // The shell always loads the reference lookups; tests get them unless a route overrides it.
+    const route = routes.find((r) => matches(r, method, url)) ?? (url === '/api/v1/reference' ? { url, respond: reference } : undefined);
     if (!route) throw apiError(404, `No mock for ${method} ${url}`);
     const payload = typeof route.respond === 'function' ? (route.respond as (c: unknown) => unknown)(config) : route.respond;
     const value = await payload;
@@ -59,7 +73,7 @@ const Theme = ({ children }: { children: ReactNode }) => (
 
 /** Renders inside Redux, the MUI theme and a memory router (route params work). */
 export const renderWithProviders = (ui: ReactElement, { store, preloadedState, route = '/', path = '*', ...options }: ProviderOptions = {}) => {
-  const appStore = store ?? setupStore(preloadedState);
+  const appStore = withReference(store ?? setupStore(preloadedState));
   const router = createMemoryRouter(
     [
       { path, element: ui },
@@ -81,6 +95,7 @@ export const renderWithProviders = (ui: ReactElement, { store, preloadedState, r
 /** Renders a form field inside Formik (and the theme). */
 export const renderInFormik = <T extends object>(ui: ReactElement, initialValues: T, onSubmit = vi.fn()) =>
   render(
+    <Provider store={referenceStore()}>
     <Theme>
       <Formik initialValues={initialValues} onSubmit={onSubmit}>
         {(formik) => (
@@ -90,7 +105,13 @@ export const renderInFormik = <T extends object>(ui: ReactElement, initialValues
           </form>
         )}
       </Formik>
-    </Theme>,
+    </Theme>
+    </Provider>,
   );
 
-export const renderWithTheme = (ui: ReactElement) => render(<Theme>{ui}</Theme>);
+export const renderWithTheme = (ui: ReactElement) =>
+  render(
+    <Provider store={referenceStore()}>
+      <Theme>{ui}</Theme>
+    </Provider>,
+  );

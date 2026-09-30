@@ -32,6 +32,7 @@ from helpers.content.library import get_library
 from helpers.content.select import CATEGORIES, participant_context
 from helpers.dates import fmt_mdy, now_utc, today
 from helpers.dependency import RequestContext, require_permission
+from helpers.reference import next_call_steps
 from helpers.revision import revise
 from helpers.targets import universe
 from registry.permissions_seed import CALL_ASSESS
@@ -264,8 +265,5 @@ def next_call(call_id: str, ctx: RequestContext = Guard) -> dict:
     audit_ctx(ctx, "NEXT_CALL_GENERATE", "calls", call_id,
               {"revision_no": revision_no, "participants": len(out_people), "engine": sorted(sources)})
     return ok({"call_id": call_id, "revision_no": revision_no, "call_date": call_date,
-               "steps": ["Reading the post-call assessment",
-                         f"Running the AI compliance check on {sum(1 for a in rows if (a.get('NOTE') or '').strip())} "
-                         f"{'note' if sum(1 for a in rows if (a.get('NOTE') or '').strip()) == 1 else 'notes'}",
-                         "Drafting next-call talking points"],
+               "steps": next_call_steps(sum(1 for a in rows if (a.get("NOTE") or "").strip())),
                "participants": out_people, "source": "ai" if "ai" in sources else "rules"})

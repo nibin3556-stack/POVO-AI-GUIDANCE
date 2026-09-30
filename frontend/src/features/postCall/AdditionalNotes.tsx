@@ -1,7 +1,8 @@
 import { memo } from 'react';
 import AiSparkle from '../../components/common/AiSparkle';
 import FormTextArea from '../../components/forms/FormTextArea';
-import { ADDITIONAL_NOTE_MAX_LENGTH, ADDITIONAL_POINT_ID } from '../../constants/constant';
+import { ADDITIONAL_POINT_ID } from '../../constants/constant';
+import { useReference } from '../../hooks/useReference';
 import { LABELS } from '../../constants/labels';
 import { complianceDialogOpened } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
@@ -18,6 +19,7 @@ const AdditionalNotes = () => {
   const { primaryId, runCheck } = useAssessment();
   const key = additionalKey(primaryId);
   const entry = useAppSelector((s) => s.callSession.compliance[key]);
+  const { limits } = useReference().data;
   const check = (note: string, force = false) =>
     void runCheck({ key, participant_id: primaryId, category: 'additional', point_id: ADDITIONAL_POINT_ID, point_text: '', note, context: P.additionalContext }, { force });
   const openReport = () => (entry?.result ? dispatch(complianceDialogOpened({ key, context: P.additionalContext })) : check(entry?.note ?? '', true));
@@ -30,7 +32,7 @@ const AdditionalNotes = () => {
         {entry?.status === 'passed' && <span className="size-[11px] rounded-full bg-[#22A34A] shadow-[0_0_0_3px_rgba(34,163,74,.18)]" />}
         {entry?.status === 'flagged' && <span className="size-[11px] rounded-full bg-red shadow-[0_0_0_3px_rgba(220,38,38,.18)]" />}
       </div>
-      <FormTextArea name="additional_note" placeholder={P.additionalPlaceholder} maxLength={ADDITIONAL_NOTE_MAX_LENGTH} ariaLabel={P.additionalTitle} onBlur={(v) => check(v)} tone={tone} />
+      <FormTextArea name="additional_note" placeholder={P.additionalPlaceholder} maxLength={limits.additional_note_max_length} ariaLabel={P.additionalTitle} onBlur={(v) => check(v)} tone={tone} />
       {entry?.status === 'flagged' && (
         <button type="button" onClick={openReport} className={cx('mt-1.5 flex items-start gap-[7px] text-left text-[12.6px] font-semibold leading-[1.4] text-red2')}>
           <AiSparkle className="mt-0.5 size-3.5 text-purple" />

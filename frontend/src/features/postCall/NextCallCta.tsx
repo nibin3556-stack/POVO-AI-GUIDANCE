@@ -3,6 +3,7 @@ import AiActivityBox from '../../components/common/AiActivityBox';
 import CtaButton from '../../components/common/CtaButton';
 import { TIMING } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
+import { useReference } from '../../hooks/useReference';
 import { useTimeline } from '../../hooks/useTimeline';
 import { stepperState } from '../../utils/steps';
 
@@ -18,7 +19,8 @@ const DELAYS = [0, TIMING.NEXT_CALL_STEP_MS, TIMING.NEXT_CALL_STEP_MS, TIMING.NE
 
 const Stepper = ({ noteCount }: { noteCount: number }) => {
   const stage = useTimeline(DELAYS, true);
-  const steps = useMemo(() => stepperState(LABELS.postCall.nextSteps(noteCount), stage), [noteCount, stage]);
+  const { nextCallSteps } = useReference();
+  const steps = useMemo(() => stepperState(nextCallSteps(noteCount), stage), [nextCallSteps, noteCount, stage]);
   return <AiActivityBox title={LABELS.postCall.aiPreparing} steps={steps} orientation="horizontal" wide />;
 };
 

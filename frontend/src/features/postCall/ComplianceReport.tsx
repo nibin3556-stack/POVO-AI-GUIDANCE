@@ -17,7 +17,6 @@ const LEVEL_CHIP = {
   rev: 'border-[#FDE68A] bg-warnbg text-warn',
   ok: 'border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]',
 };
-const SEV_LABEL = { bad: C.levels.high, rev: C.levels.med, ok: C.levels.low };
 
 const Stat = ({ value, label, color }: { value: number; label: string; color: string }) => (
   <span className="flex min-w-[52px] flex-col items-center rounded-[9px] border border-line bg-white p-1.5">
@@ -35,7 +34,7 @@ const ComplianceReport = ({ result, note, context }: ComplianceReportProps) => {
     <div className="flex flex-col gap-[9px]">
       <div className="grid grid-cols-[1fr_auto] items-center gap-3.5 rounded-xl border border-line bg-[#F7F9FC] px-3.5 py-2.5 max-bp640:grid-cols-1">
         <div>
-          <span className={cx('inline-flex items-center rounded-full border px-[11px] py-[3px] text-xs font-bold uppercase tracking-[.5px]', LEVEL_CHIP[level])}>{SEV_LABEL[level]}</span>
+          <span className={cx('inline-flex items-center rounded-full border px-[11px] py-[3px] text-xs font-bold uppercase tracking-[.5px]', LEVEL_CHIP[level])}>{result.result_label}</span>
           <div className="mt-1.5 text-[13px] font-medium leading-[1.4] text-ink2">{C.issuesFound(result.issues.length, context)}</div>
           <ul className="m-0 mt-2 flex flex-col gap-1 pl-[18px]">
             {result.issues.map((issue) => (

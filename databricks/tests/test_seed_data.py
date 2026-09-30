@@ -399,6 +399,12 @@ def test_reference_tables(data):
     assert tiers["SH"]["CALLS_PER_YEAR"] == "40" and tiers["LOW"]["REACH_GOAL_PCT"] == "75"
     assert {s["SEGMENT_CODE"] for s in data["REF_SEGMENT"]} == {"imm", "conv", "exp"}
     assert len(data["REF_COMPETITIVE_FOCUS"]) == 5
+    assert all(s["ARCHETYPE_NAME"] for s in data["REF_SEGMENT"])
+    kpi = {m["METRIC_CODE"]: m for m in data["REF_KPI_METRIC"]}
+    assert set(kpi) == {g["METRIC_CODE"] for g in data["FCT_TERRITORY_GOAL"]}
+    assert {m["EVENT_TYPE"] for m in kpi.values()} == {a["EVENT_TYPE"] for a in data["FCT_POVO_ACTIVITY"]}
+    channels = {c["CHANNEL_CODE"] for c in data["REF_INTERACTION_CHANNEL"]}
+    assert {i["CHANNEL_CODE"] for i in data["FCT_INTERACTION"]} <= channels
     years = {date(h["HOLIDAY_DATE"]).year for h in data["REF_US_HOLIDAY"]}
     assert {AS_OF.year, AS_OF.year + 1} <= years
     assert date("2026-07-03") in {date(h["HOLIDAY_DATE"]) for h in data["REF_US_HOLIDAY"]}

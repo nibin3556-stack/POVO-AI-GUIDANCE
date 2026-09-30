@@ -2,11 +2,11 @@ import { Tooltip } from '@mui/material';
 import { memo } from 'react';
 import DecileChip from '../../components/common/DecileChip';
 import EmptyState from '../../components/common/EmptyState';
-import FocusTag from '../../components/common/FocusTag';
+import CompetitiveFocusTag from '../../components/common/CompetitiveFocusTag';
 import { LABELS } from '../../constants/labels';
-import type { Facet, Target } from '../../types/models';
+import type { Target } from '../../types/models';
 import { cx } from '../../utils/cx';
-import { focusColor, focusLabel, targetFullName } from '../../utils/targets';
+import { targetFullName } from '../../utils/targets';
 import LastCallCell from './LastCallCell';
 import TargetName from './TargetName';
 
@@ -15,7 +15,6 @@ interface MustWinListProps {
   targets: Target[];
   showJak: boolean;
   selectedId: string | null;
-  focusFacets: Facet[] | undefined;
   onSelect: (hcpId: string) => void;
 }
 
@@ -34,7 +33,7 @@ const TipBody = ({ t }: { t: Target }) => (
   </span>
 );
 
-const Row = memo(({ t, index, showJak, selected, focusFacets, onSelect }: { t: Target; index: number; showJak: boolean; selected: boolean; focusFacets?: Facet[]; onSelect: (id: string) => void }) => (
+const Row = memo(({ t, index, showJak, selected, onSelect }: { t: Target; index: number; showJak: boolean; selected: boolean; onSelect: (id: string) => void }) => (
   <Tooltip title={<TipBody t={t} />} placement="right" enterDelay={200} disableInteractive>
     <button
       type="button"
@@ -46,7 +45,7 @@ const Row = memo(({ t, index, showJak, selected, focusFacets, onSelect }: { t: T
         <TargetName target={t} selected={selected} index={index} />
       </span>
       <span className="flex min-w-0 items-center">
-        <FocusTag label={focusLabel(t.competitive_focus, focusFacets)} color={focusColor(t.competitive_focus, focusFacets)} />
+        <CompetitiveFocusTag code={t.competitive_focus} />
       </span>
       <span className="flex justify-center">
         <DecileChip decile={t.decile} tier={t.tier_code} />
@@ -64,7 +63,7 @@ const Row = memo(({ t, index, showJak, selected, focusFacets, onSelect }: { t: T
 Row.displayName = 'MustWinRow';
 
 /** One Must-Wins list: top 5 with competitive focus, decile, HS patients and last call. */
-const MustWinList = ({ title, targets, showJak, selectedId, focusFacets, onSelect }: MustWinListProps) => (
+const MustWinList = ({ title, targets, showJak, selectedId, onSelect }: MustWinListProps) => (
   <div className="flex min-w-0 flex-1 flex-col rounded-xl border border-line bg-white px-[13px] pb-2.5 pt-[9px] tall:px-4 tall:pb-3.5 tall:pt-3">
     <div className="text-[15.2px] font-semibold text-blued">{title}</div>
     <div className={cx(GRID, 'mt-2 mb-[-4px]')}>
@@ -77,7 +76,7 @@ const MustWinList = ({ title, targets, showJak, selectedId, focusFacets, onSelec
     <div className="mt-2 flex flex-1 flex-col justify-evenly gap-1.5">
       {targets.length === 0 && <EmptyState message={L.mustWinsEmpty} />}
       {targets.map((t, i) => (
-        <Row key={t.hcp_id} t={t} index={i + 1} showJak={showJak} selected={t.hcp_id === selectedId} focusFacets={focusFacets} onSelect={onSelect} />
+        <Row key={t.hcp_id} t={t} index={i + 1} showJak={showJak} selected={t.hcp_id === selectedId} onSelect={onSelect} />
       ))}
     </div>
   </div>

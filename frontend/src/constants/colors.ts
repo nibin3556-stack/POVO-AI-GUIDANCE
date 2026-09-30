@@ -72,19 +72,4 @@ export const ROLE_COLORS: Record<RoleType, string> = {
   NP: '#0B6B57',
 };
 
-/** Fallback colours when an API row carries no colour. */
-export const SEGMENT_COLORS: Record<string, string> = {
-  imm: '#156CB4',
-  conv: '#0E8A8A',
-  exp: '#7C6BD6',
-};
-
-export const FOCUS_COLORS: Record<string, string> = {
-  cosentyx: '#0E8A8A',
-  bimzelx: '#C2410C',
-  humira: '#7C3AED',
-  jak: '#156CB4',
-  conventional: '#64748B',
-};
-
 export const RECEPTION_COLORS = ['#C2410C', '#D97706', '#15803D'] as const;

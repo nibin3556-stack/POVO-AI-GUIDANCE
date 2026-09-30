@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, type ReactNode } from 'react';
 import AsyncContent from '../../components/common/AsyncContent';
 import DataTable, { type DataColumn } from '../../components/common/DataTable';
 import DecileChip from '../../components/common/DecileChip';
-import FocusTag from '../../components/common/FocusTag';
+import CompetitiveFocusTag from '../../components/common/CompetitiveFocusTag';
 import Pager from '../../components/common/Pager';
 import { TARGETS_PAGE_SIZE } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
@@ -11,7 +11,7 @@ import { selectFilters, selectPage, selectSort, selectTargetQuery } from '../../
 import { pageSelected, rolesSet, sortSelected } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import type { Facets, Target, TargetSortKey } from '../../types/models';
-import { focusColor, focusLabel, targetFullName } from '../../utils/targets';
+import { targetFullName } from '../../utils/targets';
 import LastCallCell from './LastCallCell';
 import RoleFilterMenu from './RoleFilterMenu';
 import TargetName from './TargetName';
@@ -24,11 +24,11 @@ interface CallPlanTableProps {
 
 const L = LABELS.preCall;
 
-const buildColumns = (facets: Facets | undefined, selectedId: string | null, roleMenu: ReactNode): DataColumn<Target>[] => [
+const buildColumns = (selectedId: string | null, roleMenu: ReactNode): DataColumn<Target>[] => [
   { key: 'name', header: L.name, width: 'w-[20%]', headerExtra: roleMenu, render: (t) => <TargetName target={t} selected={t.hcp_id === selectedId} />, title: targetFullName },
   { key: 'account', header: L.account, width: 'w-[17%]', render: (t) => t.account_name, title: (t) => t.account_name },
   { key: 'location', header: L.location, width: 'w-[14%]', render: (t) => `${t.city}, ${t.state}` },
-  { key: 'focus', header: L.competitiveFocus, width: 'w-[13%]', render: (t) => <FocusTag label={focusLabel(t.competitive_focus, facets?.focus)} color={focusColor(t.competitive_focus, facets?.focus)} /> },
+  { key: 'focus', header: L.competitiveFocus, width: 'w-[13%]', render: (t) => <CompetitiveFocusTag code={t.competitive_focus} /> },
   { key: 'zip', header: L.zip, width: 'w-[7%]', render: (t) => t.zip },
   { key: 'decile', header: L.decile, width: 'w-[7%]', align: 'right', sortable: true, render: (t) => <DecileChip decile={t.decile} tier={t.tier_code} /> },
   { key: 'hs_patients', header: L.hsVolume, width: 'w-[8%]', align: 'right', sortable: true, render: (t) => <b className="text-sm font-bold text-ink">{t.hs_patients}</b> },
@@ -48,7 +48,7 @@ const CallPlanTable = ({ facets, selectedId, onSelect }: CallPlanTableProps) => 
     () => <RoleFilterMenu selected={filters.role} counts={facets?.role} onChange={(roles) => dispatch(rolesSet(roles))} />,
     [dispatch, facets?.role, filters.role],
   );
-  const columns = useMemo(() => buildColumns(facets, selectedId, roleMenu), [facets, selectedId, roleMenu]);
+  const columns = useMemo(() => buildColumns(selectedId, roleMenu), [selectedId, roleMenu]);
   const handleSort = useCallback((key: string) => dispatch(sortSelected(key as TargetSortKey)), [dispatch]);
   const handleRow = useCallback((t: Target) => onSelect(t.hcp_id), [onSelect]);
   const handlePage = useCallback((p: number) => dispatch(pageSelected(p)), [dispatch]);

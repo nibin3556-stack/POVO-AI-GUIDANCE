@@ -7,6 +7,7 @@ import Icon from '../../components/common/Icon';
 import { TIMING } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
 import { useDraggable } from '../../hooks/useDraggable';
+import { useReference } from '../../hooks/useReference';
 import { useTimeline } from '../../hooks/useTimeline';
 import { useAcceptSuggestionMutation } from '../../redux/api/callsApi';
 import { complianceDialogClosed } from '../../redux/callSession/callSessionSlice';
@@ -36,7 +37,8 @@ const DialogBody = ({ itemKey, context, note, result, onClose }: BodyProps) => {
   const { runCheck, focusInput } = useAssessment();
   const [accept] = useAcceptSuggestionMutation();
   const stage = useTimeline(DELAYS, true);
-  const labels = result.steps.length === 3 ? result.steps : C.steps;
+  const ref = useReference();
+  const labels = result.steps.length ? result.steps : ref.data.compliance.steps;
   const showReport = stage >= DELAYS.length;
   const { offset, handleProps } = useDraggable();
   const [participant = '', category = '', pointId = ''] = itemKey.split('|');
