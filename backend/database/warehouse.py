@@ -1,4 +1,4 @@
-"""One data-access interface over two engines: Databricks SQL and local DuckDB.
+"""One data-access interface over three engines: Databricks SQL, DuckDB and SQLite.
 
     query(sql, params)   -> list[dict]     (column name -> Python value)
     execute(sql, params) -> None
@@ -14,6 +14,10 @@ fully qualified `catalog.schema.TABLE` names (database/tables.py):
     against a DuckDB file ATTACHed under the catalog name. Bronze tables are
     (re)loaded from the seeder's CSVs at startup; app tables are created if
     missing and persist between restarts.
+  * SqliteWarehouse runs the same text on one SQLite file (sqlite3 binds
+    `:name` natively). Table names are bare there (database/tables.py). All
+    data, bronze included, lives in the file; bronze is loaded from the CSVs
+    only while a table is empty, so a copied or shared database is used as is.
 
 A list/tuple parameter is expanded (`IN (:ids)` -> `IN (:ids_0, :ids_1)`) so
 both engines see scalars only. No ORM: the tables are Delta, keys are logical,
@@ -26,8 +30,9 @@ import logging
 import os
 import queue
 import re
+import sqlite3
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Iterable, Optional
 
 from core.config import Settings, get_settings
@@ -290,6 +295,167 @@ class LocalWarehouse(Warehouse):
 
 
 # ---------------------------------------------------------------------------
+# SQLite (interim database until Databricks is connected)
+# ---------------------------------------------------------------------------
+#: Declared SQLite column types. STRING must become TEXT: "STRING" has no TEXT
+#: affinity in SQLite, so ZIP "04101" or an NPI would be stored as a number.
+#: DATE / TIMESTAMP / BOOLEAN keep their names so the converters below run.
+SQLITE_TYPES = {"STRING": "TEXT", "INT": "INTEGER", "BIGINT": "INTEGER", "DOUBLE": "REAL",
+                "BOOLEAN": "BOOLEAN", "DATE": "DATE", "TIMESTAMP": "TIMESTAMP"}
+
+
+def _ts_out(value: datetime) -> str:
+    """Timestamps are stored as naive UTC "YYYY-MM-DD HH:MM:SS[.ffffff]", as DuckDB's
+    TIMESTAMP does, so text order is time order and reads match the DuckDB mode."""
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value.isoformat(sep=" ")
+
+
+def _register_sqlite_types() -> None:
+    sqlite3.register_adapter(bool, int)
+    sqlite3.register_adapter(date, lambda d: d.isoformat())
+    sqlite3.register_adapter(datetime, _ts_out)
+    sqlite3.register_converter("DATE", lambda b: date.fromisoformat(b.decode()[:10]))
+    sqlite3.register_converter("TIMESTAMP", lambda b: datetime.fromisoformat(b.decode()))
+    sqlite3.register_converter("BOOLEAN", lambda b: b not in (b"0", b"", b"false", b"False"))
+
+
+def sqlite_value(raw: Optional[str], typ: str) -> Any:
+    """A CSV text value as the Python value for its declared type (empty = NULL)."""
+    if raw is None or raw.strip() == "":
+        return None
+    if typ in ("INT", "BIGINT"):
+        return int(raw)
+    if typ == "DOUBLE":
+        return float(raw)
+    if typ == "BOOLEAN":
+        return raw.strip().lower() in ("true", "1", "t", "yes")
+    if typ == "DATE":
+        return date.fromisoformat(raw.strip()[:10])
+    if typ == "TIMESTAMP":
+        return datetime.fromisoformat(raw.strip())
+    return raw
+
+
+def sqlite_create_sql(table: str) -> str:
+    cols = ", ".join(f"{c} {SQLITE_TYPES[t]}" for c, t in tables.ALL_COLUMNS[table])
+    return f"CREATE TABLE IF NOT EXISTS {table} ({cols})"
+
+
+def sqlite_connect(db_path: str) -> sqlite3.Connection:
+    """A connection with the POVO type conversions; shared by the warehouse and the scripts."""
+    _register_sqlite_types()
+    os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+    con = sqlite3.connect(os.path.abspath(db_path), detect_types=sqlite3.PARSE_DECLTYPES,
+                          check_same_thread=False, isolation_level=None)
+    con.execute("PRAGMA journal_mode=DELETE")
+    con.execute("PRAGMA busy_timeout=5000")
+    for table in tables.ALL_COLUMNS:
+        con.execute(sqlite_create_sql(table))
+    return con
+
+
+def load_csv_into_sqlite(con: sqlite3.Connection, table: str, folder: str) -> bool:
+    """Replace a bronze table's rows with <folder>/<TABLE>.csv. False when there is no CSV."""
+    csv_path = os.path.join(folder, f"{table}.csv")
+    if not os.path.isfile(csv_path):
+        return False
+    cols = tables.BRONZE_COLUMNS[table]
+    with open(csv_path, newline="", encoding="utf-8-sig") as fh:
+        reader = csv.DictReader(fh)
+        upper = {h.strip().upper(): h for h in (reader.fieldnames or [])}
+        rows = [{c: sqlite_value(r.get(upper[c]) if c in upper else None, t) for c, t in cols} for r in reader]
+    names = [c for c, _ in cols]
+    con.execute("BEGIN")
+    try:
+        con.execute(f"DELETE FROM {table}")
+        con.executemany(f"INSERT INTO {table} ({', '.join(names)}) VALUES ({', '.join(':' + n for n in names)})",
+                        rows)
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    return True
+
+
+class SqliteWarehouse(Warehouse):
+    """One SQLite file holding bronze and app tables under their bare names.
+
+    One connection behind a lock (FastAPI runs sync endpoints in a thread
+    pool). Autocommit, with explicit transactions for MERGE. The rollback
+    journal (not WAL) keeps the database a single file you can copy or share
+    once the backend is stopped.
+    """
+
+    name = "sqlite"
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+        self._lock = threading.RLock()
+        self._con = sqlite_connect(settings.sqlite_path)
+        self.loaded_tables: list[str] = []
+        self._fill_empty_bronze()
+
+    def _fill_empty_bronze(self) -> None:
+        """Load a bronze table from SEED_OUTPUT_DIR/<TABLE>.csv only while it is empty.
+
+        Unlike the DuckDB mode, existing rows are never replaced: this file is
+        the database. To refresh bronze, run scripts/load_sqlite_bronze.py.
+        """
+        folder = self.settings.seed_output_dir
+        for table in tables.BRONZE_COLUMNS:
+            if self._con.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone():
+                continue
+            if load_csv_into_sqlite(self._con, table, folder):
+                self.loaded_tables.append(table)
+        if self.loaded_tables:
+            logger.info("SQLite: filled %d empty bronze tables from %s", len(self.loaded_tables), folder)
+
+    def _run(self, sql: str, params: dict, fetch: bool):
+        with self._lock:
+            cur = self._con.execute(sql, params or {})
+            if not fetch:
+                return None
+            names = [d[0] for d in (cur.description or [])]
+            return [dict(zip(names, row)) for row in cur.fetchall()]
+
+    def insert(self, table: str, rows: Iterable[dict]) -> None:
+        """Plain parameter binding: no CAST (see SQLITE_TYPES); the adapters do the types."""
+        rows = list(rows)
+        if not rows:
+            return
+        cols = [c for c in tables.column_types(table) if c in rows[0]]
+        sql = f"INSERT INTO {tables.app(table)} ({', '.join(cols)}) VALUES ({', '.join(':' + c for c in cols)})"
+        with self._lock:
+            self._con.executemany(sql, [{c: r.get(c) for c in cols} for r in rows])
+
+    def merge(self, table: str, keys: list[str], rows: Iterable[dict]) -> None:
+        """Delete-then-insert in one transaction, like the DuckDB mode."""
+        rows = list(rows)
+        if not rows:
+            return
+        with self._lock:
+            self._con.execute("BEGIN")
+            try:
+                where = " AND ".join(f"{k} = :{k}" for k in keys)
+                for row in rows:
+                    self._con.execute(f"DELETE FROM {tables.app(table)} WHERE {where}", {k: row[k] for k in keys})
+                self.insert(table, rows)
+                self._con.execute("COMMIT")
+            except Exception:
+                self._con.execute("ROLLBACK")
+                raise
+
+    def close(self) -> None:
+        with self._lock:
+            try:
+                self._con.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+# ---------------------------------------------------------------------------
 _instance: Optional[Warehouse] = None
 _instance_lock = threading.Lock()
 
@@ -301,7 +467,8 @@ def get_warehouse() -> Warehouse:
         with _instance_lock:
             if _instance is None:
                 s = get_settings()
-                _instance = DatabricksWarehouse(s) if s.data_source == "databricks" else LocalWarehouse(s)
+                engines = {"databricks": DatabricksWarehouse, "sqlite": SqliteWarehouse}
+                _instance = engines.get(s.data_source, LocalWarehouse)(s)
     return _instance
 
 

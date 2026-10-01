@@ -18,7 +18,10 @@ export interface ReferenceLookup {
   categoryLabel: (code: Category) => string;
   receptionLabels: string[];
   nextCallSteps: (noteCount: number) => string[];
+  prepSteps: (category: Category, name: string) => string[];
 }
+
+const possessive = (name: string): string => (name.endsWith('s') ? `${name}'` : `${name}'s`);
 
 const fillStep = (template: string, n: number): string =>
   template.replace('{n}', String(n)).replace('{notes}', n === 1 ? 'note' : 'notes');
@@ -46,6 +49,7 @@ export const buildReferenceLookup = (data: Reference): ReferenceLookup => {
     categoryLabel: (code) => categories.get(code)?.label ?? code,
     receptionLabels: data.reception_scale.map((r) => r.label),
     nextCallSteps: (n) => data.next_call_steps.map((s) => fillStep(s, n)),
+    prepSteps: (category, name) => (data.prep_steps[category] ?? []).map((s) => s.replace('{possessive}', possessive(name))),
   };
 };
 

@@ -58,8 +58,8 @@ POVO-AI-GUIDANCE/
   - The app has no login page, no JWT and no tokens.
 - **Unknown or inactive users** get 403 with the message "Your account is not set up for POVO AI Guidance".
 - **Permissions** are role-based and declared in `backend/registry/permissions_seed.py`:
-  - `REP` gets `guidance.view` and `call.assess`.
-  - `MANAGER` gets `guidance.view`, `call.assess` and `user.impersonate`.
+  - `REP` and `MANAGER` get `guidance.view` and `call.assess`.
+  - `user.impersonate` goes to the roles in `IMPERSONATION_ROLES` (default `REP,MANAGER`, as in the POC, where the signed-in rep has **Impersonate user**). Set it to `MANAGER` to restrict it.
   - Every endpoint is guarded server-side.
 - **Impersonation**
   - The frontend sends `X-Impersonate-Employee-Id: <employee_id>` on every request while impersonating. The value is kept in Redux and persisted to `sessionStorage`.

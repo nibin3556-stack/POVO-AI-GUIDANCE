@@ -16,6 +16,8 @@ interface PrepPanelProps {
   data: CallPrep;
   category: Category;
   animate: boolean;
+  /** The steps already played while the request ran: go straight to the points. */
+  skipSteps?: boolean;
   onRevealed: () => void;
   /** Renders the header with the AI status chip. */
   renderHeader: (status: ReactNode, pill: ReactNode) => ReactNode;
@@ -42,10 +44,10 @@ const RevisionBanner = ({ data }: { data: CallPrep }) =>
  * The talking points for one participant × category × revision. Keyed by that
  * triple, so the AI activity (steps, then points one by one) plays once per key.
  */
-const PrepPanel = ({ data, category, animate, onRevealed, renderHeader, controls }: PrepPanelProps) => {
+const PrepPanel = ({ data, category, animate, skipSteps = false, onRevealed, renderHeader, controls }: PrepPanelProps) => {
   const handleDone = useCallback(() => onRevealed(), [onRevealed]);
   const { categoryLabel } = useReference();
-  const reveal = useAiReveal(data.steps, data.points.length, animate, handleDone);
+  const reveal = useAiReveal(data.steps, data.points.length, animate, handleDone, skipSteps);
   const revised = data.is_revised;
   const pill = revised ? (
     <StatusChip variant="purple" className="ml-2.5 animate-tag-glow border-purple2! bg-purple2! text-white!">

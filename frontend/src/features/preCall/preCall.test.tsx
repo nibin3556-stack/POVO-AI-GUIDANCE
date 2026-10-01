@@ -71,6 +71,23 @@ describe('Pre-Call Planning', () => {
     expect(within(prep).getByText('AI generated')).toBeInTheDocument();
   }, 10000);
 
+  it('shows the AI activity box with its steps, not a spinner, while the points are prepared', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    mockApi([
+      ...routes.filter((r) => r.url !== '/call-prep'),
+      { method: 'post', url: '/call-prep', respond: () => gate.then(() => callPrep({ category: 'messaging' })) },
+    ]);
+    renderWithProviders(<PreCallPage />, { route: '/pre-call/H2', path: '/pre-call/:hcpId?' });
+    const prep = await screen.findByTestId('call-prep');
+    await userEvent.click(await within(prep).findByRole('button', { name: 'Suggested Messaging' }));
+    expect(await within(prep).findByText('AI is preparing Suggested Messaging')).toBeInTheDocument();
+    expect(within(prep).getByText("Analyzing Dr. Winters' profile, decile and HS volume")).toBeInTheDocument();
+    expect(within(prep).queryByText('Loading…')).toBeNull();
+    release();
+    expect(await within(prep).findByText(/HiSCR50/, {}, { timeout: 5000 })).toBeInTheDocument();
+  }, 10000);
+
   it('adds the PA as a meeting participant', async () => {
     mockApi(routes);
     const { store } = renderWithProviders(<PreCallPage />, { route: '/pre-call/H2', path: '/pre-call/:hcpId?' });

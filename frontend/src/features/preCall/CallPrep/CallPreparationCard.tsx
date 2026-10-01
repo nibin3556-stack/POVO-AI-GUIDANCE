@@ -1,4 +1,6 @@
-import { memo, useCallback, useMemo, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
+import AiActivityBox from '../../../components/common/AiActivityBox';
+import { usePendingSteps } from '../../../hooks/useAiReveal';
 import AsyncContent from '../../../components/common/AsyncContent';
 import EmptyState from '../../../components/common/EmptyState';
 import Icon from '../../../components/common/Icon';
@@ -29,6 +31,24 @@ const Header = ({ status, pill }: { status?: ReactNode; pill?: ReactNode }) => (
   </header>
 );
 
+interface PreparingOrErrorProps {
+  pending: boolean;
+  error: unknown;
+  onRetry: () => void;
+  children: ReactNode;
+}
+
+const PreparingOrError = ({ pending, error, onRetry, children }: PreparingOrErrorProps) => {
+  if (pending) return <>{children}</>;
+  return <AsyncContent isLoading={false} error={error} onRetry={onRetry}>{null}</AsyncContent>;
+};
+
+/** While the AI prepares the points: the same activity box, its steps playing until the answer arrives. */
+const PreparingBox = ({ title, labels }: { title: string; labels: string[] }) => {
+  const steps = usePendingSteps(labels);
+  return <AiActivityBox title={title} steps={steps} />;
+};
+
 /** Card 2: category toggle, role tabs and the AI-prepared talking points (top 3). */
 const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardProps) => {
   const dispatch = useAppDispatch();
@@ -46,6 +66,13 @@ const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardPro
   const key = prep.data && category ? revealKey(prep.data.participant_id, category, prep.data.revision_no) : null;
   const onRevealed = useCallback(() => key && dispatch(revealCompleted(key)), [dispatch, key]);
   const renderHeader = useCallback((status: ReactNode, pill: ReactNode) => <Header status={status} pill={pill} />, []);
+  // Which request showed the preparing box: its steps are not replayed when the points arrive.
+  // Recorded during render (React's "adjust state on change" pattern), not in an effect.
+  const argsKey = args ? `${args.participant_id}|${args.category}` : '';
+  const pending = prep.isLoading || prep.isFetching;
+  const [waitedFor, setWaitedFor] = useState('');
+  if (pending && argsKey && waitedFor !== argsKey) setWaitedFor(argsKey);
+  const pendingLabels = useMemo(() => (active && category ? ref.prepSteps(category, active.display_name) : []), [active, category, ref]);
 
   const controls = (
     <>
@@ -58,7 +85,7 @@ const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardPro
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-white shadow-e1">
       {ready && prep.data && category && key ? (
-        <PrepPanel key={key} data={prep.data} category={category} animate={!revealed[key]} onRevealed={onRevealed} renderHeader={renderHeader} controls={controls} />
+        <PrepPanel key={key} data={prep.data} category={category} animate={!revealed[key]} skipSteps={waitedFor === argsKey} onRevealed={onRevealed} renderHeader={renderHeader} controls={controls} />
       ) : (
         <>
           <Header />
@@ -67,9 +94,9 @@ const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardPro
             {!category ? (
               <EmptyState message={C.chooseCategory} variant="hint" />
             ) : (
-              <AsyncContent isLoading={prep.isLoading || prep.isFetching} error={prep.error} onRetry={() => void prep.refetch()}>
-                {null}
-              </AsyncContent>
+              <PreparingOrError pending={pending} error={prep.error} onRetry={() => void prep.refetch()}>
+                <PreparingBox key={argsKey} title={C.aiPreparing(ref.categoryLabel(category))} labels={pendingLabels} />
+              </PreparingOrError>
             )}
           </div>
         </>

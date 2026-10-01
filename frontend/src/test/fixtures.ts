@@ -311,6 +311,11 @@ export const reference: Reference = {
     steps: ['Reading your note', 'Checking against 14 compliance rules', 'Drafting a rewrite'],
     severity_labels: { high: 'Non-compliant', med: 'Needs review', low: 'Minor issue' },
   },
+  prep_steps: {
+    messaging: ['Analyzing {possessive} profile, decile and HS volume', 'Applying the Core Claims order for POVO data', 'Generating suggested messaging'],
+    objection: ['Analyzing {possessive} profile, decile and HS volume', 'Selecting objections from the POVO objection handler', 'Generating potential objections'],
+    closing: ['Analyzing {possessive} profile and call history', 'Matching suggested closes to the call goals', 'Generating suggested closing statements'],
+  },
   next_call_steps: ['Reading the post-call assessment', 'Running the AI compliance check on {n} {notes}', 'Drafting next-call talking points'],
   limits: { points_per_category: 3, note_max_length: 200, additional_note_max_length: 600 },
 };

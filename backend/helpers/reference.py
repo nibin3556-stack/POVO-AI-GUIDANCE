@@ -13,7 +13,7 @@ from helpers.compliance.engine import LABEL_BY_SEVERITY
 from helpers.compliance.service import DEFAULT_NOTE_LIMIT, NOTE_LIMIT, compliance_steps
 from helpers.content.library import get_library
 from helpers.content.select import CATEGORIES, LABELS
-from helpers.prep import TP_SHOW
+from helpers.prep import PREP_STEPS, TP_SHOW
 from helpers.territory_data import get_refs
 
 ROLE_TYPES = (("HCP", "HCP"), ("NP", "NP"), ("PA", "PA"))
@@ -51,6 +51,7 @@ def build_reference() -> dict:
         "compliance": {"rule_count": len(lib.compliance_rules), "steps": compliance_steps(),
                        "severity_labels": dict(LABEL_BY_SEVERITY)},
         "next_call_steps": list(NEXT_CALL_STEPS),
+        "prep_steps": {cat: list(lines) for cat, lines in PREP_STEPS.items()},
         "limits": {"points_per_category": TP_SHOW, "note_max_length": DEFAULT_NOTE_LIMIT,
                    "additional_note_max_length": NOTE_LIMIT["additional"]},
     }

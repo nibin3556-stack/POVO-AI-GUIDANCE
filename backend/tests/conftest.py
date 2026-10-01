@@ -28,8 +28,12 @@ _TMP = Path(tempfile.mkdtemp(prefix="povo-tests-"))
 SEED_DIR = _TMP / "seed"
 SERVICE_TOKEN = "test-service-token-0123456789"
 
+#: Run the whole suite on another engine with POVO_TEST_DATA_SOURCE=sqlite.
+DATA_SOURCE = os.environ.get("POVO_TEST_DATA_SOURCE", "local")
+
 os.environ.update({
-    "ENVIRONMENT": "testing", "DATA_SOURCE": "local", "LOCAL_DUCKDB_PATH": str(_TMP / "povo.duckdb"),
+    "ENVIRONMENT": "testing", "DATA_SOURCE": DATA_SOURCE, "LOCAL_DUCKDB_PATH": str(_TMP / "povo.duckdb"),
+    "SQLITE_PATH": str(_TMP / "povo.sqlite"),
     "SEED_OUTPUT_DIR": str(SEED_DIR), "POVO_TODAY_OVERRIDE": AS_OF, "AI_ENABLED": "false", "N8N_BASE_URL": "",
     "POVO_SERVICE_TOKEN": SERVICE_TOKEN, "DEV_FALLBACK_USERNAME": "vturano", "LOG_LEVEL": "WARNING",
     "BRONZE_CACHE_SECONDS": "600",

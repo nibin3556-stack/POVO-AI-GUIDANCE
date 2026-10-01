@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from tests.conftest import SERVICE_TOKEN, ident, seed_rows
+from tests.conftest import DATA_SOURCE, SERVICE_TOKEN, ident, seed_rows
 
 ENVELOPE = {"data", "status", "message", "page", "limit", "total_pages", "total_items"}
 
@@ -18,7 +18,7 @@ def _data(resp, status=200):
 # --- health, envelope, middleware ------------------------------------------
 def test_health(client):
     d = _data(client.get("/health"))
-    assert d["data_source"] == "local" and d["warehouse"] == "ok" and d["n8n"] == "disabled"
+    assert d["data_source"] == DATA_SOURCE and d["warehouse"] == "ok" and d["n8n"] == "disabled"
 
 
 def test_request_id_echo_and_security_headers(client):
@@ -43,7 +43,7 @@ def test_me_dev_fallback(client, rep):
     assert d["signed_in"]["username"] == "vturano" and not d["is_impersonating"]
     assert d["territory"]["territory_id"] == rep["HOME_TERRITORY_ID"] == "NE-POR"
     assert d["today"] == "2026-10-13" and d["data_as_of"] <= "2026-10-13"
-    assert d["permissions"] == ["guidance.view", "call.assess"]
+    assert d["permissions"] == ["guidance.view", "call.assess", "user.impersonate"]
 
 
 def test_plain_username_and_email_header(client, rep):
@@ -58,7 +58,22 @@ def test_unknown_user_403(client):
     assert r.status_code == 403 and r.json()["message"] == "Your account is not set up for POVO AI Guidance"
 
 
-def test_rep_cannot_impersonate(client, other_rep):
+def test_rep_impersonates_like_the_poc(client, rep, other_rep):
+    """Default IMPERSONATION_ROLES includes REP: the signed-in rep sees another rep's data."""
+    h = {**ident("vturano"), "X-Impersonate-Employee-Id": other_rep["EMPLOYEE_ID"]}
+    me = _data(client.get("/api/v1/me", headers=h))
+    assert me["is_impersonating"] and me["signed_in"]["username"] == "vturano"
+    assert me["effective"]["employee_id"] == other_rep["EMPLOYEE_ID"]
+    assert me["territory"]["territory_id"] == other_rep["HOME_TERRITORY_ID"] != rep["HOME_TERRITORY_ID"]
+    own = _data(client.get("/api/v1/targets/must-wins", headers=ident("vturano")))
+    theirs = _data(client.get("/api/v1/targets/must-wins", headers=h))
+    assert own["territory_name"] != theirs["territory_name"]
+    assert {t["hcp_id"] for t in own["hs_volume"]}.isdisjoint({t["hcp_id"] for t in theirs["hs_volume"]})
+
+
+def test_rep_cannot_impersonate_when_restricted(client, other_rep, monkeypatch):
+    from core.config import get_settings
+    monkeypatch.setattr(get_settings(), "impersonation_roles", ["MANAGER"])
     h = {**ident("vturano"), "X-Impersonate-Employee-Id": other_rep["EMPLOYEE_ID"]}
     assert client.get("/api/v1/me", headers=h).status_code == 403
     assert client.get("/api/v1/employees/search?q=da", headers=ident("vturano")).status_code == 403
@@ -317,6 +332,7 @@ def test_reference_lookups(client):
     assert d["limits"] == {"points_per_category": 3, "note_max_length": 200, "additional_note_max_length": 600}
     assert {c["code"] for c in d["interaction_channels"]} == {"rep", "adfa", "opz", "msl", "spkr", "pr"}
     assert [m["title"] for m in d["kpi_metrics"]] == ["Patient Enrollment Forms", "NRx", "New POVO Patients"]
+    assert d["prep_steps"]["messaging"][0] == "Analyzing {possessive} profile, decile and HS volume"
 
 
 def test_kpi_cards_follow_ref_kpi_metric(client):

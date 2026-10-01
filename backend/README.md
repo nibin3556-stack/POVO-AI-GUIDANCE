@@ -41,14 +41,30 @@ another rep's call, the envelope, pagination cap and sort whitelist, KPI math ag
 POC values, all 14 compliance rules with suppressions, score and labels, the rewrite, the revision
 rules, next-call 409/422, jobs token, n8n unreachable, Guard failure and a valid AI answer.
 
-## Local vs Databricks mode
+Run the same suite on SQLite with `POVO_TEST_DATA_SOURCE=sqlite` (PowerShell:
+`$env:POVO_TEST_DATA_SOURCE="sqlite"; .venv\Scripts\python -m pytest`). `tests/test_sqlite_warehouse.py`
+covers the SQLite engine itself (types, leading zeros, MERGE, no overwrite of existing data).
 
-| | `DATA_SOURCE=local` | `DATA_SOURCE=databricks` |
-|---|---|---|
-| Engine | DuckDB file (`LOCAL_DUCKDB_PATH`, default `backend/.localdata/povo.duckdb`) attached **as the catalog**, so the same `catalog.schema.TABLE` SQL runs | SQL Warehouse via `databricks-sql-connector` (native `:name` parameters, small connection pool) |
-| Bronze | reloaded at startup from `SEED_OUTPUT_DIR/<TABLE>.csv` (typed casts; missing CSV = empty table) | `${DATABRICKS_CATALOG}.${DATABRICKS_SCHEMA}` (read only) |
-| App tables | created if missing, persist across restarts | `${DATABRICKS_CATALOG}.${DATABRICKS_APP_SCHEMA}` (MERGE upserts) |
-| Allowed in production | no (refused at startup) | yes |
+## Data sources: local DuckDB, SQLite, Databricks
+
+| | `DATA_SOURCE=local` | `DATA_SOURCE=sqlite` (current interim database) | `DATA_SOURCE=databricks` |
+|---|---|---|---|
+| Engine | DuckDB file (`LOCAL_DUCKDB_PATH`, default `backend/.localdata/povo.duckdb`) attached **as the catalog**, so the same `catalog.schema.TABLE` SQL runs | One SQLite file (`SQLITE_PATH`, default `backend/.localdata/povo.sqlite`). SQLite has no catalogs, so tables use their **bare names** (unique across bronze and app) | SQL Warehouse via `databricks-sql-connector` (native `:name` parameters, small connection pool) |
+| Bronze | reloaded at startup from `SEED_OUTPUT_DIR/<TABLE>.csv` (typed casts; missing CSV = empty table) | kept in the file; filled from the CSVs **only while a table is empty**. Refresh with `scripts/load_sqlite_bronze.py` | `${DATABRICKS_CATALOG}.${DATABRICKS_SCHEMA}` (read only) |
+| App tables | created if missing, persist across restarts | created if missing, persist (delete-then-insert upserts) | `${DATABRICKS_CATALOG}.${DATABRICKS_APP_SCHEMA}` (MERGE upserts) |
+| Allowed in production | no (refused at startup) | yes (no Databricks settings needed) | yes |
+
+SQLite stores dates as ISO text, timestamps as naive UTC text and booleans as 0/1, declared as `DATE`,
+`TIMESTAMP` and `BOOLEAN` so they read back as Python `date`, `datetime` and `bool`, exactly like
+DuckDB. Text columns are declared `TEXT`, so ZIP and NPI keep their leading zeros. The rollback journal
+(not WAL) keeps the database a single file: stop the backend, then copy or share `povo.sqlite`.
+
+**Scripts** (stop the backend first):
+
+| Command | What it does |
+|---|---|
+| `.venv\Scripts\python scripts\duckdb_to_sqlite.py [--replace]` | Copies every bronze and app table, with rows, from the DuckDB file into the SQLite file. Refuses to overwrite a SQLite file that has data unless `--replace` is given. |
+| `.venv\Scripts\python scripts\load_sqlite_bronze.py [--tables A,B]` | Replaces the SQLite bronze tables from the seed CSVs (run `databricks/seed/generate_seed_data.py` first for fresh data). App tables are untouched. |
 
 All SQL is portable (SELECT / INSERT / UPDATE / DELETE / MERGE) and filters by territory. Metrics are
 computed in Python from per-territory data cached for `BRONZE_CACHE_SECONDS`.
@@ -66,8 +82,9 @@ computed in Python from per-territory data cached for `BRONZE_CACHE_SECONDS`.
 | `POVO_TODAY_OVERRIDE` | empty | `YYYY-MM-DD`, dev/tests only; refused in production |
 | `DEV_FALLBACK_USERNAME` | `vturano` | only when `ENVIRONMENT != production` and no header |
 | `POSIT_IDENTITY_HEADER` | `RStudio-Connect-Credentials` | |
-| `DATA_SOURCE` | `local` | `local` or `databricks` |
+| `DATA_SOURCE` | `local` | `local`, `sqlite` or `databricks` |
 | `LOCAL_DUCKDB_PATH` | `backend/.localdata/povo.duckdb` | |
+| `SQLITE_PATH` | `backend/.localdata/povo.sqlite` | used when `DATA_SOURCE=sqlite` |
 | `SEED_OUTPUT_DIR` | `databricks/seed/output` | |
 | `BRONZE_CACHE_SECONDS` | `600` | per-territory bronze cache and content cache |
 | `DATABRICKS_HOST` | | workspace host (a pasted URL is accepted) |
@@ -88,7 +105,7 @@ computed in Python from per-territory data cached for `BRONZE_CACHE_SECONDS`.
 `.env` then `.env.local` are loaded from this folder (resolved from `core/config.py`, not the working
 directory). Only `.env.example` is committed.
 
-**Production refuses to start** when `DATA_SOURCE=local`, when any of `DATABRICKS_HOST` / `TOKEN` /
+**Production refuses to start** when `DATA_SOURCE=local`, when `DATA_SOURCE=databricks` and any of `DATABRICKS_HOST` / `TOKEN` /
 `WAREHOUSE_ID` is missing, when `POVO_SERVICE_TOKEN` is empty or a default, or when
 `POVO_TODAY_OVERRIDE` is set.
 
@@ -97,7 +114,7 @@ directory). Only `.env.example` is committed.
 ```
 main.py                 app factory, middleware (request id, security headers, GZip, CORS), lifespan
 core/                   config, identity (Posit header), request_id, security_headers, exception_handler, logging
-database/               tables.py (names + column types), warehouse.py (Databricks | local DuckDB)
+database/               tables.py (names + column types), warehouse.py (Databricks | local DuckDB | SQLite)
 schema/                 request models + the response envelope
 api/                    health, me, impersonation, performance, targets, accounts, call_prep, calls, compliance, jobs
 helpers/                dependency (real/effective user), audit, dates, territory_data (cache), targets,

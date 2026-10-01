@@ -174,20 +174,28 @@ def current_list(u: Universe, primary: dict, p: dict, category: str, request_id:
     return {"points": points, "revision": None, "source": source}
 
 
+#: The AI activity steps per category ({possessive} = "Dr. Winters'" / "Kristen Casey's").
+#: Also served by GET /reference, so the screen can play them while the request runs.
+PREP_STEPS = {
+    "messaging": ["Analyzing {possessive} profile, decile and HS volume",
+                  "Applying the Core Claims order for POVO data", "Generating suggested messaging"],
+    "objection": ["Analyzing {possessive} profile, decile and HS volume",
+                  "Selecting objections from the POVO objection handler", "Generating potential objections"],
+    "closing": ["Analyzing {possessive} profile and call history", "Matching suggested closes to the call goals",
+                "Generating suggested closing statements"],
+}
+
+
+def possessive(name: str) -> str:
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
+
+
 def steps(category: str, name: str, revised_from=None) -> list[str]:
-    poss = f"{name}'" if name.endswith("s") else f"{name}'s"
     if revised_from:
         return [f"Reading the {fmt_mdy(revised_from)} post-call assessment for {name}",
                 "Reordering objections by what is still open" if category == "objection"
                 else "Checking which points stayed open", f"Generating next-call {LABELS[category].lower()}"]
-    if category == "objection":
-        return [f"Analyzing {poss} profile, decile and HS volume", "Selecting objections from the POVO objection handler",
-                "Generating potential objections"]
-    if category == "closing":
-        return [f"Analyzing {poss} profile and call history", "Matching suggested closes to the call goals",
-                "Generating suggested closing statements"]
-    return [f"Analyzing {poss} profile, decile and HS volume", "Applying the Core Claims order for POVO data",
-            "Generating suggested messaging"]
+    return [s.format(possessive=possessive(name)) for s in PREP_STEPS.get(category, PREP_STEPS["messaging"])]
 
 
 def point_out(x: dict, rank: int, category: str) -> dict:

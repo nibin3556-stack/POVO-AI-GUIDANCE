@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     # NoDecode: read the raw comma-separated string instead of expecting JSON.
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5175"]
+    #: Roles allowed to impersonate (DIM_EMPLOYEE.ROLE_CODE, comma-separated).
+    #: The POC offers "Impersonate user" to the signed-in rep, so reps and
+    #: managers both have it by default; set e.g. MANAGER to restrict it.
+    impersonation_roles: Annotated[list[str], NoDecode] = ["REP", "MANAGER"]
     app_timezone: str = "America/New_York"
     dev_fallback_username: str = "vturano"
     posit_identity_header: str = "RStudio-Connect-Credentials"
@@ -62,8 +66,12 @@ class Settings(BaseSettings):
     povo_today_override: Optional[date] = None
 
     # --- Data ----------------------------------------------------------------
-    data_source: Literal["local", "databricks"] = "local"
+    #: local = DuckDB file (bronze reloaded from the seed CSVs at every start),
+    #: sqlite = one SQLite file that keeps all its data (the interim database
+    #: until Databricks is connected), databricks = the SQL warehouse.
+    data_source: Literal["local", "sqlite", "databricks"] = "local"
     local_duckdb_path: str = path.join(BACKEND_DIR, ".localdata", "povo.duckdb")
+    sqlite_path: str = path.join(BACKEND_DIR, ".localdata", "povo.sqlite")
     seed_output_dir: str = path.join(REPO_DIR, "databricks", "seed", "output")
     #: The backend owns the content JSON; the loader falls back to it when the
     #: REF_ content tables are empty (before the seeder has run).
@@ -95,6 +103,13 @@ class Settings(BaseSettings):
             return [o.strip() for o in value.split(",") if o.strip()]
         return value
 
+    @field_validator("impersonation_roles", mode="before")
+    @classmethod
+    def _split_roles(cls, value):
+        if isinstance(value, str):
+            return [r.strip().upper() for r in value.split(",") if r.strip()]
+        return [str(r).upper() for r in value]
+
     @field_validator("povo_today_override", "n8n_base_url", "databricks_host",
                      "databricks_token", "databricks_warehouse_id", mode="before")
     @classmethod
@@ -109,7 +124,8 @@ class Settings(BaseSettings):
         problems = []
         if self.data_source == "local":
             problems.append("DATA_SOURCE=local serves dummy data from a DuckDB file")
-        if not (self.databricks_host and self.databricks_token and self.databricks_warehouse_id):
+        if self.data_source == "databricks" and not (
+                self.databricks_host and self.databricks_token and self.databricks_warehouse_id):
             problems.append("DATABRICKS_HOST, DATABRICKS_TOKEN and DATABRICKS_WAREHOUSE_ID are required")
         if self.povo_service_token.strip().lower() in _DEFAULT_TOKENS:
             problems.append("POVO_SERVICE_TOKEN is empty or a default value")

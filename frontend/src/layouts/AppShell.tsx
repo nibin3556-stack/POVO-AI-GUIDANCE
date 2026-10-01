@@ -51,8 +51,10 @@ const AppShell = () => {
   const openDialog = useCallback(() => setDialogOpen(true), []);
   const closeDialog = useCallback(() => setDialogOpen(false), []);
   const handleViewAs = useCallback(
-    async (employeeId: string) => {
-      if (await start(employeeId)) setDialogOpen(false);
+    async (employeeId: string): Promise<string | null> => {
+      const message = await start(employeeId);
+      if (!message) setDialogOpen(false);
+      return message;
     },
     [start],
   );
@@ -87,7 +89,7 @@ const AppShell = () => {
           </ErrorBoundary>
         </div>
       </main>
-      {canImpersonate && <ImpersonateDialog open={dialogOpen} onClose={closeDialog} onViewAs={(id) => void handleViewAs(id)} busy={isStarting} />}
+      {canImpersonate && <ImpersonateDialog open={dialogOpen} ownerId={me.signed_in.employee_id} onClose={closeDialog} onViewAs={handleViewAs} busy={isStarting} />}
     </div>
   );
 };

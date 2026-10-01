@@ -27,3 +27,6 @@ rsconnect-python/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Temporary local dev helpers (never committed)
+backend/scripts/local/

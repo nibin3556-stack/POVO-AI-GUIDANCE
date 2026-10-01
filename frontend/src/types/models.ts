@@ -458,5 +458,7 @@ export interface Reference {
   reception_scale: { value: Reception; label: string }[];
   compliance: { rule_count: number; steps: string[]; severity_labels: Record<'high' | 'med' | 'low', string> };
   next_call_steps: string[];
+  /** AI activity steps per category; `{possessive}` is "Dr. Winters'" or "Kristen Casey's". */
+  prep_steps: Record<Category, string[]>;
   limits: { points_per_category: number; note_max_length: number; additional_note_max_length: number };
 }

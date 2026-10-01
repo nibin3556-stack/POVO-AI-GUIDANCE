@@ -4,6 +4,11 @@ Names are built from DATABRICKS_CATALOG / DATABRICKS_SCHEMA /
 DATABRICKS_APP_SCHEMA, so the same `catalog.schema.TABLE` SQL runs on the
 Databricks warehouse and on the local DuckDB file (attached AS the catalog).
 
+SQLite has no catalogs or schemas, so with DATA_SOURCE=sqlite the bare table
+name is used. That is safe because the names are unique across the two
+schemas (every app table starts with APP_), and it keeps the whole database
+in one shareable file.
+
 The column lists mirror ARCHITECTURE.md §4 (and databricks/ddl). They are used
 by the local warehouse to create tables and cast CSV text to real types, and by
 the Databricks MERGE builder to CAST parameters (a NULL parameter has no type
@@ -102,11 +107,15 @@ ALL_COLUMNS = {**BRONZE_COLUMNS, **APP_COLUMNS}
 
 def bronze(table: str) -> str:
     s = get_settings()
+    if s.data_source == "sqlite":
+        return table
     return f"{s.databricks_catalog}.{s.databricks_schema}.{table}"
 
 
 def app(table: str) -> str:
     s = get_settings()
+    if s.data_source == "sqlite":
+        return table
     return f"{s.databricks_catalog}.{s.databricks_app_schema}.{table}"
 
 

@@ -40,14 +40,40 @@ describe('shell and impersonation', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /Impersonate user/ }));
     await userEvent.type(screen.getByLabelText('Rep name, employee ID or network ID'), 'Dana');
     await userEvent.click(await screen.findByRole('option', { name: /Dana Whitaker/ }));
-    expect(screen.getByText('Employee ID p250611 · Network ID 3418')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'View as Dana Whitaker' }));
     await waitFor(() => expect(store.getState().session.impersonation).toEqual({ employeeId: 'p250611', name: 'Dana Whitaker' }));
     expect(sessionStorage.getItem(IMPERSONATION_STORAGE_KEY)).toContain('p250611');
     expect(spy.mock.calls.some(([c]) => c.method?.toLowerCase() === 'post' && c.url === '/api/v1/impersonation')).toBe(true);
     const next = attachRequestHeaders({ headers: new AxiosHeaders() } as InternalAxiosRequestConfig);
     expect(next.headers.get(IMPERSONATE_HEADER)).toBe('p250611');
     expect(axiosInstance).toBeDefined();
+  });
+
+  it('lists recently viewed reps, picks switch straight away, and no toast is shown', async () => {
+    localStorage.setItem('povo.impersonation.recent.' + meManager.signed_in.employee_id, JSON.stringify([dana]));
+    mockApi(managerRoutes);
+    const { store } = renderWithProviders(<AppShell />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Impersonate user/ }));
+    expect(screen.getByText('Recent')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('option', { name: /Dana Whitaker/ }));
+    await waitFor(() => expect(store.getState().session.impersonation).toEqual({ employeeId: 'p250611', name: 'Dana Whitaker' }));
+    expect(screen.queryByText(/Now viewing as/)).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    localStorage.clear();
+  });
+
+  it('a single Look up match switches directly and is remembered as recent', async () => {
+    localStorage.clear();
+    mockApi(managerRoutes);
+    const { store } = renderWithProviders(<AppShell />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Impersonate user/ }));
+    expect(screen.queryByText('Recent')).toBeNull();
+    await userEvent.type(screen.getByLabelText('Rep name, employee ID or network ID'), 'Dana');
+    await userEvent.click(screen.getByRole('button', { name: /Look up/ }));
+    await waitFor(() => expect(store.getState().session.impersonation?.employeeId).toBe('p250611'));
+    expect(localStorage.getItem('povo.impersonation.recent.' + meManager.signed_in.employee_id)).toContain('p250611');
+    localStorage.clear();
   });
 
   it('Look up with no match shows the error message', async () => {

@@ -27,14 +27,16 @@ export const buildRevealDelays = (stepCount: number, pointCount: number): number
   TIMING.AI_DONE_DELAY_MS,
 ];
 
-export const revealStateAt = (stage: number, labels: string[], pointCount: number, animate: boolean): AiRevealState => {
-  const n = labels.length;
+export const revealStateAt = (stage: number, labels: string[], pointCount: number, animate: boolean, skipSteps = false): AiRevealState => {
+  // With skipSteps the steps show as done from the start and the timeline begins at the fade.
+  const n = skipSteps ? 0 : labels.length;
   if (!animate) {
     return { boxVisible: false, boxFading: false, steps: [], visiblePoints: pointCount, generating: false };
   }
   // stage 1..n: step k running; n+1: all done; n+2: fading; n+3: box gone, point 1; ...
   const steps: StepItem[] = labels.map((label, index) => {
     const position = index + 1;
+    if (skipSteps) return { label, state: 'done' };
     if (stage < position) return { label, state: 'pending' };
     if (stage === position) return { label, state: 'run' };
     return { label, state: 'done' };
@@ -51,8 +53,18 @@ export const revealStateAt = (stage: number, labels: string[], pointCount: numbe
   };
 };
 
-export const useAiReveal = (labels: string[], pointCount: number, animate: boolean, onDone: () => void): AiRevealState => {
-  const delays = useMemo(() => buildRevealDelays(labels.length, pointCount), [labels.length, pointCount]);
+export const useAiReveal = (labels: string[], pointCount: number, animate: boolean, onDone: () => void, skipSteps = false): AiRevealState => {
+  const delays = useMemo(() => buildRevealDelays(skipSteps ? 0 : labels.length, pointCount), [skipSteps, labels.length, pointCount]);
   const stage = useTimeline(delays, animate, onDone);
-  return useMemo(() => revealStateAt(stage, labels, pointCount, animate), [stage, labels, pointCount, animate]);
+  return useMemo(() => revealStateAt(stage, labels, pointCount, animate, skipSteps), [stage, labels, pointCount, animate, skipSteps]);
+};
+
+/** Steps 560ms apart while a request runs; the last step keeps running until the answer arrives. */
+export const usePendingSteps = (labels: string[]): StepItem[] => {
+  const delays = useMemo(() => labels.map((_, i) => (i === 0 ? 0 : TIMING.AI_STEP_MS)), [labels]);
+  const stage = useTimeline(delays, true);
+  return useMemo(
+    () => labels.map((label, i): StepItem => ({ label, state: stage > i + 1 ? 'done' : stage === i + 1 ? 'run' : 'pending' })),
+    [labels, stage],
+  );
 };
