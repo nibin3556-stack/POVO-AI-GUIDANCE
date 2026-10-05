@@ -81,12 +81,15 @@ def _activity():
     return SimpleNamespace(activity=rows)
 
 
+PARAMS = {"PAID_PERSISTENCE": 0.85, "PENDING_ON_THERAPY": 0.7, "BRIDGE_SHARE": 0.55}
+
+
 def test_patient_split_month_and_ytd():
     td = _activity()
-    month = patient_split(td, period_window("month", TODAY), TODAY)
+    month = patient_split(td, period_window("month", TODAY), TODAY, PARAMS)
     # paid = 6 new + round(29 x 0.85) = 6 + 25; pending = round(13 x 0.7) = 9 -> bridge 5, free trial 4
     assert (month["new_patients"], month["continuing_patients"], month["paid"]) == (6, 25, 31)
     assert (month["bridge"], month["free_trial"], month["total"]) == (5, 4, 40)
     assert (month["paid_pct"], month["bridge_pct"], month["free_trial_pct"]) == (78, 12, 10)
-    ytd = patient_split(td, period_window("ytd", TODAY), TODAY)
+    ytd = patient_split(td, period_window("ytd", TODAY), TODAY, PARAMS)
     assert (ytd["paid"], ytd["continuing_patients"], ytd["total"]) == (35, 0, 44)

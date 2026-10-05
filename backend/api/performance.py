@@ -31,7 +31,8 @@ def _calendar():
 
 @router.get("/kpis")
 def get_kpis(period: Literal["month", "quarter", "ytd"] = "month", ctx: RequestContext = Guard) -> dict:
-    return ok(kpis.kpis(get_territory(ctx.territory_id), period, today(), _calendar(), get_refs().kpi_metrics))
+    return ok(kpis.kpis(get_territory(ctx.territory_id), period, today(), _calendar(), get_refs().kpi_metrics,
+                       get_refs().kpi_parameters))
 
 
 def compute_guidance(territory_id: str) -> dict:

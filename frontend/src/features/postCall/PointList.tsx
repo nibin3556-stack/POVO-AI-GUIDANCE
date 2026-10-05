@@ -73,7 +73,6 @@ const PointList = ({ participant, category }: PointListProps) => {
             open={openId === point.point_id}
             context={pointContext(categoryLabel, index, participant.display_name)}
             onOpenChange={handleOpen}
-            role={participant.role_type}
             reinforced={reinforcedIds.has(point.point_id)}
           />
         ))}

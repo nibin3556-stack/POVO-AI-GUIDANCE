@@ -41,6 +41,8 @@ export const TIMING = {
   AI_DONE_DELAY_MS: 400,
   SCROLL_DELAY_MS: 120,
   LOOKUP_MIN_MS: 350,
+  /** Wait for the reception slider to settle before asking the AI for new example notes. */
+  EXAMPLE_NOTES_DEBOUNCE_MS: 500,
 } as const;
 
 export const ROUTES = {

@@ -421,6 +421,22 @@ export interface ComplianceResult {
   engine: string;
 }
 
+/** POST /example-notes: what the AI predicts the rep will write for one note field. */
+export interface ExampleNotesArgs {
+  call_id: string | null;
+  participant_id: string;
+  category: AssessmentCategory;
+  point_text: string;
+  /** The reception picked so far; null when not rated (and always for objections and Additional Notes). */
+  reception: Reception | null;
+}
+
+export interface ExampleNotesResult {
+  notes: string[];
+  /** `none` = AI was not available; the screen then shows no example notes. */
+  source: 'ai' | 'none';
+}
+
 export interface ComplianceCheckArgs {
   call_id: string | null;
   participant_id: string;
@@ -435,6 +451,10 @@ export interface NextCallFlag {
   category: AssessmentCategory;
   point_id: string;
   chip: string;
+  /** The note the server checked. */
+  note?: string;
+  /** The full compliance report for that note. */
+  result?: ComplianceResult & { check_id: string };
 }
 
 export interface NextCallResult {
@@ -491,8 +511,6 @@ export interface Reference {
   reception_scale: { value: Reception; label: string }[];
   compliance: { rule_count: number; steps: string[]; severity_labels: Record<'high' | 'med' | 'low', string> };
   next_call_steps: string[];
-  /** One-click example notes per category; `{who}` is "HCP" or the role. */
-  example_notes: Record<AssessmentCategory, string[]>;
   /** AI activity steps per category; `{possessive}` is "Dr. Winters'" or "Kristen Casey's". */
   prep_steps: Record<Category, string[]>;
   limits: { points_per_category: number; note_max_length: number; additional_note_max_length: number };

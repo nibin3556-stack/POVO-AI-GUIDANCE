@@ -1,6 +1,6 @@
 # POVO AI Guidance content (owned by the backend)
 
-These three files are the source of the `REF_` content tables. The seeder copies them into
+These four files are the source of the `REF_` content tables. The seeder copies them into
 `seed/output/*.csv` unchanged; the backend reads the tables through the warehouse and falls back
 to these files when the tables are empty. `CONTENT_VERSION` is `2026.2`; it is part of the AI
 cache key, so bump it whenever the text changes.
@@ -10,9 +10,12 @@ cache key, so bump it whenever the text changes.
 | `talking_points.json` | `REF_TALKING_POINT` | 62 |
 | `objection_rules.json` | `REF_OBJECTION_RULE` | 10 |
 | `compliance_rules.json` | `REF_COMPLIANCE_RULE` | 14 |
+| `compliance_texts.json` | `REF_COMPLIANCE_TEXT` | 12 |
 
-The text is copied verbatim from the v2 POC (`POVO_AI_Guidance_Step3_63_Alt 2.html`). It is the
-MLR draft copy: `MLR_CODE` is `DRAFT-POC-3.63` until real approval codes are assigned. The LLM never
+This is **dummy seed content** until the client supplies approved text: it was transcribed from the
+v2 POC (`POVO_AI_Guidance_Step3_63_Alt 2.html`), which is a reference for the data shapes only.
+`MLR_CODE` is `DRAFT-POC-3.63` until real approval codes are assigned. Replacing it is a table load;
+the code holds none of this text. The LLM never
 rewrites it; it can only choose points, order them and write insight lines.
 
 ## Template syntax
@@ -80,5 +83,6 @@ the first one without a condition. This keeps every word in content, not in code
 Ten rules are Python regexes (`PATTERN`, case-insensitive; the patient-name part of `phi` is
 case-sensitive through `(?-i:...)`), with an optional `SUPPRESS_PATTERN`. `gib`, `vague` and `rel`
 have no pattern and are built-in detectors in `backend/helpers/compliance/engine.py`. `ph` matches
-unfilled `[brackets]`. Only titles, chips, severities, deductions and texts are read from the table
+unfilled `[brackets]`, and the engine also flags a note cut off mid-sentence (it ends on a word such as
+"a", "the", "before" or "and", or on a comma). Only titles, chips, severities, deductions and texts are read from the table
 for those.

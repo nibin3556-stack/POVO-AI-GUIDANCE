@@ -283,7 +283,7 @@ Modal steps: "Reading your note", "Checking against 14 compliance rules", "Draft
 | fill | Filler | Filler wording | low | 10 |
 | gib | Not readable | Text is not readable | high | 100 |
 | vague | Too vague | Note is too vague (< 3 words or a generic phrase) | med | 60 |
-| ph | Incomplete | Note is incomplete (unfilled `[brackets]`) | med | 40 |
+| ph | Incomplete | Note is incomplete (unfilled `[brackets]`, or cut off mid-sentence) | med | 40 |
 | rel | Unrelated | Not related to this point (no content word shared with the point or the HS/POVO vocabulary) | med | 50 |
 
 - **Suppressions:** "medical information" suppresses `off`; "reported to pharmacovigilance" suppresses `ae`.

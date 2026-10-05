@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { CheckOptions, CheckTarget } from '../../hooks/useComplianceCheck';
+import type { CheckOptions, CheckOutcome, CheckTarget } from '../../hooks/useComplianceCheck';
 import type { VoiceNote } from '../../hooks/useVoiceNote';
 import type { Participant } from '../../types/models';
 
@@ -7,7 +7,7 @@ export interface AssessmentContextValue {
   callId: string;
   primaryId: string;
   participants: Participant[];
-  runCheck: (target: CheckTarget, options?: CheckOptions) => Promise<void>;
+  runCheck: (target: CheckTarget, options?: CheckOptions) => Promise<CheckOutcome>;
   /** Save pending changes now (before a re-check or the next-call CTA). */
   flush: () => Promise<void>;
   /** Note inputs register here so Use Suggestion can focus and select the first [placeholder]. */

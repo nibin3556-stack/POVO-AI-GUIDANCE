@@ -140,9 +140,7 @@ describe('reference lookups', () => {
     expect(ref.categoryLabel('objection')).toBe('Potential Objections');
     expect(ref.roleCodes).toEqual(['HCP', 'NP', 'PA']);
   });
-  it('fills the example notes and reception labels', () => {
-    expect(ref.exampleNotes('messaging', 'PA')[0]).toBe('PA asked how lab monitoring works before a first POVO start');
-    expect(ref.exampleNotes('additional', 'HCP')).toHaveLength(1);
+  it('fills the reception labels', () => {
     expect(receptionText(ref.receptionLabels, 2, 'Not rated')).toBe('Well Received');
     expect(receptionText(ref.receptionLabels, null, 'Not rated')).toBe('Not rated');
   });

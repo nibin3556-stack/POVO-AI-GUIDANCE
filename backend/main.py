@@ -13,7 +13,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from api import accounts, call_prep, calls, compliance, health, impersonation, jobs, me, performance, reference, targets
+from api import (accounts, call_prep, calls, compliance, example_notes, health, impersonation, jobs, me, performance,
+                 reference, targets)
 from core.config import get_settings
 from core.exception_handler import register_exception_handlers
 from core.logging import configure_logging
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(call_prep.router)
     app.include_router(calls.router)
     app.include_router(compliance.router)
+    app.include_router(example_notes.router)
     app.include_router(jobs.router)
     return app
 

@@ -32,7 +32,9 @@ The app only reads these tables. The seeder regenerates them.
 | `FCT_POVO_ACTIVITY` | Patient funnel events: `PEF` → `NRX` → `NEW_PATIENT` (the first paid script), keyed by an opaque `PATIENT_KEY` | ~3k |
 | `FCT_TERRITORY_GOAL` | Monthly goals for `NEW_PATIENTS`, `PEF` (×1.4) and `NRX` (×1.25), full year | 288 |
 | `REF_US_HOLIDAY` | The POC company holidays for the as-of year and the next | 16 |
+| `REF_KPI_PARAMETER` | Rates behind the Total on POVO split (`PAID_PERSISTENCE`, `PENDING_ON_THERAPY`, `BRIDGE_SHARE`); dummy values until the client supplies real ones | 3 |
 | `REF_TALKING_POINT` / `REF_OBJECTION_RULE` / `REF_COMPLIANCE_RULE` | MLR-approved content, copied unchanged from `seed/content/*.json` | per content |
+| `REF_COMPLIANCE_TEXT` | The compliance rewrite wording, copied unchanged from `seed/content/compliance_texts.json` | 12 |
 
 ### `app`: tables the app writes
 

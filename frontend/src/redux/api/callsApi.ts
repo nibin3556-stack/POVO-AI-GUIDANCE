@@ -4,6 +4,8 @@ import type {
   ComplianceCheckArgs,
   ComplianceResult,
   EnsureCallArgs,
+  ExampleNotesArgs,
+  ExampleNotesResult,
   NextCallResult,
 } from '../../types/models';
 import { TAGS, baseApi } from './baseApi';
@@ -36,6 +38,11 @@ export const callsApi = baseApi.injectEndpoints({
     checkCompliance: build.mutation<ComplianceResult, ComplianceCheckArgs>({
       query: (body) => ({ url: '/compliance/check', method: 'POST', data: body }),
     }),
+    /** AI-predicted example notes; cached per args (the backend caches the model answer too). */
+    getExampleNotes: build.query<ExampleNotesResult, ExampleNotesArgs>({
+      query: (body) => ({ url: '/example-notes', method: 'POST', data: body }),
+      keepUnusedDataFor: 600,
+    }),
     acceptSuggestion: build.mutation<unknown, string>({
       query: (checkId) => ({ url: `/compliance/${encodeURIComponent(checkId)}/accept`, method: 'POST' }),
     }),
@@ -52,6 +59,7 @@ export const {
   useGetActiveCallQuery,
   useSaveAssessmentsMutation,
   useCheckComplianceMutation,
+  useGetExampleNotesQuery,
   useAcceptSuggestionMutation,
   useGenerateNextCallMutation,
 } = callsApi;

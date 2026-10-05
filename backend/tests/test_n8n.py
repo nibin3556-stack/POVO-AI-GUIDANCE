@@ -123,3 +123,110 @@ def test_compliance_guard_failure_keeps_rules(client, ai_on):
         "point_text": "HiSCR50 primary endpoint met", "note": "Patient developed a rash on another JAK"})
     d = r.json()["data"]
     assert d["engine"] == "rules" and d["issues"][0]["rule_id"] == "ae"
+
+
+def test_submit_keeps_the_ai_verdict_and_ai_checks_unchecked_notes(client, ai_on):
+    """A flag only the AI found still blocks Submit, without a second LLM call;
+    a note nobody checked yet goes through the AI pass at Submit."""
+    phys = _physician(8)
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if request.url.path.endswith("compliance-check"):
+            seen.append(body["note"])
+            if "better than" in body["note"]:
+                return httpx.Response(200, json={"ok": True, "issues": [{"rule_id": "claim", "excerpt": "better than",
+                                                                       "why": "Comparative claim"}]})
+            return httpx.Response(200, json={"ok": True, "issues": []})
+        return httpx.Response(200, json={"ok": False, "reason": "not under test"})
+
+    _mock(handler)
+    _clear_cache()
+    cid = client.post("/api/v1/calls", json={"hcp_id": phys, "participant_ids": []}).json()["data"]["call_id"]
+    m = _prep(client, phys)["points"]
+    flagged = "HCP said it works better than her current option"
+    items = [{"participant_id": phys, "category": "messaging", "point_id": m[0]["point_id"], "point_rank": 1,
+              "point_text": m[0]["text"], "was_raised": True, "reception": 2, "note": flagged},
+             {"participant_id": phys, "category": "messaging", "point_id": m[1]["point_id"], "point_rank": 2,
+              "point_text": m[1]["text"], "was_raised": True, "reception": 2,
+              "note": "HCP agreed to review two HS patients next visit"}]
+    assert client.put(f"/api/v1/calls/{cid}/assessments", json={"items": items}).status_code == 200
+    chk = client.post("/api/v1/compliance/check", json={
+        "call_id": cid, "participant_id": phys, "category": "messaging", "point_id": m[0]["point_id"],
+        "point_text": m[0]["text"], "note": flagged}).json()["data"]
+    assert chk["engine"] == "rules+llm" and [i["rule_id"] for i in chk["issues"]] == ["claim"]
+    seen.clear()
+
+    r = client.post(f"/api/v1/calls/{cid}/next-call")
+    assert r.status_code == 409
+    assert [f["point_id"] for f in r.json()["data"]["flags"]] == [m[0]["point_id"]]
+    assert seen == ["HCP agreed to review two HS patients next visit"]  # the flagged note was not re-sent
+    assert r.json()["data"]["flags"][0]["result"]["issues"][0]["rule_id"] == "claim"
+
+    # The AI pass fails on a re-check: the earlier AI verdict on this exact text still shows, not "passed".
+    _mock(lambda req: httpx.Response(200, json={"ok": False, "reason": "model_error: bad format"}))
+    again = client.post("/api/v1/compliance/check", json={
+        "call_id": cid, "participant_id": phys, "category": "messaging", "point_id": m[0]["point_id"],
+        "point_text": m[0]["text"], "note": flagged}).json()["data"]
+    assert again["status"] == "flagged" and again["check_id"] == chk["check_id"]
+    assert again["engine"] == "rules+llm" and [i["rule_id"] for i in again["issues"]] == ["claim"]
+
+
+def test_ai_incomplete_finding_is_kept(client, ai_on):
+    """The rules miss it, the AI calls the note incomplete: the finding stands, with a fix that fits."""
+    _mock(lambda r: httpx.Response(200, json={"ok": True, "issues": [
+        {"rule_id": "ph", "excerpt": "HCP said the HS data", "why": "The note does not say what the HCP said"},
+        {"rule_id": "vague", "excerpt": "x", "why": "only one built-in finding is kept"}]}))
+    d = client.post("/api/v1/compliance/check", json={
+        "participant_id": _physician(7), "category": "messaging", "point_id": "MSG_EFF_HCP",
+        "point_text": "HiSCR50 primary endpoint met", "note": "HCP said the HS data looked strong on the HiSCR50 slide"}
+    ).json()["data"]
+    assert d["engine"] == "rules+llm" and [i["rule_id"] for i in d["issues"]] == ["ph"]
+    assert d["issues"][0]["why"] == "The note does not say what the HCP said"
+    assert d["issues"][0]["fix"].startswith("Finish the sentence")
+
+
+def test_example_notes_come_from_ai_and_never_carry_a_flag(client, ai_on):
+    phys = _physician(9)
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        return httpx.Response(200, json={"ok": True, "notes": [
+            "HCP liked the HiSCR50 Week 12 data and asked for the lesion and pain slides",
+            "HCP said POVO is the best HS option she has seen",          # claim -> dropped
+            "HCP will share [patient count] at the next visit",          # placeholder -> dropped
+            "HCP liked the HiSCR50 Week 12 data and asked for the lesion and pain slides",  # duplicate
+            "HCP agreed to review two HS patients on antibiotics before the next visit"]})
+
+    _mock(handler)
+    _clear_cache()
+    req = {"participant_id": phys, "category": "messaging",
+           "point_text": "HiSCR50 primary endpoint met at Week 12 for POVO in HS", "reception": 2}
+    d = client.post("/api/v1/example-notes", json=req).json()["data"]
+    assert d["source"] == "ai"
+    assert d["notes"] == ["HCP liked the HiSCR50 Week 12 data and asked for the lesion and pain slides",
+                          "HCP agreed to review two HS patients on antibiotics before the next visit"]
+    body = calls[0]
+    assert body["reception"] == "well received" and body["count"] == 3 and body["max_chars"] == 200
+    assert body["participant"]["role_type"] == "HCP" and body["point_text"].startswith("HiSCR50")
+    # Same request again: served from the cache, no second model call.
+    assert client.post("/api/v1/example-notes", json=req).json()["data"]["notes"] == d["notes"]
+    assert len(calls) == 1
+    # A different reception is a different prediction.
+    client.post("/api/v1/example-notes", json={**req, "reception": 0})
+    assert len(calls) == 2 and calls[1]["reception"] == "not well received"
+
+
+def test_example_notes_without_ai_are_empty_not_made_up(client, ai_on):
+    _mock(lambda r: httpx.Response(200, json={"ok": False, "reason": "model_error: timeout"}))
+    _clear_cache()
+    d = client.post("/api/v1/example-notes", json={"participant_id": _physician(9), "category": "closing",
+                                                   "point_text": "Agree on two HS patients to start"}).json()["data"]
+    assert d == {"notes": [], "source": "none"}
+
+
+def test_example_notes_with_ai_off(client):
+    d = client.post("/api/v1/example-notes", json={"participant_id": _physician(9), "category": "additional"}).json()
+    assert d["data"] == {"notes": [], "source": "none"}

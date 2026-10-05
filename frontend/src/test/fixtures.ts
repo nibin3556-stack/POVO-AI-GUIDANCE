@@ -339,11 +339,5 @@ export const reference: Reference = {
     closing: ['Analyzing {possessive} profile and call history', 'Matching suggested closes to the call goals', 'Generating suggested closing statements'],
   },
   next_call_steps: ['Reading the post-call assessment', 'Running the AI compliance check on {n} {notes}', 'Drafting next-call talking points'],
-  example_notes: {
-    messaging: ['{who} asked how lab monitoring works before a first POVO start', '{who} was interested in the Week 12 HiSCR50 results'],
-    objection: ['Still open; {who} wants to review the boxed warning section before deciding'],
-    closing: ['{who} agreed to identify 2 HS patients to reassess before the next visit'],
-    additional: ['Office asked for HSTruths.com patient resources; follow-up visit planned in 2 weeks'],
-  },
   limits: { points_per_category: 3, note_max_length: 200, additional_note_max_length: 600 },
 };

@@ -8,7 +8,7 @@ import { useReference } from '../../hooks/useReference';
 import { LABELS } from '../../constants/labels';
 import { complianceDialogOpened } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import type { Category, RoleType, TalkingPoint } from '../../types/models';
+import type { Category, TalkingPoint } from '../../types/models';
 import { newItem, type AssessmentFormValues, type AssessmentItemValues } from '../../utils/assessment';
 import { chipList } from '../../utils/compliance';
 import { cx } from '../../utils/cx';
@@ -27,16 +27,14 @@ interface PointRowProps {
   open: boolean;
   context: string;
   onOpenChange: (pointId: string | null) => void;
-  /** The participant's role: example notes say "HCP", "PA" or "NP". */
-  role: RoleType;
   /** A delivered point the rep chose to reinforce on this call. */
   reinforced?: boolean;
 }
 
 /** One point raised (or not) on the call: checkbox, text, reception slider, note and the AI compliance state. */
-const PointRow = ({ itemKey, participantId, category, point, index, open, context, onOpenChange, role, reinforced = false }: PointRowProps) => {
+const PointRow = ({ itemKey, participantId, category, point, index, open, context, onOpenChange, reinforced = false }: PointRowProps) => {
   const dispatch = useAppDispatch();
-  const { runCheck, registerInput, voice } = useAssessment();
+  const { callId, runCheck, registerInput, voice } = useAssessment();
   const ref = useReference();
   const { limits } = ref.data;
   const { setFieldValue } = useFormikContext<AssessmentFormValues>();
@@ -150,7 +148,11 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
               )}
             </div>
           </div>
-          <ExampleNotes notes={ref.exampleNotes(category, role)} disabled={Boolean(voice.recordingKey)} onPick={pickExample} />
+          <ExampleNotes
+            args={{ call_id: callId, participant_id: participantId, category, point_text: point.text, reception: category === 'objection' ? null : (item?.reception ?? null) }}
+            disabled={Boolean(voice.recordingKey)}
+            onPick={pickExample}
+          />
         </div>
       )}
     </div>

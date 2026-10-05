@@ -126,6 +126,14 @@ CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_KPI_METRIC (
 ) USING DELTA
 COMMENT 'Territory Performance KPI definitions. Logical key METRIC_CODE.';
 
+CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_KPI_PARAMETER (
+  PARAM_CODE STRING NOT NULL COMMENT 'PAID_PERSISTENCE, PENDING_ON_THERAPY or BRIDGE_SHARE',
+  PARAM_VALUE DOUBLE COMMENT 'Rate between 0 and 1',
+  DESCRIPTION STRING COMMENT 'What the rate means',
+  SORT_ORDER INT COMMENT 'Display order'
+) USING DELTA
+COMMENT 'Rates behind the Total on POVO split (Paid / Bridge / Free Trial). Logical key PARAM_CODE.';
+
 CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_INTERACTION_CHANNEL (
   CHANNEL_CODE STRING NOT NULL COMMENT 'rep, adfa, opz, msl, spkr or pr (matches FCT_INTERACTION.CHANNEL_CODE)',
   TYPE_LABEL STRING COMMENT 'Interaction card title, e.g. Direct call',
@@ -226,3 +234,15 @@ CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_COMPLIANCE_RULE (
   IS_ACTIVE BOOLEAN COMMENT 'False disables the rule'
 ) USING DELTA
 COMMENT 'Compliance rules for post-call notes (copied from seed/content/compliance_rules.json). Logical key RULE_ID.';
+
+CREATE TABLE IF NOT EXISTS ${catalog}.${bronze_schema}.REF_COMPLIANCE_TEXT (
+  TEXT_ID STRING NOT NULL COMMENT 'Text key, e.g. TPL_MESSAGING',
+  CONTENT_VERSION STRING COMMENT 'Content version, e.g. 2026.2',
+  KIND STRING COMMENT 'template, replacement, reword or cut_off',
+  TEXT_KEY STRING COMMENT 'Category (template), rule id (replacement), rule id (reword) or why/fix/placeholder (cut_off)',
+  PATTERN STRING COMMENT 'Python regular expression for a reword; nullable',
+  TEXT_TEMPLATE STRING COMMENT 'The text; {who} is the participant name',
+  SORT_ORDER INT COMMENT 'Order',
+  IS_ACTIVE BOOLEAN COMMENT 'False disables the text'
+) USING DELTA
+COMMENT 'Wording of the compliance rewrite (copied from seed/content/compliance_texts.json). Logical key TEXT_ID.';

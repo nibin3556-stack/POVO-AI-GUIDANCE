@@ -86,6 +86,9 @@ COLUMNS: dict[str, list[str]] = {
                            "WRITER_STATE", "OBJECTION_POINT_IDS", "PRIORITY"],
     "REF_COMPLIANCE_RULE": ["RULE_ID", "CHIP_LABEL", "TITLE", "SEVERITY", "DEDUCTION", "PATTERN",
                             "SUPPRESS_PATTERN", "WHY_TEXT", "FIX_TEXT", "SORT_ORDER", "IS_ACTIVE"],
+    "REF_COMPLIANCE_TEXT": ["TEXT_ID", "CONTENT_VERSION", "KIND", "TEXT_KEY", "PATTERN", "TEXT_TEMPLATE",
+                            "SORT_ORDER", "IS_ACTIVE"],
+    "REF_KPI_PARAMETER": ["PARAM_CODE", "PARAM_VALUE", "DESCRIPTION", "SORT_ORDER"],
 }
 
 #: Content tables are owned by the backend as JSON; the seeder copies them.
@@ -93,6 +96,7 @@ CONTENT_FILES = {
     "REF_TALKING_POINT": "talking_points.json",
     "REF_OBJECTION_RULE": "objection_rules.json",
     "REF_COMPLIANCE_RULE": "compliance_rules.json",
+    "REF_COMPLIANCE_TEXT": "compliance_texts.json",
 }
 
 # --------------------------------------------------------------------------
@@ -135,6 +139,14 @@ SEGMENTS = [
 KPI_METRICS = [
     ("PEF", "PEF", "Patient Enrollment Forms", "PEFs"),
     ("NEW_PATIENTS", "NEW_PATIENT", "Total Patients Receiving POVO", "new patients"),
+]
+
+# Rates behind the Total on POVO split (Paid / Bridge / Free Trial). Dummy business
+# assumptions until the client supplies real ones; the backend reads them from the table.
+KPI_PARAMETERS = [
+    ("PAID_PERSISTENCE", 0.85, "Share of patients started before the period still on paid POVO"),
+    ("PENDING_ON_THERAPY", 0.70, "Share of PEFs without a paid start that are on Bridge or Free Trial"),
+    ("BRIDGE_SHARE", 0.55, "Share of those pending patients on Bridge (the rest are on Free Trial)"),
 ]
 
 # Interaction channels: the card type and the team shown on the filter chips.
@@ -605,6 +617,9 @@ class SeedGenerator:
         for i, (code, event, title, unit) in enumerate(KPI_METRICS, 1):
             self.tables["REF_KPI_METRIC"].append(dict(METRIC_CODE=code, EVENT_TYPE=event, TITLE=title, UNIT=unit,
                                                       SORT_ORDER=i))
+        for i, (code, value, desc) in enumerate(KPI_PARAMETERS, 1):
+            self.tables["REF_KPI_PARAMETER"].append(dict(PARAM_CODE=code, PARAM_VALUE=value, DESCRIPTION=desc,
+                                                         SORT_ORDER=i))
         for i, (code, type_label, team) in enumerate(INTERACTION_CHANNELS, 1):
             self.tables["REF_INTERACTION_CHANNEL"].append(dict(CHANNEL_CODE=code, TYPE_LABEL=type_label,
                                                                TEAM_LABEL=team, SORT_ORDER=i))

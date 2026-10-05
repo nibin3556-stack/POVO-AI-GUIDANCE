@@ -95,6 +95,7 @@ describe('callSession slice', () => {
     expect(s.compliance.k?.alertedNote).toBe('n');
     s = reducer(s, complianceFlagged([{ key: 'j', note: 'x', chip: 'Claim' }]));
     expect(s.compliance.j?.chip).toBe('Claim');
+    expect(s.compliance.j?.result).toBeNull();
     s = reducer(s, revealCompleted('H2|messaging|0'));
     expect(s.revealed['H2|messaging|0']).toBe(true);
     s = reducer(s, targetSelected({ hcpId: 'H2' }));
@@ -102,9 +103,13 @@ describe('callSession slice', () => {
     expect(s.reinforced['H2|messaging']).toEqual(['M1']);
     s = reducer(s, recordingChanged('k'));
     expect(s.recordingKey).toBe('k');
-    s = reducer(s, assessmentSubmitted('H2'));
+    s = reducer(s, assessmentSubmitted({ hcpId: 'H2', participantId: 'P1', category: 'closing' }));
     expect(s.compliance).toEqual({});
-    expect(s.selectedHcpId).toBeNull();
+    expect(s.selectedHcpId).toBe('H2');
+    expect(s.prepParticipantId).toBe('P1');
+    expect(s.historyParticipantId).toBe('P1');
+    expect(s.prepCategory).toBe('closing');
+    expect(s.scrollToPrep).toBe(true);
     expect(s.reinforced).toEqual({});
     expect(s.recordingKey).toBeNull();
     expect(s.justSubmittedHcpId).toBe('H2');

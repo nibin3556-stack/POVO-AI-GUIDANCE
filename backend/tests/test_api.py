@@ -315,8 +315,14 @@ def test_full_call_loop(client, target_with_pa, other_rep):
     # Flagged note -> 409 with the flags.
     r = client.post(f"/api/v1/calls/{cid}/next-call")
     assert r.status_code == 409
-    assert r.json()["data"]["flags"] == [{"participant_id": phys, "category": "objection",
-                                          "point_id": o[1]["point_id"], "chip": "Adverse event"}]
+    flags = r.json()["data"]["flags"]
+    assert [{k: f[k] for k in ("participant_id", "category", "point_id", "chip", "note")} for f in flags] == [
+        {"participant_id": phys, "category": "objection", "point_id": o[1]["point_id"], "chip": "Adverse event",
+         "note": items[2]["note"]}]
+    # The full report travels with the flag, so the screen can open it without a new check.
+    report = flags[0]["result"]
+    assert report["status"] == "flagged" and report["issues"][0]["rule_id"] == "ae" and report["check_id"]
+    assert report["suggested_text"] and report["result_label"] == "Non-compliant"
 
     # Fix the note: still open. Add a compliant Additional Note (it carries into the next pre-call plan).
     items[2]["note"] = "Still concerned about JAK safety for HS patients with risk factors"
@@ -350,7 +356,9 @@ def test_full_call_loop(client, target_with_pa, other_rep):
 
     prof = _data(client.get(f"/api/v1/targets/{phys}/profile"))["participants"][0]
     assert prof["stats"]["last_call_date"] == "2026-10-13"
-    assert prof["interactions"][0]["is_new"] and prof["interactions"][0]["summary"] == "Call assessed"
+    # The assessed call's card carries this participant's notes, in form order.
+    assert prof["interactions"][0]["is_new"] and prof["interactions"][0]["summary"] == " · ".join(
+        [items[0]["note"], items[2]["note"], items[3]["note"], note])
     assert prof["bullets"][4].startswith("Post-call 10/13/2026: 1 of 2 messages well received")
     assert prof["bullets"][5] == f"Last call note (Oct 13, 2026): {note}"
 
@@ -407,8 +415,7 @@ def test_reference_lookups(client):
     assert [m["title"] for m in d["kpi_metrics"]] == ["Patient Enrollment Forms", "Total Patients Receiving POVO"]
     assert [s["code"] for s in d["segments"]] == ["imm", "exp", "conv"]
     assert d["segments"][1]["full_name"] == "Advanced Biologics plus JAK Inhibitors"
-    assert set(d["example_notes"]) == {"messaging", "objection", "closing", "additional"}
-    assert all(len(v) == 3 for v in d["example_notes"].values())
+    assert "example_notes" not in d  # predicted per note by AI, never fixed text
     assert d["prep_steps"]["messaging"][0] == "Analyzing {possessive} profile, decile and HS volume"
 
 
@@ -417,13 +424,22 @@ def test_kpi_cards_follow_ref_kpi_metric(client):
     assert [(c["metric_code"], c["unit"]) for c in d["cards"]] == [("PEF", "PEFs"), ("NEW_PATIENTS", "new patients")]
 
 
-def test_example_notes_pass_the_compliance_check(client, target_with_pa):
-    phys, _ = target_with_pa
-    ref = _data(client.get("/api/v1/reference"))["example_notes"]
-    for cat, notes in ref.items():
-        for text in notes:
-            note = text.format(who="HCP")
-            d = _data(client.post("/api/v1/compliance/check", json={
-                "participant_id": phys, "category": cat, "point_id": "additional" if cat == "additional" else "X",
-                "point_text": "HiSCR50 primary endpoint met at Week 12 for POVO in HS", "note": note}))
-            assert d["status"] == "passed", (cat, note, d["issues"])
+def test_kpi_rates_are_read_from_the_table(client):
+    """Empty the table and the split disappears rather than being made up."""
+    from database.tables import bronze
+    from database.warehouse import get_warehouse
+    from helpers.territory_data import clear_cache
+
+    wh = get_warehouse()
+    params = wh.query(f"SELECT * FROM {bronze('REF_KPI_PARAMETER')}")
+    try:
+        wh.execute(f"DELETE FROM {bronze('REF_KPI_PARAMETER')}")
+        clear_cache()
+        assert "split" not in _data(client.get("/api/v1/performance/kpis?period=month"))["cards"][1]
+    finally:
+        for row in params:
+            wh.execute(f"INSERT INTO {bronze('REF_KPI_PARAMETER')} (PARAM_CODE, PARAM_VALUE, DESCRIPTION, SORT_ORDER) "
+                       f"VALUES (:c, :v, :d, :s)", {"c": row["PARAM_CODE"], "v": row["PARAM_VALUE"],
+                                                   "d": row["DESCRIPTION"], "s": row["SORT_ORDER"]})
+        clear_cache()
+    assert "split" in _data(client.get("/api/v1/performance/kpis?period=month"))["cards"][1]

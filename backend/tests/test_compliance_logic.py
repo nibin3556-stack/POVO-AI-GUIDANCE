@@ -6,9 +6,17 @@ import pytest
 
 from helpers.compliance.engine import check, result_label, score
 from helpers.compliance.rewrite import suggest, template
+from helpers.content.library import ComplianceTexts
 
-RULES = json.loads((Path(__file__).resolve().parents[2] / "databricks" / "seed" / "content"
-                    / "compliance_rules.json").read_text(encoding="utf-8"))
+CONTENT = Path(__file__).resolve().parents[2] / "databricks" / "seed" / "content"
+RULES = json.loads((CONTENT / "compliance_rules.json").read_text(encoding="utf-8"))
+_ROWS = json.loads((CONTENT / "compliance_texts.json").read_text(encoding="utf-8"))
+TEXTS = ComplianceTexts(
+    templates={r["TEXT_KEY"]: r["TEXT_TEMPLATE"] for r in _ROWS if r["KIND"] == "template"},
+    replacements={r["TEXT_KEY"]: r["TEXT_TEMPLATE"] for r in _ROWS if r["KIND"] == "replacement"},
+    rewords=[(r["PATTERN"], r["TEXT_TEMPLATE"]) for r in _ROWS if r["KIND"] == "reword"],
+    cut_off={r["TEXT_KEY"]: r["TEXT_TEMPLATE"] for r in _ROWS if r["KIND"] == "cut_off"})
+EMPTY = ComplianceTexts(templates={}, replacements={}, rewords=[], cut_off={})
 POINT = "HiSCR50 primary endpoint met for both doses at Week 12 in STOP-HS1 and STOP-HS2"
 
 
@@ -81,19 +89,54 @@ def test_issues_sorted_by_severity():
 def test_rewrite_replaces_adverse_event_clause():
     note = "HCP agreed to review HS patients next visit. One patient had a rash last week."
     issues = check(note, POINT, RULES)
-    out = suggest(note, issues, RULES, "m", "Dr. Winters", POINT, POINT)
-    assert "Safety information reported to Pharmacovigilance" in out
+    out = suggest(note, issues, RULES, TEXTS, "messaging", "Dr. Winters", POINT, POINT)
+    assert out.endswith(TEXTS.replacements["ae"] + ".")
     assert "rash" not in out
 
 
 def test_rewrite_template_for_vague_and_bracket_only():
     issues = check("good call", POINT, RULES)
-    assert suggest("good call", issues, RULES, "o", "Dr. Winters", POINT, POINT) == template("o", "Dr. Winters", POINT)
+    assert (suggest("good call", issues, RULES, TEXTS, "objection", "Dr. Winters", POINT, POINT)
+            == template("objection", "Dr. Winters", TEXTS))
     only_ph = "HCP agreed to review HS data; objection [resolved / still open]"
-    assert suggest(only_ph, check(only_ph, POINT, RULES), RULES, "o", "Dr. Winters", POINT, POINT) == ""
+    assert suggest(only_ph, check(only_ph, POINT, RULES), RULES, TEXTS, "objection", "Dr. Winters", POINT, POINT) == ""
 
 
-def test_template_shapes():
-    assert template("c", "Dr. Winters", POINT).startswith("Closed with: HiSCR50 primary endpoint met")
-    assert template("n", "Dr. Winters", "") == ("Also discussed [topic] with Dr. Winters. Dr. Winters [response]; "
-                                               "next step: [action]")
+def test_template_comes_from_the_table_and_never_holds_the_talking_point():
+    for category in ("messaging", "objection", "closing", "additional"):
+        out = template(category, "Dr. Winters", TEXTS)
+        assert out == TEXTS.templates[category].replace("{who}", "Dr. Winters")
+        assert "HiSCR50" not in out and "[" in out
+    issues = check("good call", POINT, RULES)
+    assert "HiSCR50" not in suggest("good call", issues, RULES, TEXTS, "messaging", "Dr. Winters", POINT, POINT)
+
+
+def test_no_wording_in_the_table_means_no_wording_in_the_rewrite():
+    assert template("messaging", "Dr. Winters", EMPTY) == ""
+    note = "HCP agreed to review HS patients next visit. One patient had a rash last week."
+    out = suggest(note, check(note, POINT, RULES), RULES, EMPTY, "messaging", "Dr. Winters", POINT, POINT)
+    assert "Pharmacovigilance" not in out and "rash" not in out
+
+
+@pytest.mark.parametrize("note", [
+    "HCP asked how lab monitoring works before a",
+    "HCP reviewed the HS data and",
+    "HCP asked about the Week 12 HS data,",
+    "Agreed to identify two HS patients for.",
+])
+def test_note_cut_off_mid_sentence_is_incomplete(note):
+    issues = check(note, "HS lab monitoring before a first POVO start", RULES)
+    assert [x["rule"]["RULE_ID"] for x in issues] == ["ph"] and issues[0]["cut"] is True
+
+
+def test_finished_sentence_is_not_cut_off():
+    assert ids("HCP asked how lab monitoring works before a first POVO start",
+               "HS lab monitoring before a first POVO start") == []
+    assert ids("HCP will think about the HS data and follow up") == []
+
+
+def test_rewrite_keeps_the_words_of_a_cut_off_note():
+    note = "HCP asked how lab monitoring works before a"
+    issues = check(note, "HS lab monitoring before a first POVO start", RULES)
+    assert suggest(note, issues, RULES, TEXTS, "messaging", "Dr. Winters", "", "") == (
+        f"HCP asked how lab monitoring works {TEXTS.cut_off['placeholder']}.")

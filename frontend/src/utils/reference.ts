@@ -1,4 +1,4 @@
-import type { AssessmentCategory, Category, ChannelCode, Reception, Reference, ReferenceSegment, ReferenceTier, RoleType, TierCode } from '../types/models';
+import type { Category, ChannelCode, Reception, Reference, ReferenceSegment, ReferenceTier, RoleType, TierCode } from '../types/models';
 
 /** Neutral colour for a code the reference data does not know (never expected). */
 const UNKNOWN_COLOR = '#64748B';
@@ -19,7 +19,6 @@ export interface ReferenceLookup {
   receptionLabels: string[];
   prepSteps: (category: Category, name: string) => string[];
   /** One-click example notes; "HCP" for a physician, else the role. */
-  exampleNotes: (category: AssessmentCategory, role: RoleType) => string[];
 }
 
 const possessive = (name: string): string => (name.endsWith('s') ? `${name}'` : `${name}'s`);
@@ -47,7 +46,6 @@ export const buildReferenceLookup = (data: Reference): ReferenceLookup => {
     categoryLabel: (code) => categories.get(code)?.label ?? code,
     receptionLabels: data.reception_scale.map((r) => r.label),
     prepSteps: (category, name) => (data.prep_steps[category] ?? []).map((s) => s.replace('{possessive}', possessive(name))),
-    exampleNotes: (category, role) => (data.example_notes?.[category] ?? []).map((s) => s.replaceAll('{who}', role)),
   };
 };
 

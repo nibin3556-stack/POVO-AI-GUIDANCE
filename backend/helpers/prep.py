@@ -297,6 +297,25 @@ def last_call_notes(rows: list[dict]) -> dict[str, tuple]:
             for pid, r in latest.items() if r.get("CALL_ID") in notes}
 
 
+def assessed_notes(call_ids: list[str]) -> dict[tuple[str, str], list[str]]:
+    """(call id, participant id) -> the compliance-passed notes of that participant on that call,
+    in the order of the form (messaging, objections, closings, then Additional Notes)."""
+    ids = sorted(set(call_ids))
+    if not ids:
+        return {}
+    marks = ", ".join(f":c{i}" for i in range(len(ids)))
+    rows = get_warehouse().query(
+        f"SELECT CALL_ID, PARTICIPANT_ID, CATEGORY, POINT_RANK, NOTE FROM {app('APP_CALL_POINT_ASSESSMENT')} "
+        f"WHERE CALL_ID IN ({marks}) AND COMPLIANCE_STATUS = 'passed'", {f"c{i}": v for i, v in enumerate(ids)})
+    order = {"messaging": 0, "objection": 1, "closing": 2, "additional": 3}
+    out: dict[tuple[str, str], list[str]] = {}
+    for r in sorted(rows, key=lambda r: (order.get(r["CATEGORY"], 9), r.get("POINT_RANK") or 0)):
+        note = (r.get("NOTE") or "").strip()
+        if note:
+            out.setdefault((r["CALL_ID"], r["PARTICIPANT_ID"]), []).append(note)
+    return out
+
+
 def profile(u: Universe, hcp_id: str) -> dict:
     target = person(u, hcp_id)
     if target is None:
@@ -312,17 +331,20 @@ def profile(u: Universe, hcp_id: str) -> dict:
     latest: dict[str, tuple] = {}
     for r in sorted(hist_rows, key=lambda r: (r["REVISION_NO"], str(r["CREATED_AT"]))):
         latest[r["PARTICIPANT_ID"]] = (to_date(r["CALL_DATE"]), r["HISTORY_LINE"])
+    people = participants_of(u, primary)
+    call_notes = assessed_notes([c["CALL_ID"] for p in people for c in u.app_calls_by_hcp.get(p["hcp_id"], [])])
     out = []
-    for p in participants_of(u, primary):
+    for p in people:
         ints = [{"interaction_id": i["INTERACTION_ID"], "date": i["INTERACTION_DATE"],
                  "channel_code": i["CHANNEL_CODE"], "team_label": u.refs.channel(i["CHANNEL_CODE"])["TEAM_LABEL"],
                  "type_label": i.get("INTERACTION_TYPE") or u.refs.channel(i["CHANNEL_CODE"])["TYPE_LABEL"],
                  "summary": i.get("SUMMARY") or "POVO discussed", "is_new": False}
                 for i in u.td.interactions if i["HCP_ID"] == p["hcp_id"]]
         for c in u.app_calls_by_hcp.get(p["hcp_id"], []):
+            mine = call_notes.get((c["CALL_ID"], p["hcp_id"])) or []
             ints.append({"interaction_id": c["CALL_ID"], "date": c["CALL_DATE"], "channel_code": "rep",
-                         "team_label": "POVO Sales", "type_label": "Direct call", "summary": "Call assessed",
-                         "is_new": True})
+                         "team_label": "POVO Sales", "type_label": "Direct call",
+                         "summary": " · ".join(mine) if mine else "Call assessed", "is_new": True})
         ints.sort(key=lambda x: (x["date"] or today(), x["is_new"]), reverse=True)
         ints = ints[:MAX_INTERACTIONS]
         counts = {"all": len(ints), **{k: sum(1 for x in ints if x["channel_code"] == k) for k in (c["CHANNEL_CODE"] for c in u.refs.channels)}}

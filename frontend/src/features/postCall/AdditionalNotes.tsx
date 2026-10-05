@@ -22,7 +22,7 @@ const P = LABELS.postCall;
  */
 const AdditionalNotes = () => {
   const dispatch = useAppDispatch();
-  const { primaryId, runCheck, voice } = useAssessment();
+  const { callId, primaryId, runCheck, voice } = useAssessment();
   const { setFieldValue } = useFormikContext<AssessmentFormValues>();
   const key = additionalKey(primaryId);
   const entry = useAppSelector((s) => s.callSession.compliance[key]);
@@ -64,7 +64,11 @@ const AdditionalNotes = () => {
         </button>
       )}
       {entry?.status === 'passed' && <div className="mt-1.5 text-[12.2px] font-semibold text-green">{P.passed}</div>}
-      <ExampleNotes notes={ref.exampleNotes('additional', 'HCP')} disabled={Boolean(voice.recordingKey)} onPick={pickExample} />
+      <ExampleNotes
+        args={{ call_id: callId, participant_id: primaryId, category: 'additional', point_text: '', reception: null }}
+        disabled={Boolean(voice.recordingKey)}
+        onPick={pickExample}
+      />
     </div>
   );
 };

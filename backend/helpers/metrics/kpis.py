@@ -21,7 +21,7 @@ The patients card also carries the "Total on POVO" split:
 
   * Paid NRx   = patients with a paid fill in the period: new patients in the
                  period + continuing patients (new patients from the data start
-                 to the period start x PERSISTENCE)
+                 to the period start x PAID_PERSISTENCE)
   * Bridge NRx / Free Trial NRx = patients on POVO while coverage is pending,
                  point in time (today): PENDING_ON_THERAPY of the PEFs that have
                  not turned into a paid patient yet, split BRIDGE_SHARE to the
@@ -29,6 +29,9 @@ The patients card also carries the "Total on POVO" split:
                  always stay above patients (every patient has a PEF)
   * Total on POVO = Paid + Bridge + Free Trial; the three shares are rounded
                  with largest remainder so they add up to 100%
+
+The three rates come from REF_KPI_PARAMETER. If any is missing the card has no
+split (the View more panel is hidden) rather than showing made-up numbers.
 
 Pure functions over monthly series so the tests can check them against
 hand-computed values without a warehouse.
@@ -43,12 +46,8 @@ from helpers.dates import (MONS, MONTHS, WorkCalendar, data_start, js_round, mon
 PERIODS = ("month", "quarter", "ytd")
 YM = tuple[int, int]
 
-#: Share of earlier new patients still on POVO in a later period (modelled persistence).
-PERSISTENCE = 0.85
-#: Share of the not-yet-paid PEFs whose patients are on POVO through bridge or free trial.
-PENDING_ON_THERAPY = 0.7
-#: Share of those pending patients on the bridge program (the rest are on the free trial).
-BRIDGE_SHARE = 0.55
+#: REF_KPI_PARAMETER codes the patient split needs.
+SPLIT_PARAMETERS = ("PAID_PERSISTENCE", "PENDING_ON_THERAPY", "BRIDGE_SHARE")
 PATIENTS_CODE = "NEW_PATIENTS"
 
 
@@ -124,18 +123,18 @@ def event_count(td, event_type: str, start: date, end: date) -> int:
                and start <= a["EVENT_DATE"] <= end)
 
 
-def patient_split(td, win: dict, today: date) -> dict:
+def patient_split(td, win: dict, today: date, params: dict[str, float]) -> dict:
     """Total on POVO = Paid NRx (new + continuing) + Bridge NRx + Free Trial NRx."""
     start = data_start(today)
     period_start = max(win["start"], start)
     new = event_count(td, "NEW_PATIENT", period_start, today)
     before = event_count(td, "NEW_PATIENT", start, period_start - timedelta(days=1))
-    continuing = js_round(before * PERSISTENCE)
+    continuing = js_round(before * params["PAID_PERSISTENCE"])
     paid = new + continuing
     pefs = event_count(td, "PEF", start, today)
     patients = event_count(td, "NEW_PATIENT", start, today)
-    pending = js_round(max(0, pefs - patients) * PENDING_ON_THERAPY)
-    bridge = js_round(pending * BRIDGE_SHARE)
+    pending = js_round(max(0, pefs - patients) * params["PENDING_ON_THERAPY"])
+    bridge = js_round(pending * params["BRIDGE_SHARE"])
     free_trial = pending - bridge
     total = paid + bridge + free_trial
     shares = spread_lr(100, [paid, bridge, free_trial])
@@ -144,7 +143,8 @@ def patient_split(td, win: dict, today: date) -> dict:
             "new_patients": new, "continuing_patients": continuing, "as_of": today}
 
 
-def kpis(td, period: str, today: date, cal: WorkCalendar, metrics: list[dict]) -> dict:
+def kpis(td, period: str, today: date, cal: WorkCalendar, metrics: list[dict],
+         params: dict[str, float]) -> dict:
     """KPI cards in REF_KPI_METRIC order; titles and units come from that table."""
     win = period_window(period, today)
     goals, actuals = monthly_series(td, today, metrics)
@@ -153,8 +153,8 @@ def kpis(td, period: str, today: date, cal: WorkCalendar, metrics: list[dict]) -
         code = ref["METRIC_CODE"]
         card = {"metric_code": code, "title": ref["TITLE"], "unit": ref["UNIT"],
                 **metric(goals[code], actuals[code], win["months"], today, cal)}
-        if code == PATIENTS_CODE:
-            card["split"] = patient_split(td, win, today)
+        if code == PATIENTS_CODE and all(k in params for k in SPLIT_PARAMETERS):
+            card["split"] = patient_split(td, win, today, params)
         cards.append(card)
     return {"period": period, "period_label": win["label"], "period_start": win["start"],
             "period_end": win["end"], "remaining_working_days": cal.work_after(today, win["end"]),

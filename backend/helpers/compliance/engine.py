@@ -7,7 +7,8 @@ optional SUPPRESS_PATTERN: "medical information" suppresses off-label,
 detectors whose logic is here, exactly as in the POC:
 
   * gib   : words that are not words (keyboard mashes, no vowels, "xxxx")
-  * ph    : an unfilled [bracket] (the rewrite template's placeholders)
+  * ph    : an unfilled [bracket] (the rewrite template's placeholders), or a
+            note cut off mid-sentence ("... works before a")
   * vague : under 3 words, or a stock phrase like "good call"
   * rel   : shares no content word with the point or the HS/POVO vocabulary
 
@@ -28,6 +29,12 @@ from typing import Optional
 SEV_RANK = {"high": 0, "med": 1, "low": 2}
 LABEL_BY_SEVERITY = {"high": "Non-compliant", "med": "Needs review", "low": "Minor issue"}
 BUILT_IN = ("gib", "ph", "vague", "rel")
+
+#: A note that ends on one of these words (or a comma, colon, dash) stops mid-sentence.
+CUT_RE = re.compile(r"(?:[,:;(&/-]|\b(?:a|an|the|to|of|for|with|at|by|from|before|after|during|into|than|and|or|but|"
+                    r"so|because|if|that|which|who|whose|is|was|are|were|be|been|will|would|can|could|should|"
+                    r"may|might|must|has|have|had|his|her|their|our|my|your|its|this|these|those|very|how|what|"
+                    r"when|where|why))\s*[.!?]*$", re.I)
 
 REL_STOP = re.compile(
     r"^(the|a|an|and|or|but|of|to|in|on|at|for|with|by|from|as|is|are|was|were|be|been|it|its|this|that|these|"
@@ -89,6 +96,11 @@ def gib_words(txt: str) -> list[str]:
     return out
 
 
+def is_cut_off(txt: str) -> bool:
+    """True for a note that ends mid-sentence ("HCP asked how lab monitoring works before a")."""
+    return len(txt.split()) >= 2 and bool(CUT_RE.search(txt.strip()))
+
+
 def is_vague(txt: str) -> bool:
     t = re.sub(r"[.!]+$", "", txt.strip().lower())
     if VAGUE_RE.match(t):
@@ -120,6 +132,9 @@ def check(txt: str, ctx_text: str, rules: list[dict]) -> list[dict]:
         out.insert(0, {"rule": by_id["gib"], "hit": ", ".join(gib[:3])})
     elif ph and "ph" in by_id:
         out.append({"rule": by_id["ph"], "hit": ph.group(0)})
+    elif is_cut_off(txt) and not is_vague(txt) and "ph" in by_id:
+        # why / fix for this case come from REF_COMPLIANCE_TEXT (cut_off); the rule's own are about [brackets].
+        out.append({"rule": by_id["ph"], "hit": txt.strip(), "cut": True})
     elif is_vague(txt) and "vague" in by_id:
         out.append({"rule": by_id["vague"], "hit": txt.strip()})
     elif (is_unrelated(txt, ctx_text) and "rel" in by_id
@@ -155,4 +170,4 @@ def score_label(s: int) -> str:
 def issue_out(x: dict) -> dict:
     r = x["rule"]
     return {"rule_id": r["RULE_ID"], "chip": r["CHIP_LABEL"], "title": r["TITLE"], "severity": r["SEVERITY"],
-            "why": x.get("why") or r["WHY_TEXT"], "fix": r["FIX_TEXT"], "excerpt": x["hit"]}
+            "why": x.get("why") or r["WHY_TEXT"], "fix": x.get("fix") or r["FIX_TEXT"], "excerpt": x["hit"]}

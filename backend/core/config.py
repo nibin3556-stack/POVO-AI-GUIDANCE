@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     n8n_call_prep_path: str = "/webhook/povo-call-prep"
     n8n_compliance_path: str = "/webhook/povo-compliance-check"
     n8n_next_call_path: str = "/webhook/povo-next-call"
+    n8n_example_notes_path: str = "/webhook/povo-example-notes"
     n8n_timeout_seconds: float = 60.0
     ai_cache_hours: int = 24
     povo_service_token: str = ""

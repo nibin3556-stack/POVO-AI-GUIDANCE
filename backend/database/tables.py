@@ -68,6 +68,11 @@ BRONZE_COLUMNS: dict[str, list[tuple[str, str]]] = {
                             ("SEVERITY", "STRING"), ("DEDUCTION", "INT"), ("PATTERN", "STRING"),
                             ("SUPPRESS_PATTERN", "STRING"), ("WHY_TEXT", "STRING"), ("FIX_TEXT", "STRING"),
                             ("SORT_ORDER", "INT"), ("IS_ACTIVE", "BOOLEAN")],
+    "REF_COMPLIANCE_TEXT": [("TEXT_ID", "STRING"), ("CONTENT_VERSION", "STRING"), ("KIND", "STRING"),
+                            ("TEXT_KEY", "STRING"), ("PATTERN", "STRING"), ("TEXT_TEMPLATE", "STRING"),
+                            ("SORT_ORDER", "INT"), ("IS_ACTIVE", "BOOLEAN")],
+    "REF_KPI_PARAMETER": [("PARAM_CODE", "STRING"), ("PARAM_VALUE", "DOUBLE"), ("DESCRIPTION", "STRING"),
+                          ("SORT_ORDER", "INT")],
 }
 
 APP_COLUMNS: dict[str, list[tuple[str, str]]] = {

@@ -214,9 +214,10 @@ const callSessionSlice = createSlice({
     complianceCleared: (state, action: PayloadAction<string>) => {
       delete state.compliance[action.payload];
     },
-    complianceFlagged: (state, action: PayloadAction<{ key: string; note: string; chip: string }[]>) => {
-      action.payload.forEach(({ key, note, chip }) => {
-        state.compliance[key] = { status: 'flagged', note, result: null, chip, alertedNote: null };
+    /** Flags from Submit (409). Each carries its full report when the server sends it, so the report opens without a new check. */
+    complianceFlagged: (state, action: PayloadAction<{ key: string; note: string; chip: string; result?: ComplianceResult | null }[]>) => {
+      action.payload.forEach(({ key, note, chip, result }) => {
+        state.compliance[key] = { status: 'flagged', note, result: result ?? null, chip, alertedNote: null };
       });
     },
     complianceDialogOpened: (state, action: PayloadAction<ComplianceDialogState>) => {
@@ -227,16 +228,21 @@ const callSessionSlice = createSlice({
     complianceDialogClosed: (state) => {
       state.complianceDialog = null;
     },
-    /** Submit done: back to Pre-Call Planning with no target open; the submitted row flashes. */
-    assessmentSubmitted: (state, action: PayloadAction<string>) => {
+    /**
+     * Submit done: back to Pre-Call Planning with the same target selected. Call
+     * Preparation and the history open on what was just assessed (so "Delivered
+     * on earlier calls" and the new call's notes are on screen); the row flashes.
+     */
+    assessmentSubmitted: (state, action: PayloadAction<{ hcpId: string; participantId: string; category: Category | null }>) => {
+      const { hcpId, participantId, category } = action.payload;
       resetCall(state);
-      state.selectedHcpId = null;
-      state.participantIds = [];
-      state.participantsFor = null;
-      state.prepCategory = null;
-      state.scrollToPrep = false;
+      state.selectedHcpId = hcpId;
+      state.prepParticipantId = participantId;
+      state.historyParticipantId = participantId;
+      if (category) state.prepCategory = category;
+      state.scrollToPrep = true;
       state.reinforced = {};
-      state.justSubmittedHcpId = action.payload;
+      state.justSubmittedHcpId = hcpId;
     },
     submittedFlashDone: (state) => {
       state.justSubmittedHcpId = null;

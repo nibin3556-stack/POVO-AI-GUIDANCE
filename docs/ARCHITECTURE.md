@@ -98,6 +98,7 @@ POVO-AI-GUIDANCE/
 | **REF_SEGMENT** | SEGMENT_CODE, SHORT_NAME, FULL_NAME, DESCRIPTION, COLOR_HEX, ARCHETYPE_NAME (`Tara`, `Marcus`), ARCHETYPE_DESC, SORT_ORDER |
 | **REF_COMPETITIVE_FOCUS** | FOCUS_CODE, LABEL (`Cosentyx`, `Bimzelx`, `Humira`, `JAK`, `Conventional therapy`), COLOR_HEX, SORT_ORDER |
 | **REF_KPI_METRIC** | METRIC_CODE (`PEF`\|`NEW_PATIENTS`, as in FCT_TERRITORY_GOAL), EVENT_TYPE (the FCT_POVO_ACTIVITY event counted as actual), TITLE, UNIT, SORT_ORDER. Drives the 2 KPI cards. |
+| **REF_KPI_PARAMETER** | PARAM_CODE (`PAID_PERSISTENCE`\|`PENDING_ON_THERAPY`\|`BRIDGE_SHARE`), PARAM_VALUE DOUBLE, DESCRIPTION, SORT_ORDER. The rates behind the Total on POVO split. If any is missing, the card has no split (View more is hidden). |
 | **REF_INTERACTION_CHANNEL** | CHANNEL_CODE, TYPE_LABEL (`Direct call`, …), TEAM_LABEL (`POVO Sales`, …), SORT_ORDER |
 | **FCT_INTERACTION** | INTERACTION_ID STRING, HCP_ID, TERRITORY_ID, EMPLOYEE_ID (nullable; the rep, for channel `rep`), INTERACTION_DATE DATE, CHANNEL_CODE (`rep`\|`adfa`\|`opz`\|`msl`\|`spkr`\|`pr`), INTERACTION_TYPE (`Direct call`, `ADFA visit`, `Opz Sales call`, `MSL visit`, `Speaker program`, `PR visit`), POVO_DISCUSSED BOOLEAN, SUMMARY STRING |
 | **FCT_POVO_ACTIVITY** | ACTIVITY_ID STRING, TERRITORY_ID, HCP_ID, PATIENT_KEY STRING (anonymised token, never PHI), EVENT_DATE DATE, EVENT_TYPE (`PEF`\|`NRX`\|`NEW_PATIENT`). `NEW_PATIENT` is the first paid script. |
@@ -106,8 +107,11 @@ POVO-AI-GUIDANCE/
 | **REF_TALKING_POINT** | POINT_ID STRING, CONTENT_VERSION STRING, CATEGORY (`messaging`\|`objection`\|`closing`), VARIANT (`initial`\|`next_call`\|`extra`\|`peer`), PILLAR STRING, AUDIENCE (`HCP`\|`NP`\|`PA`\|`ALL`), SEGMENT_CODE (`imm`\|`conv`\|`exp`\|`ALL`), WRITER_STATE (`writer`\|`non_writer`\|`ALL`), TEXT_TEMPLATE STRING, DETAIL_TEMPLATE STRING (insight or response), NEXT_CALL_TEMPLATE STRING, SORT_ORDER INT, MLR_CODE STRING, IS_ACTIVE BOOLEAN |
 | **REF_OBJECTION_RULE** | RULE_ID STRING, AUDIENCE, SEGMENT_CODE (or `ALL`), MIN_DECILE INT, MAX_DECILE INT, WRITER_STATE, OBJECTION_POINT_IDS STRING (ordered, comma-separated POINT_IDs), PRIORITY INT (lowest wins) |
 | **REF_COMPLIANCE_RULE** | RULE_ID (`off`, `claim`, …), CHIP_LABEL, TITLE, SEVERITY (`high`\|`med`\|`low`), DEDUCTION INT, PATTERN STRING (Python regex, case-insensitive), SUPPRESS_PATTERN STRING (nullable), WHY_TEXT, FIX_TEXT, SORT_ORDER INT, IS_ACTIVE BOOLEAN |
+| **REF_COMPLIANCE_TEXT** | TEXT_ID, CONTENT_VERSION, KIND (`template`\|`replacement`\|`reword`\|`cut_off`), TEXT_KEY (category, rule id, or `why`\|`fix`\|`placeholder`), PATTERN (regex, reword only), TEXT_TEMPLATE (`{who}` = participant), SORT_ORDER, IS_ACTIVE. Every word the compliance rewrite adds. Templates hold placeholders only, never talking-point text. |
 
-**Content tables** (`REF_TALKING_POINT`, `REF_OBJECTION_RULE`, `REF_COMPLIANCE_RULE`):
+**Content tables** (`REF_TALKING_POINT`, `REF_OBJECTION_RULE`, `REF_COMPLIANCE_RULE`, `REF_COMPLIANCE_TEXT`):
+
+- **No content in code.** The reference HTML only showed the data shapes. Every talking point, rule, rewrite line and KPI rate is read from these tables; example notes are predicted by AI per note (no fixed text). Code holds logic and UI wording only.
 
 - The **backend** owns them as JSON files in `databricks/seed/content/` (`talking_points.json`, `objection_rules.json`, `compliance_rules.json`). Each file is an array of objects whose keys are exactly the column names above.
 - The backend defines the template placeholders and documents them in `databricks/seed/content/README.md`. Templates use `{snake_case}` placeholders, rendered with `str.format_map` over a safe dict.
@@ -230,14 +234,21 @@ Every response uses the Mosaic envelope `{data, status, message, page, limit, to
 - **`PUT /api/v1/calls/{call_id}/assessments`** `{items: [Assessment without compliance fields]}` → `Call`. This is an upsert used for autosave.
   - `note` is at most 200 characters (600 for `additional`).
   - Changing a note resets its compliance status to `unchecked`.
+- **`POST /api/v1/example-notes`** `{call_id|null, participant_id, category, point_text, reception: 0|1|2|null}` → `{notes: [string ≤ 3], source: ai|none}`.
+  - The AI predicts what the rep is likely to write for this point, matched to the reception picked so far (messaging and closings only). For Additional Notes the model also sees the points already raised on the call.
+  - Every note is checked against the compliance rules and dropped if any rule fires. Answers are cached in `APP_AI_CACHE`.
+  - With AI off or failing the answer is `{notes: [], source: "none"}` and the screen shows no example notes. There is no fixed fallback text.
 - **`POST /api/v1/compliance/check`** `{call_id|null, participant_id, category, point_id, point_text, note}` → `{check_id, status: passed|flagged, result_label, max_severity|null, score, issues: [{rule_id, chip, title, severity, why, fix, excerpt}], suggested_text|null, steps: [string×3], engine}`.
   - Rules run first and are always applied.
   - The LLM second pass can add issues and improve the rewrite, but can never remove a rules finding.
   - If a `call_id` is given, the assessment row's `compliance_status` and `compliance_check_id` are updated.
+  - If the AI pass fails (`engine: rules`) while AI is on, the latest AI-assisted verdict on the same note text for that call slot is returned instead. A transient n8n failure can then never show "passed" for a text the AI flagged, which Submit would still block.
+  - The frontend calls it when a note loses focus, on Enter, after a voice note or an example note, and for every note at once from the purple "AI checks every note for compliance" chip in the Post-Call header (notes already AI-checked with the same text are skipped; a flag opens the first flagged note's report).
 - **`POST /api/v1/compliance/{check_id}/accept`** → marks `SUGGESTION_ACCEPTED`. The frontend then saves the note and re-checks it.
 - **`POST /api/v1/calls/{call_id}/next-call`** (the Submit button):
-  - Re-checks every non-empty note on the server.
-  - If any note is flagged, it returns **409** `{data: {flags: [{participant_id, category, point_id, chip}]}}`.
+  - Re-checks every non-empty note on the server. A note that already has an AI-assisted check (`ENGINE = rules+llm`) for the same text on the same call slot keeps that verdict, so no second LLM call is made. Any other note gets the full check now, with the rules plus the n8n AI pass when AI is on. A flag only the AI found therefore still blocks Submit.
+  - If any note is flagged, it returns **409** `{data: {flags: [{participant_id, category, point_id, chip, note, result}]}}`. `result` is the full compliance report (as from `/compliance/check`, with `check_id`), so the screen jumps to the first flagged note and opens its report without running a new check.
+  - On success the screen returns to Pre-Call Planning with the same target selected. Call Preparation and Call Participant History open on the first participant and category assessed, so "Delivered on earlier calls" and the new call card (which lists that participant's notes) are on screen. The target's row flashes.
   - If nothing is answered, it returns **422**.
   - Otherwise it builds and persists a revision for every participant × category (helpers/revision.py: raised points move to the delivered history; messaging and closings are re-ranked — follow-ups of well-received points, one unused point in a well-received theme, follow-ups of moderately received points, then unused and new points; a not-well-received theme is never suggested again), sets the call to `assessed`, increments `REVISION_NO`, and audits.
   - The call's passed Additional Notes appear in the next profile as a bullet: "Last call note (Oct 13, 2026): …".
@@ -261,6 +272,7 @@ Every response uses the Mosaic envelope `{data, status, message, page, limit, to
 | Workflow file | Path (env var) | Request | Response payload |
 |---|---|---|---|
 | `POVO AI Guidance - Call Prep v1.json` | `/webhook/povo-call-prep` (`N8N_CALL_PREP_PATH`) | `{request_id, category, participant: {role_type, display_name, decile, tier_name, segment_short_name, competitive_focus_label, hs_patients, povo_patients, jak_patients, povo_discussions, last_call_date}, interactions: [{date, type_label, summary}], candidates: [{point_id, pillar, text, detail}], max_points: 3}` | `{ordered_point_ids: [≤3, subset of the candidates], insights: {point_id: string ≤ 220 chars}}`. Insights are only for messaging; the approved text is never modified. |
+| `POVO AI Guidance - Example Notes v1.json` | `/webhook/povo-example-notes` (`N8N_EXAMPLE_NOTES_PATH`) | `{request_id, category, category_label, point_text, reception\|null, other_points, participant, interactions, count, max_chars}` | `{notes: [string] (1..count, ≤ max_chars, no placeholders or PHI)}` |
 | `POVO AI Guidance - Compliance Check v1.json` | `/webhook/povo-compliance-check` (`N8N_COMPLIANCE_PATH`) | `{request_id, category, point_text, participant_role, note, rule_findings: [{rule_id, title, severity}], allowed_rule_ids: [...14]}` | `{issues: [{rule_id (from allowed_rule_ids), excerpt, why}], suggested_text (≤ 200/600 chars, no PHI, no off-label claims)}` |
 | `POVO AI Guidance - Next Call v1.json` | `/webhook/povo-next-call` (`N8N_NEXT_CALL_PATH`) | `{request_id, participant: {...as in call prep}, call_date, assessments: [{category, point_id, text, reception, note}]}` | `{objection_states: {point_id: open\|resolved}, summary (≤ 240 chars), next_best_action (≤ 200 chars)}` |
 | `POVO AI Guidance - Nightly Guidance Refresh v1.json` | schedule | Cron 05:00 America/New_York, Mon–Fri → HTTP POST `{{$env.POVO_BACKEND_URL}}/api/v1/jobs/refresh-guidance` with `X-POVO-Service-Token: {{$env.POVO_SERVICE_TOKEN}}`, then `/api/v1/jobs/purge-ai-cache` | — |

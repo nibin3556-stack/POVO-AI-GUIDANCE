@@ -1,6 +1,8 @@
 """AI compliance check on a call note, and accepting its suggested rewrite."""
 from fastapi import APIRouter, Depends, HTTPException
 
+from core.config import get_settings
+
 from database.tables import app
 from database.warehouse import get_warehouse
 from helpers import prep
@@ -37,8 +39,18 @@ def check(body: ComplianceCheckRequest, ctx: RequestContext = Guard) -> dict:
         raise HTTPException(status_code=404, detail="Participant not found")
     who, role = p["display_name"], p["role_type"]
     result = service.evaluate(body.note, body.category, body.point_text or "", who, ctx_text, role, ctx.request_id)
-    check_id = service.persist(result, body.call_id, body.participant_id, body.category, body.point_id,
-                               body.note, ctx.effective["EMPLOYEE_ID"], ctx.real["EMPLOYEE_ID"])
+    prev = None
+    if body.call_id and result["engine"] == "rules" and get_settings().ai_active:
+        # The AI pass failed this time. Its earlier verdict on this exact text still stands
+        # (Submit would apply it), so show that instead of a weaker rules-only "passed".
+        prev = service.latest_ai_check(body.call_id, body.participant_id, body.category, body.point_id,
+                                       body.note.strip())
+    if prev is not None:
+        check_id = prev.pop("check_id")
+        result = prev
+    else:
+        check_id = service.persist(result, body.call_id, body.participant_id, body.category, body.point_id,
+                                   body.note.strip(), ctx.effective["EMPLOYEE_ID"], ctx.real["EMPLOYEE_ID"])
     if body.call_id:
         # Only the row whose stored note IS the checked note takes the result.
         wh.execute(f"UPDATE {app('APP_CALL_POINT_ASSESSMENT')} SET COMPLIANCE_STATUS = :st, COMPLIANCE_CHECK_ID = :chk "

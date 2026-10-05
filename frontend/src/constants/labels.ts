@@ -241,6 +241,12 @@ export const LABELS = {
   },
   postCall: {
     aiChip: 'AI checks every note for compliance',
+    aiChipHint: 'Run the AI compliance check on every note of this call now',
+    checkingAll: (n: number) => `AI is checking ${n} ${plural(n, 'note', 'notes')}…`,
+    checkAllEmpty: 'There are no notes to check yet. Write a note, pick an example or record a voice note first',
+    checkAllPassed: (n: number) => `AI checked ${n} ${plural(n, 'note', 'notes')}: all passed the compliance check`,
+    checkAllFlagged: (n: number, k: number) =>
+      `AI checked ${n} ${plural(n, 'note', 'notes')}: ${k} ${plural(k, 'needs', 'need')} changes before you submit`,
     participants: 'Call participants',
     ofSelected: (n: number, t: number) => `${n} of ${t} selected`,
     sliderAria: 'How the point was received',
@@ -262,9 +268,10 @@ export const LABELS = {
     submitting: 'Submitting…',
     clearFlags: (n: number) => `Clear ${n} compliance ${plural(n, 'flag', 'flags')} to submit the assessment`,
     voicePaused: 'Submit is paused until the voice note and its compliance check finish',
-    submitted: (name: string, tab: string) =>
-      `Assessment submitted. The next-call plan for ${name} appears when you open ${name} in ${tab}`,
-    exampleNotes: 'Example notes',
+    submitted: (name: string) => `Assessment submitted. The next-call plan and call history for ${name} are updated below`,
+    exampleNotes: 'AI example notes',
+    exampleNotesHint: 'Predicted by AI from this point, the participant and the reception. Click one to use it, then edit it',
+    exampleNotesLoading: 'AI is predicting example notes…',
     voiceNote: 'Voice note',
     listening: 'Listening…',
     recordAria: 'Record a voice note',

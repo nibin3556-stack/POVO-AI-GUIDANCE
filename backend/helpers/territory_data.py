@@ -35,6 +35,8 @@ class Refs:
     holidays: set[date]
     kpi_metrics: list[dict]
     channels: list[dict]
+    #: REF_KPI_PARAMETER: PARAM_CODE -> PARAM_VALUE (the patient split rates).
+    kpi_parameters: dict[str, float] = field(default_factory=dict)
 
     def tier(self, code: Optional[str]) -> Optional[dict]:
         return next((t for t in self.tiers if t["TIER_CODE"] == code), None)
@@ -110,7 +112,9 @@ def get_refs() -> Refs:
     kpi = sorted(wh.query(f"SELECT * FROM {bronze('REF_KPI_METRIC')}"), key=lambda r: r.get("SORT_ORDER") or 0)
     chans = sorted(wh.query(f"SELECT * FROM {bronze('REF_INTERACTION_CHANNEL')}"),
                    key=lambda r: r.get("SORT_ORDER") or 0)
-    value = Refs(emps, terrs, tiers, segs, focus, {h for h in hol if h}, kpi, chans)
+    params = {r["PARAM_CODE"]: float(r["PARAM_VALUE"])
+              for r in wh.query(f"SELECT * FROM {bronze('REF_KPI_PARAMETER')}") if r.get("PARAM_VALUE") is not None}
+    value = Refs(emps, terrs, tiers, segs, focus, {h for h in hol if h}, kpi, chans, params)
     with _lock:
         _refs = (time.time(), value)
     return value

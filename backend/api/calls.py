@@ -202,25 +202,34 @@ def next_call(call_id: str, ctx: RequestContext = Guard) -> dict:
     rows = assessments(call_id)
     wh = get_warehouse()
 
-    # 1. Server-side re-check of every non-empty note (rules only: deterministic).
+    # 1. Server-side re-check of every non-empty note. A note the AI already
+    #    checked (same text, same slot) keeps that verdict; any other note gets
+    #    the full check now, rules plus the n8n AI pass when AI is on.
     all_points = " ".join(a.get("POINT_TEXT") or "" for a in rows)
     flags = []
     for a in rows:
         note = (a.get("NOTE") or "").strip()
         if not note:
             continue
-        who = people.get(a["PARTICIPANT_ID"], primary)["display_name"]
-        res = compliance.evaluate(note, a["CATEGORY"], a.get("POINT_TEXT") or "", who, all_points, use_ai=False)
-        check_id = compliance.persist(res, call_id, a["PARTICIPANT_ID"], a["CATEGORY"], a["POINT_ID"], note,
-                                      ctx.effective["EMPLOYEE_ID"], ctx.real["EMPLOYEE_ID"])
+        res = compliance.latest_ai_check(call_id, a["PARTICIPANT_ID"], a["CATEGORY"], a["POINT_ID"], note)
+        if res is not None:
+            check_id = res.pop("check_id")
+        else:
+            person = people.get(a["PARTICIPANT_ID"], primary)
+            res = compliance.evaluate(note, a["CATEGORY"], a.get("POINT_TEXT") or "", person["display_name"],
+                                      all_points, person["role_type"], ctx.request_id)
+            check_id = compliance.persist(res, call_id, a["PARTICIPANT_ID"], a["CATEGORY"], a["POINT_ID"], note,
+                                          ctx.effective["EMPLOYEE_ID"], ctx.real["EMPLOYEE_ID"])
         wh.execute(f"UPDATE {app('APP_CALL_POINT_ASSESSMENT')} SET COMPLIANCE_STATUS = :st, "
                    f"COMPLIANCE_CHECK_ID = :chk WHERE CALL_ID = :cid AND PARTICIPANT_ID = :pid "
                    f"AND CATEGORY = :cat AND POINT_ID = :point",
                    {"st": res["status"], "chk": check_id, "cid": call_id, "pid": a["PARTICIPANT_ID"],
                     "cat": a["CATEGORY"], "point": a["POINT_ID"]})
         if res["status"] == "flagged":
+            # The full report travels with the flag, so the rep can open it at once.
             flags.append({"participant_id": a["PARTICIPANT_ID"], "category": a["CATEGORY"],
-                          "point_id": a["POINT_ID"], "chip": res["issues"][0]["chip"]})
+                          "point_id": a["POINT_ID"], "chip": res["issues"][0]["chip"], "note": note,
+                          "result": {"check_id": check_id, **res}})
     if flags:
         raise ApiError(409, f"Clear {len(flags)} compliance {'flag' if len(flags) == 1 else 'flags'} "
                             f"to submit the assessment", {"flags": flags})

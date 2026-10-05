@@ -33,6 +33,9 @@ export interface CheckOptions {
   force?: boolean;
 }
 
+/** What one check ended in; `skipped` = empty note or this text already checked. */
+export type CheckOutcome = 'passed' | 'flagged' | 'skipped' | 'failed';
+
 /**
  * Runs the AI compliance check for one note: at least 600ms of spinner, then
  * the result. A flagged note pops the report once per text (like the POC).
@@ -43,14 +46,14 @@ export const useComplianceCheck = (callId: string | null) => {
   const [check] = useCheckComplianceMutation();
 
   return useCallback(
-    async (target: CheckTarget, options: CheckOptions = {}) => {
+    async (target: CheckTarget, options: CheckOptions = {}): Promise<CheckOutcome> => {
       const note = target.note.trim();
       if (!note) {
         dispatch(complianceCleared(target.key));
-        return;
+        return 'skipped';
       }
       const existing = store.getState().callSession.compliance[target.key];
-      if (!options.force && existing && existing.note === note && existing.status !== 'checking') return;
+      if (!options.force && existing && existing.note === note && existing.status !== 'checking') return 'skipped';
       dispatch(complianceChecking({ key: target.key, note }));
       try {
         const [result] = await Promise.all([
@@ -65,15 +68,17 @@ export const useComplianceCheck = (callId: string | null) => {
           delay(TIMING.COMPLIANCE_MIN_SPINNER_MS),
         ]);
         const current = store.getState().callSession.compliance[target.key];
-        if (current?.note !== note) return; // the note changed while the check ran
+        if (current?.note !== note) return 'skipped'; // the note changed while the check ran
         dispatch(complianceChecked({ key: target.key, note, result }));
         const alreadyShown = current.alertedNote === note && !options.force;
         if (result.status === 'flagged' && !options.silent && !alreadyShown) {
           dispatch(complianceDialogOpened({ key: target.key, context: target.context }));
         }
+        return result.status;
       } catch {
         dispatch(complianceCleared(target.key));
         toast.error(LABELS.postCall.checkFailed, { id: 'compliance-failed' });
+        return 'failed';
       }
     },
     [callId, check, dispatch, store],

@@ -1,4 +1,5 @@
-"""The approved content library: talking points, objection rules, compliance rules.
+"""The content library: talking points, objection rules, compliance rules and
+the compliance rewrite wording.
 
 Read from the REF_ tables through the warehouse (Databricks, or the local
 DuckDB loaded from the seeder's CSVs). The backend OWNS the source JSON in
@@ -25,7 +26,20 @@ from database.warehouse import get_warehouse
 logger = logging.getLogger("povo.content")
 
 FILES = {"REF_TALKING_POINT": "talking_points.json", "REF_OBJECTION_RULE": "objection_rules.json",
-         "REF_COMPLIANCE_RULE": "compliance_rules.json"}
+         "REF_COMPLIANCE_RULE": "compliance_rules.json", "REF_COMPLIANCE_TEXT": "compliance_texts.json"}
+
+
+@dataclass
+class ComplianceTexts:
+    """REF_COMPLIANCE_TEXT, by kind. Every word of the rewrite comes from here."""
+    #: category -> fallback template ({who} = participant); placeholders only, never claim text.
+    templates: dict[str, str]
+    #: rule id -> the approved line that replaces a clause that rule flagged.
+    replacements: dict[str, str]
+    #: (regex, replacement) applied to the rep's words before cleaning.
+    rewords: list[tuple[str, str]]
+    #: why / fix / placeholder for a note cut off mid-sentence.
+    cut_off: dict[str, str]
 
 
 @dataclass
@@ -33,6 +47,7 @@ class Library:
     points: dict[str, dict]
     objection_rules: list[dict]
     compliance_rules: list[dict]
+    compliance_texts: ComplianceTexts
     content_version: str
     source: str
 
@@ -74,12 +89,23 @@ def get_library() -> Library:
     tp, src1 = _read("REF_TALKING_POINT")
     obj, _ = _read("REF_OBJECTION_RULE")
     comp, _ = _read("REF_COMPLIANCE_RULE")
+    texts = sorted((r for r in _read("REF_COMPLIANCE_TEXT")[0] if _is_active(r)),
+                   key=lambda r: int(r.get("SORT_ORDER") or 0))
+    by_kind: dict[str, list[dict]] = {}
+    for r in texts:
+        by_kind.setdefault(str(r.get("KIND") or ""), []).append(r)
+    ctexts = ComplianceTexts(
+        templates={r["TEXT_KEY"]: r["TEXT_TEMPLATE"] for r in by_kind.get("template", [])},
+        replacements={r["TEXT_KEY"]: r["TEXT_TEMPLATE"] for r in by_kind.get("replacement", [])},
+        rewords=[(r["PATTERN"], r["TEXT_TEMPLATE"]) for r in by_kind.get("reword", []) if r.get("PATTERN")],
+        cut_off={r["TEXT_KEY"]: r["TEXT_TEMPLATE"] for r in by_kind.get("cut_off", [])})
     points = {r["POINT_ID"]: r for r in tp if _is_active(r)}
     versions = sorted({str(r.get("CONTENT_VERSION") or "") for r in points.values()} - {""})
     lib = Library(points=points,
                   objection_rules=sorted(obj, key=lambda r: int(r.get("PRIORITY") or 0)),
                   compliance_rules=sorted([r for r in comp if _is_active(r)],
                                           key=lambda r: int(r.get("SORT_ORDER") or 0)),
+                  compliance_texts=ctexts,
                   content_version=versions[-1] if versions else "2026.1", source=src1)
     with _lock:
         _cache = (time.time(), lib)

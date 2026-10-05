@@ -6,6 +6,7 @@
 |---|---|---|
 | `POVO AI Guidance - Call Prep v1.json` | `POST /webhook/povo-call-prep` | backend `POST /api/v1/call-prep` (`N8N_CALL_PREP_PATH`) |
 | `POVO AI Guidance - Compliance Check v1.json` | `POST /webhook/povo-compliance-check` | backend `POST /api/v1/compliance/check` (`N8N_COMPLIANCE_PATH`) |
+| `POVO AI Guidance - Example Notes v1.json` | `POST /webhook/povo-example-notes` | backend `POST /api/v1/example-notes` (`N8N_EXAMPLE_NOTES_PATH`) |
 | `POVO AI Guidance - Next Call v1.json` | `POST /webhook/povo-next-call` | backend "AI Suggestions for Next Call" (`N8N_NEXT_CALL_PATH`) |
 | `POVO AI Guidance - Nightly Guidance Refresh v1.json` | cron `0 5 * * 1-5`, America/New_York | n8n itself. It calls backend `/api/v1/jobs/*`. |
 
@@ -61,6 +62,18 @@ The Guard cleans insights without failing the call:
 - A sentence is stripped when it has a claim-like number (`%`, mg, weeks, p-value, n=, fold) that is not in that point's approved text.
 - A sentence is also stripped when it has any other number that is not in the approved text or the participant facts.
 - An insight that is still over 220 characters is dropped, never truncated.
+
+### Example Notes v1: `povo-example-notes`
+
+- Request: `{request_id, category, category_label, point_text, reception ("well received" | "moderately received" | "not well received" | null), other_points:[string], participant:{role_type, decile, tier_name, segment_short_name, ...}, interactions:[{date, type_label, summary}], count, max_chars}`
+- Response: `{ok:true, notes:[string]}`
+
+Predicts the notes the rep is most likely to write for one point (or Additional Notes), matched to the reception the rep picked. The rep clicks one and edits it.
+
+- The participant is named only by role (HCP, PA, NP); no patient details, adverse events, off-label uses, pricing or claims.
+- The Guard drops notes over `max_chars`, under 4 words, with `[placeholders]` or PHI, and duplicates; with none left it answers `ok:false`.
+- The backend then runs every note through the 14 compliance rules and drops any that fires, and caches the answer in `APP_AI_CACHE`.
+- On `ok:false` the screen shows **no** example notes. There is no fixed fallback text.
 
 ### Compliance Check v1: `povo-compliance-check`
 
@@ -153,6 +166,7 @@ On the VM, either set `POVO_BACKEND_URL` (with env access allowed) or edit the S
    N8N_CALL_PREP_PATH=/webhook/povo-call-prep
    N8N_COMPLIANCE_PATH=/webhook/povo-compliance-check
    N8N_NEXT_CALL_PATH=/webhook/povo-next-call
+   N8N_EXAMPLE_NOTES_PATH=/webhook/povo-example-notes
    N8N_TIMEOUT_SECONDS=60
    POVO_SERVICE_TOKEN=<same as n8n>
    ```
