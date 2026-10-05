@@ -15,6 +15,7 @@
   --breakpoint-bp760: 760px;
   --breakpoint-bp900: 900px;
   --breakpoint-bp1180: 1180px;
+  --breakpoint-bp1300: 1300px;
   --breakpoint-bp1400: 1400px;
   --breakpoint-bp1500: 1500px;
   --breakpoint-bp1700: 1700px;
@@ -22,16 +23,19 @@
   /* Tokens mirror constants/colors.ts and the MUI theme. */
   --color-bg: #d9e2ec;
   --color-ink: #0f1f33;
-  --color-ink2: #1e3350;
-  --color-ink3: #334155;
+  --color-ink2: #1c2f48;
+  --color-ink3: #3a4a5e;
   --color-blue: #156cb4;
   --color-blued: #115088;
   --color-navy: #12406e;
+  --color-navyd: #0e3a63;
+  --color-header: #0e3e6e;
+  --color-tabon: #1a65aa;
   --color-sky: #2388d4;
   --color-bluet: #eaf3fb;
   --color-bluet2: #c7ddf0;
-  --color-line: #c4cfdc;
-  --color-line2: #d5dee8;
+  --color-line: #bcc8d6;
+  --color-line2: #d3dce6;
   --color-warn: #b45309;
   --color-warnb: #f59e0b;
   --color-warnbg: #fef3c7;
@@ -74,6 +78,9 @@
   --animate-card-glow: card-glow 2s ease-in-out 3;
   --animate-green-glow: green-glow 1.6s ease-in-out infinite;
   --animate-pop-in: pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --animate-ai-glow-soft: ai-glow-soft 2.6s ease-in-out infinite;
+  --animate-just-done: just-done 1.3s ease-in-out 3;
+  --animate-mic-pulse: mic-pulse 1.1s ease-in-out infinite;
 
   @keyframes cta-pulse {
     0%, 100% { transform: none; box-shadow: 0 6px 18px rgba(109, 91, 208, 0.32); }
@@ -122,6 +129,18 @@
   @keyframes green-glow {
     0%, 100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.5); }
     50% { box-shadow: 0 0 0 6px rgba(21, 128, 61, 0.15); }
+  }
+  @keyframes ai-glow-soft {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(109, 91, 208, 0); }
+    50% { box-shadow: 0 0 0 3px rgba(109, 91, 208, 0.18), 0 0 14px rgba(109, 91, 208, 0.45); }
+  }
+  @keyframes just-done {
+    0%, 100% { background: #cfe3f8; box-shadow: inset 4px 0 0 var(--color-blue), 0 0 0 3px rgba(21, 108, 180, 0.45); }
+    50% { background: #f2f8fe; box-shadow: inset 4px 0 0 var(--color-blue), 0 0 0 0 rgba(21, 108, 180, 0); }
+  }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(90, 72, 184, 0.45); }
+    50% { box-shadow: 0 0 0 7px rgba(90, 72, 184, 0); }
   }
   @keyframes pop-in {
     0% { transform: scale(0.94); opacity: 0; }
@@ -176,16 +195,6 @@
   }
   @keyframes ai-sweep {
     to { transform: translateX(320%); }
-  }
-  /* The vertical connector behind the talking point cards. */
-  .point-rail::before {
-    content: '';
-    position: absolute;
-    left: 25px;
-    top: 16px;
-    bottom: 16px;
-    width: 2px;
-    background: linear-gradient(#c7ddf0, #d8d0f5);
   }
   .scroll-thin::-webkit-scrollbar {
     width: 9px;

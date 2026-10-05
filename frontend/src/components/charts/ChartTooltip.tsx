@@ -8,6 +8,8 @@ export interface TooltipRow {
   color: string;
   value: ReactNode;
   text: string;
+  /** A small uppercase heading shown above this row (e.g. "Funnel"). */
+  group?: string;
 }
 
 interface ChartTooltipProps {
@@ -49,10 +51,13 @@ const ChartTooltip = ({ anchorEl: card, hover, title, rows, footer }: ChartToolt
           <HcpsText text={title} />
         </div>
         {rows.map((row) => (
-          <div key={row.key} className="flex items-center gap-2 text-[13px] font-medium leading-normal text-ink2">
-            <i className="inline-block h-0 w-[18px] flex-none border-t-[3px]" style={{ borderColor: row.color }} />
-            <b className="min-w-[52px] text-[14.5px] font-bold text-ink">{row.value}</b>
-            <span>{row.text}</span>
+          <div key={row.key}>
+            {row.group && <div className="mb-0.5 mt-[5px] text-[11px] font-bold uppercase tracking-[.4px] text-ink3">{row.group}</div>}
+            <div className="flex items-center gap-2 text-[13px] font-medium leading-normal text-ink2">
+              <i className="inline-block h-0 w-[18px] flex-none border-t-[3px]" style={{ borderColor: row.color }} />
+              <b className="min-w-[52px] text-[14.5px] font-bold text-ink">{row.value}</b>
+              <span>{row.text}</span>
+            </div>
           </div>
         ))}
         {footer && <div className="mt-[5px] border-t border-line2 pt-[5px] text-[13px] font-bold text-blued">{footer}</div>}

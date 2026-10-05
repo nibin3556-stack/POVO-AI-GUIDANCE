@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { call, target } from '../test/fixtures';
-import { additionalKey, anyAnswered, callToFormValues, changedInputs, countAnswered, countNotes, itemKey, toInputs } from './assessment';
-import { isChanged, orderParticipants, replacesRemoved, revealKey, showsPreviousText, tagTone } from './callPrep';
+import { additionalKey, anyAnswered, callToFormValues, changedInputs, countAnswered, itemKey, toInputs } from './assessment';
+import { deliveredTone, isChanged, isPostCallBullet, orderParticipants, reinforceScope, revealKey, tagTone } from './callPrep';
 import { chipList, complianceLevel, firstPlaceholderRange, markExcerpts, severityCounts, splitPlaceholders } from './compliance';
 import { cx } from './cx';
 import { formatLongDate, formatMD, formatMDY, formatNumber, formatShortMD, nameInitials, splitHcps, splitMatch, truncate } from './format';
 import { receptionFromX, stepReception } from './reception';
 import { stepperState } from './steps';
-import { countActiveFilters, EMPTY_FILTERS, filterAccounts, filterParams, nextRoles, nextSort, passesFilters, sortParam, targetFullName, toggleValue } from './targets';
-import { flaggedResult, profile, accounts, reference } from '../test/fixtures';
+import { countActiveFilters, EMPTY_FILTERS, filterParams, nextRoles, nextSort, sortParam, targetFullName, toggleValue } from './targets';
+import { flaggedResult, profile, reference } from '../test/fixtures';
 import { buildReferenceLookup, receptionText } from './reference';
 
 describe('format', () => {
@@ -49,9 +49,6 @@ describe('targets', () => {
     expect(filterParams(filters)).toEqual({ focus: 'jak,humira', account_id: 'A1' });
     expect(countActiveFilters(filters)).toBe(2);
     expect(toggleValue(['a'], 'a')).toEqual([]);
-    expect(passesFilters(target(), filters)).toBe(true);
-    expect(passesFilters(target({ competitive_focus: 'cosentyx' }), filters)).toBe(false);
-    expect(filterAccounts(accounts, { ...EMPTY_FILTERS, focus: ['humira'] }).map((a) => a.account_id)).toEqual(['A9']);
   });
   it('toggles roles with empty meaning all', () => {
     const roles = ['HCP', 'NP', 'PA'] as const;
@@ -83,23 +80,23 @@ describe('assessment', () => {
     expect(countAnswered(after, 'H2')).toBe(1);
     expect(countAnswered(after, 'H2', 'closing')).toBe(0);
     expect(anyAnswered(after)).toBe(true);
-    expect(countNotes(after)).toBe(2);
   });
 });
 
 describe('callPrep and compliance', () => {
-  it('maps revision tags to tones', () => {
-    expect(tagTone('Retained · well received')).toBe('res');
-    expect(tagTone('Changed')).toBe('upd');
-    expect(tagTone('▲ was #3')).toBe('mv');
-    expect(tagTone('Still open · address first')).toBe('open');
+  it('maps next-call tags and delivered points to tones', () => {
+    expect(tagTone('Builds on well received')).toBe('well');
+    expect(tagTone('Builds on moderate')).toBe('mod');
     expect(tagTone('New')).toBe('new');
-    expect(tagTone('New AI suggestion')).toBe('nai');
-    const point = { point_id: 'x', rank: 1, pillar: null, text: 't', detail: null, detail_label: null, tags: ['New · replaces a removed message'], previous_text: 'old', previous_rank: 1 } as const;
-    expect(replacesRemoved({ ...point, tags: [...point.tags] })).toBe(true);
-    expect(showsPreviousText({ ...point, tags: [] }, 'objection')).toBe(false);
-    expect(showsPreviousText({ ...point, tags: [] }, 'messaging')).toBe(true);
+    expect(tagTone('Something else')).toBe('other');
+    const point = { point_id: 'x', rank: 1, pillar: null, text: 't', detail: null, detail_label: null, tags: [], previous_text: null, previous_rank: null } as const;
     expect(isChanged({ ...point, tags: [] })).toBe(false);
+    const delivered = { ...point, tags: [], delivered_date: '2026-10-13', reception: 1 as const, label: 'Moderately Received', is_open: false };
+    expect(deliveredTone(delivered)).toBe('good');
+    expect(deliveredTone({ ...delivered, reception: 0 })).toBe('bad');
+    expect(deliveredTone({ ...delivered, reception: null, is_open: true })).toBe('bad');
+    expect(reinforceScope('H2', 'closing')).toBe('H2|closing');
+    expect(isPostCallBullet('Last call note (Oct 13, 2026): x')).toBe(true);
     expect(revealKey('H2', 'closing', 2)).toBe('H2|closing|2');
     expect(orderParticipants(profile.participants, ['N11', 'H2']).map((p) => p.hcp_id)).toEqual(['N11', 'H2']);
   });
@@ -143,9 +140,9 @@ describe('reference lookups', () => {
     expect(ref.categoryLabel('objection')).toBe('Potential Objections');
     expect(ref.roleCodes).toEqual(['HCP', 'NP', 'PA']);
   });
-  it('fills the next-call steps and reception labels', () => {
-    expect(ref.nextCallSteps(1)[1]).toBe('Running the AI compliance check on 1 note');
-    expect(ref.nextCallSteps(3)[1]).toBe('Running the AI compliance check on 3 notes');
+  it('fills the example notes and reception labels', () => {
+    expect(ref.exampleNotes('messaging', 'PA')[0]).toBe('PA asked how lab monitoring works before a first POVO start');
+    expect(ref.exampleNotes('additional', 'HCP')).toHaveLength(1);
     expect(receptionText(ref.receptionLabels, 2, 'Not rated')).toBe('Well Received');
     expect(receptionText(ref.receptionLabels, null, 'Not rated')).toBe('Not rated');
   });

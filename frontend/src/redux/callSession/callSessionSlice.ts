@@ -11,7 +11,7 @@ import type {
 } from '../../types/models';
 import { EMPTY_FILTERS, nextSort, toggleValue } from '../../utils/targets';
 
-export type PlanView = 'plan' | 'accounts';
+export type DecileView = 'table' | 'chart';
 
 export interface ComplianceEntry {
   status: 'checking' | 'passed' | 'flagged';
@@ -38,13 +38,18 @@ export interface CallSessionState {
   interactionFilter: InteractionFilter;
   revealed: Record<string, true>;
   scrollToPrep: boolean;
-  view: PlanView;
   filters: Record<FilterGroup, string[]>;
   sort: TargetSort;
   page: number;
-  openAccountId: string | null;
   period: Period;
   grain: Grain;
+  decileView: DecileView;
+  /** Delivered points the rep marked Reinforce, per `${participantId}|${category}`: added to the post-call list. */
+  reinforced: Record<string, string[]>;
+  /** The target whose assessment was just submitted: its row flashes in Pre-Call Planning. */
+  justSubmittedHcpId: string | null;
+  /** The note field a voice note is recording into (Submit waits for it). */
+  recordingKey: string | null;
   assessParticipantId: string | null;
   assessCategory: Category;
   openPoints: Record<string, string | null>;
@@ -62,13 +67,15 @@ export const initialCallSessionState: CallSessionState = {
   interactionFilter: 'all',
   revealed: {},
   scrollToPrep: false,
-  view: 'plan',
   filters: EMPTY_FILTERS,
   sort: { key: 'hs_patients', direction: 'desc' },
   page: 0,
-  openAccountId: null,
   period: 'month',
   grain: 'month',
+  decileView: 'table',
+  reinforced: {},
+  justSubmittedHcpId: null,
+  recordingKey: null,
   assessParticipantId: null,
   assessCategory: 'messaging',
   openPoints: {},
@@ -85,6 +92,7 @@ const resetCall = (state: CallSessionState) => {
   state.openPoints = {};
   state.compliance = {};
   state.complianceDialog = null;
+  state.recordingKey = null;
 };
 
 const callSessionSlice = createSlice({
@@ -101,6 +109,7 @@ const callSessionSlice = createSlice({
       state.participantsFor = null;
       state.prepCategory = null;
       state.scrollToPrep = Boolean(action.payload.scroll);
+      state.reinforced = {};
       resetCall(state);
     },
     participantsInitialised: (state, action: PayloadAction<{ hcpId: string; ids: string[] }>) => {
@@ -132,10 +141,6 @@ const callSessionSlice = createSlice({
     scrollHandled: (state) => {
       state.scrollToPrep = false;
     },
-    viewSelected: (state, action: PayloadAction<PlanView>) => {
-      state.view = action.payload;
-      state.openAccountId = null;
-    },
     filterToggled: (state, action: PayloadAction<{ group: FilterGroup; value: string }>) => {
       const { group, value } = action.payload;
       state.filters[group] = toggleValue(state.filters[group], value);
@@ -149,6 +154,10 @@ const callSessionSlice = createSlice({
       state.filters = { ...EMPTY_FILTERS, role: state.filters.role };
       state.page = 0;
     },
+    accountsCleared: (state) => {
+      state.filters.account = [];
+      state.page = 0;
+    },
     sortSelected: (state, action: PayloadAction<TargetSortKey>) => {
       state.sort = nextSort(state.sort, action.payload);
       state.page = 0;
@@ -156,14 +165,21 @@ const callSessionSlice = createSlice({
     pageSelected: (state, action: PayloadAction<number>) => {
       state.page = Math.max(0, action.payload);
     },
-    accountToggled: (state, action: PayloadAction<string>) => {
-      state.openAccountId = state.openAccountId === action.payload ? null : action.payload;
-    },
     periodSelected: (state, action: PayloadAction<Period>) => {
       state.period = action.payload;
     },
     grainSelected: (state, action: PayloadAction<Grain>) => {
       state.grain = action.payload;
+    },
+    decileViewSelected: (state, action: PayloadAction<DecileView>) => {
+      state.decileView = action.payload;
+    },
+    reinforceToggled: (state, action: PayloadAction<{ scope: string; pointId: string }>) => {
+      const { scope, pointId } = action.payload;
+      state.reinforced[scope] = toggleValue(state.reinforced[scope] ?? [], pointId);
+    },
+    recordingChanged: (state, action: PayloadAction<string | null>) => {
+      state.recordingKey = action.payload;
     },
     assessParticipantSelected: (state, action: PayloadAction<string>) => {
       state.assessParticipantId = action.payload;
@@ -211,10 +227,19 @@ const callSessionSlice = createSlice({
     complianceDialogClosed: (state) => {
       state.complianceDialog = null;
     },
-    nextCallCompleted: (state) => {
+    /** Submit done: back to Pre-Call Planning with no target open; the submitted row flashes. */
+    assessmentSubmitted: (state, action: PayloadAction<string>) => {
       resetCall(state);
-      state.prepCategory = 'messaging';
-      state.scrollToPrep = true;
+      state.selectedHcpId = null;
+      state.participantIds = [];
+      state.participantsFor = null;
+      state.prepCategory = null;
+      state.scrollToPrep = false;
+      state.reinforced = {};
+      state.justSubmittedHcpId = action.payload;
+    },
+    submittedFlashDone: (state) => {
+      state.justSubmittedHcpId = null;
     },
     callSessionReset: () => initialCallSessionState,
   },
@@ -230,15 +255,17 @@ export const {
   interactionFilterSelected,
   revealCompleted,
   scrollHandled,
-  viewSelected,
   filterToggled,
   filtersCleared,
+  accountsCleared,
   rolesSet,
   sortSelected,
   pageSelected,
-  accountToggled,
   periodSelected,
   grainSelected,
+  decileViewSelected,
+  reinforceToggled,
+  recordingChanged,
   assessParticipantSelected,
   assessCategorySelected,
   pointOpened,
@@ -248,7 +275,8 @@ export const {
   complianceFlagged,
   complianceDialogOpened,
   complianceDialogClosed,
-  nextCallCompleted,
+  assessmentSubmitted,
+  submittedFlashDone,
   callSessionReset,
 } = callSessionSlice.actions;
 

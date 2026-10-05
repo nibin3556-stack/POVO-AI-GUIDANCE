@@ -34,10 +34,10 @@ const ChartCard = ({ title, headerRight, legend, caption, hover, tip, onLeave, c
     <section
       ref={setCardEl}
       onMouseLeave={onLeave}
-      className={cx('relative flex min-h-0 min-w-0 flex-col rounded-xl border border-line bg-white px-3.5 pb-1.5 pt-[9px] shadow-e1 animate-fade-up', className)}
+      className={cx('relative flex min-h-0 min-w-0 flex-col rounded-xl border border-t-4 border-line border-t-[#1B6FBF] bg-white px-3.5 pb-1.5 pt-[9px] shadow-e1 animate-fade-up', className)}
     >
       <header className="flex flex-wrap items-center gap-[7px]">
-        <h3 className="m-0 text-[15.7px] font-semibold text-blued">{title}</h3>
+        <h3 className="m-0 text-[15.7px] font-bold text-navyd">{title}</h3>
         {headerRight && <div className="ml-auto">{headerRight}</div>}
       </header>
       {legend && (

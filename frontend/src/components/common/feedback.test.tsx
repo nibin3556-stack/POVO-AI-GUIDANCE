@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithTheme } from '../../test/testUtils';
@@ -6,7 +6,7 @@ import AiActivityBox from './AiActivityBox';
 import AiStatusChip from './AiStatusChip';
 import AiStepper from './AiStepper';
 import AsyncContent from './AsyncContent';
-import CtaButton from './CtaButton';
+import KpiRing from '../charts/KpiRing';
 import EmptyState from './EmptyState';
 import ErrorBoundary from './ErrorBoundary';
 import ErrorState from './ErrorState';
@@ -87,22 +87,14 @@ describe('feedback components', () => {
     expect(screen.getByText('Step A')).toBeInTheDocument();
   });
 
-  it('CtaButton pulses only when enabled', async () => {
-    const onClick = vi.fn();
-    const { rerender } = renderWithTheme(
-      <CtaButton onClick={onClick} pulse>
-        Go
-      </CtaButton>,
-    );
-    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('animate-cta-pulse');
-    await act(() => userEvent.click(screen.getByRole('button', { name: 'Go' })));
-    expect(onClick).toHaveBeenCalled();
-    rerender(
-      <CtaButton onClick={onClick} pulse disabled>
-        Go
-      </CtaButton>,
-    );
-    expect(screen.getByRole('button', { name: 'Go' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Go' })).not.toHaveClass('animate-cta-pulse');
+  it('KpiRing shows achieved / goal and the right caption', () => {
+    const { rerender } = renderWithTheme(<KpiRing achieved={9} goal={17} pct={53} status="on_track" />);
+    expect(screen.getByRole('img', { name: '9 of 17 achieved, 53% of goal' })).toBeInTheDocument();
+    expect(screen.getByText('53%')).toBeInTheDocument();
+    expect(screen.getByText('of goal')).toBeInTheDocument();
+    rerender(<KpiRing achieved={20} goal={17} pct={118} status="on_track" />);
+    expect(screen.getByText('Goal exceeded')).toBeInTheDocument();
+    rerender(<KpiRing achieved={3} goal={0} pct={0} status="no_goal" />);
+    expect(screen.getByText('No goal set')).toBeInTheDocument();
   });
 });

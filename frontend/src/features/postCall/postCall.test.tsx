@@ -1,7 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { InternalAxiosRequestConfig } from 'axios';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import PostCallPage from '../../pages/PostCallPage';
 import { call, callPrep, flaggedResult, passedResult, profile } from '../../test/fixtures';
 import { apiError, mockApi, renderWithProviders, type MockRoute } from '../../test/testUtils';
@@ -20,6 +20,32 @@ const baseRoutes = (overrides: MockRoute[] = []): MockRoute[] => [
 
 const open = () => renderWithProviders(<PostCallPage />, { route: '/post-call/H2', path: '/post-call/:hcpId' });
 
+/** A stand-in for the browser's speech recognition: it "hears" one sentence, then ends. */
+class FakeRecognizer {
+  static last: FakeRecognizer | null = null;
+  lang = '';
+  continuous = false;
+  interimResults = false;
+  onresult: ((e: unknown) => void) | null = null;
+  onerror: ((e: unknown) => void) | null = null;
+  onend: (() => void) | null = null;
+  constructor() {
+    FakeRecognizer.last = this;
+  }
+  start() {}
+  stop() {
+    this.onend?.();
+  }
+  abort() {}
+  say(text: string) {
+    this.onresult?.({ resultIndex: 0, results: { length: 1, 0: Object.assign([{ transcript: text }], { isFinal: true }) } });
+  }
+}
+
+afterEach(() => {
+  delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+});
+
 const raiseFirstPoint = async () => {
   const rows = await screen.findAllByTestId('point-row', {}, { timeout: 5000 });
   await userEvent.click(within(rows[0]!).getByRole('checkbox'));
@@ -32,12 +58,13 @@ describe('Post-Call Assessment', () => {
     open();
     expect(await screen.findByText('HiSCR50 primary endpoint met at Week 12', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(spy.mock.calls.some(([c]) => c.url === '/api/v1/calls' && JSON.stringify(body(c)) === JSON.stringify({ hcp_id: 'H2', participant_ids: ['H2'] }))).toBe(true);
-    expect(screen.getByRole('button', { name: /AI Suggestions for Next Call/ })).toBeDisabled();
+    expect(screen.getByText('Post-Call Assessment')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
     await raiseFirstPoint();
     expect(screen.getByText('1 of 9 selected for Dr. Winters')).toBeInTheDocument();
     expect(screen.getByText('1 of 3 selected')).toBeInTheDocument();
     expect(screen.getByRole('slider')).toHaveAttribute('aria-valuetext', 'Not rated');
-    expect(screen.getByRole('button', { name: /AI Suggestions for Next Call/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
   }, 10000);
 
   it('autosaves the changed rows after a pause', async () => {
@@ -72,21 +99,54 @@ describe('Post-Call Assessment', () => {
     mockApi(baseRoutes([{ method: 'post', url: /next-call/, respond: apiError(409, 'Flagged', { flags: [{ participant_id: 'H2', category: 'messaging', point_id: 'M1', chip: 'Claim' }] }) }]));
     const { store } = open();
     await raiseFirstPoint();
-    await userEvent.click(screen.getByRole('button', { name: /AI Suggestions for Next Call/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await waitFor(() => expect(store.getState().callSession.compliance['H2|messaging|M1']).toMatchObject({ status: 'flagged', chip: 'Claim' }));
-    expect(await screen.findByText('Clear 1 compliance flag to enable AI Suggestions for Next Call')).toBeInTheDocument();
+    expect(await screen.findByText('Clear 1 compliance flag to submit the assessment')).toBeInTheDocument();
     expect(screen.getByText('1 compliance flag')).toBeInTheDocument();
   });
 
-  it('runs the stepper and returns to Pre-Call Planning on success', async () => {
+  it('submits and returns to Pre-Call Planning with the row to flash', async () => {
     mockApi(baseRoutes([{ method: 'post', url: /next-call/, respond: { call_id: 'C1', revision_no: 1, call_date: '2026-10-13', steps: [], participants: [], source: 'rules' } }]));
     const { router, store } = open();
     await raiseFirstPoint();
-    await userEvent.click(screen.getByRole('button', { name: /AI Suggestions for Next Call/ }));
-    expect(await screen.findByText('AI is preparing suggestions for the next call')).toBeInTheDocument();
-    expect(screen.getByText('Reading the post-call assessment')).toBeInTheDocument();
-    await waitFor(() => expect(router.state.location.pathname).toBe('/pre-call/H2'), { timeout: 5000 });
-    expect(store.getState().callSession.scrollToPrep).toBe(true);
-    expect(store.getState().callSession.prepCategory).toBe('messaging');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/pre-call'), { timeout: 5000 });
+    expect(store.getState().callSession.justSubmittedHcpId).toBe('H2');
+    expect(store.getState().callSession.selectedHcpId).toBeNull();
+  }, 10000);
+
+  it('an example note fills the field and is checked', async () => {
+    const spy = mockApi(baseRoutes());
+    open();
+    const row = await raiseFirstPoint();
+    const examples = within(row).getByTestId('example-notes');
+    await userEvent.click(within(examples).getByRole('button', { name: 'HCP asked how lab monitoring works before a first POVO start' }));
+    expect(screen.getByPlaceholderText('Notes')).toHaveValue('HCP asked how lab monitoring works before a first POVO start');
+    await waitFor(() => expect(spy.mock.calls.some(([c]) => c.url === '/api/v1/compliance/check')).toBe(true), { timeout: 3000 });
+  }, 10000);
+
+  it('a voice note is transcribed into the note, checked, and pauses Submit while it records', async () => {
+    (window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = FakeRecognizer;
+    const spy = mockApi(baseRoutes());
+    const { store } = open();
+    const row = await raiseFirstPoint();
+    await userEvent.click(within(row).getByRole('button', { name: 'Record a voice note' }));
+    expect(store.getState().callSession.recordingKey).toBe('H2|messaging|M1');
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.getByText('Submit is paused until the voice note and its compliance check finish')).toBeInTheDocument();
+    act(() => FakeRecognizer.last?.say('hcp asked for the week 12 lesion data'));
+    await waitFor(() => expect(screen.getByPlaceholderText('Listening…')).toHaveValue('Hcp asked for the week 12 lesion data'));
+    await userEvent.click(within(row).getByRole('button', { name: 'Stop recording' }));
+    expect(store.getState().callSession.recordingKey).toBeNull();
+    await waitFor(() =>
+      expect(spy.mock.calls.some(([c]) => c.url === '/api/v1/compliance/check' && body(c).note === 'Hcp asked for the week 12 lesion data')).toBe(true),
+    { timeout: 3000 });
+  }, 10000);
+
+  it('a voice note without browser support explains why', async () => {
+    mockApi(baseRoutes());
+    open();
+    const row = await raiseFirstPoint();
+    expect(within(row).getByRole('button', { name: /Microsoft Edge or Google Chrome/ })).toBeInTheDocument();
   }, 10000);
 });

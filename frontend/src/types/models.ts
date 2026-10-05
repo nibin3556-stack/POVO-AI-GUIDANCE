@@ -50,8 +50,24 @@ export interface Me {
 
 /* ---------------------------------------------------------------- performance */
 
+export type KpiStatus = 'on_track' | 'at_risk' | 'no_goal';
+
+/** Total on POVO = Paid NRx (new + continuing) + Bridge NRx + Free Trial NRx; the % add up to 100. */
+export interface PatientSplit {
+  total: number;
+  paid: number;
+  bridge: number;
+  free_trial: number;
+  paid_pct: number;
+  bridge_pct: number;
+  free_trial_pct: number;
+  new_patients: number;
+  continuing_patients: number;
+  as_of: string;
+}
+
 export interface KpiCard {
-  metric_code: 'PEF' | 'NRX' | 'NEW_PATIENTS';
+  metric_code: 'PEF' | 'NEW_PATIENTS';
   title: string;
   unit: string;
   goal: number;
@@ -59,7 +75,9 @@ export interface KpiCard {
   yet_to_achieve: number;
   pct_achieved: number;
   due_to_date: number;
-  status: 'on_track' | 'at_risk';
+  status: KpiStatus;
+  /** Patients card only. */
+  split?: PatientSplit;
 }
 
 export interface Kpis {
@@ -68,6 +86,7 @@ export interface Kpis {
   period_start: string;
   period_end: string;
   remaining_working_days: number;
+  data_start: string;
   cards: KpiCard[];
 }
 
@@ -95,7 +114,8 @@ export interface Guidance {
   super_high_not_writing: number;
   strong: {
     best_segment: { segment_code: SegmentCode; short_name: string; trial_pct: number };
-    top_writer: { hcp_id: string; display_name: string; povo_patients: number } | null;
+    /** `ties` names every physician tied for the most POVO patients (the first is `display_name`). */
+    top_writer: { hcp_id: string; display_name: string; povo_patients: number; ties: string[] } | null;
     super_high_reach_pct: number;
   };
   focus: GuidanceFocus[];
@@ -115,6 +135,17 @@ export interface Segment {
   penetration_pct: number;
   adoption_pct: number;
   reach_pct: number;
+  /** Targets > Reached > Writing (Trial) > 3+ POVO patients (Adoption); % of the segment's targets. */
+  funnel: {
+    reached: number;
+    reached_pct: number;
+    writers: number;
+    writers_pct: number;
+    adopters: number;
+    adopters_pct: number;
+    povo_patients: number;
+    hs_patients: number;
+  };
 }
 
 export interface Segmentation {
@@ -130,10 +161,14 @@ export interface DecileRow {
   writers: number;
   yet_to_write: number;
   hs_patients: number;
-  execution_pct: number;
+  avg_hs_patients: number;
+  reached: number;
   reach_pct: number;
-  early_reach_count: number;
-  productivity: number;
+  reach_goal_pct: number;
+  calls: number;
+  /** Calls / targets reached in the data window; null when nobody was reached. */
+  avg_frequency: number | null;
+  frequency_goal: number;
 }
 
 export interface Tier {
@@ -145,11 +180,15 @@ export interface Tier {
   reach_goal_pct: number;
   targets: number;
   writers: number;
+  frequency_goal: number;
 }
 
 export interface Deciles {
   rows: DecileRow[];
   tiers: Tier[];
+  /** Share of the working year the data window covers (the frequency goal's factor). */
+  elapsed_pct: number;
+  data_start: string;
   super_high_total: number;
   super_high_not_writing: number;
 }
@@ -158,8 +197,9 @@ export interface WriterBucket {
   label: string;
   start_date: string;
   end_date: string;
-  jak_writers: number;
-  non_jak_writers: number;
+  /** New POVO writers per HS treatment segment. */
+  segments: Record<SegmentCode, number>;
+  total: number;
   is_partial: boolean;
 }
 
@@ -168,6 +208,7 @@ export interface NewWriters {
   total: number;
   range_label: string;
   x_axis_label: string;
+  segment_codes: SegmentCode[];
   buckets: WriterBucket[];
 }
 
@@ -193,6 +234,8 @@ export interface Target {
   hs_patients: number;
   jak_patients: number;
   povo_patients: number;
+  /** PEFs received through IncyteCARES; every POVO patient has one. */
+  pef: number;
   last_call_date: string | null;
   parent_hcp_id: string | null;
   is_must_win: boolean;
@@ -219,26 +262,12 @@ export interface Facets {
   role: Facet[];
 }
 
-export interface Account {
-  account_id: string;
-  account_name: string;
-  city: string;
-  state: string;
-  zip: string;
-  hs_patients: number;
-  povo_patients: number;
-  target_count: number;
-  in_plan_count: number;
-  main_focus: string;
-  is_claims_only: boolean;
-}
-
 export type FilterGroup = 'focus' | 'segment' | 'tier' | 'account' | 'role';
 
 export type TargetFilters = Record<FilterGroup, string[]>;
 
 export type SortDirection = 'asc' | 'desc';
-export type TargetSortKey = 'name' | 'decile' | 'hs_patients' | 'last_call_date';
+export type TargetSortKey = 'name' | 'decile' | 'hs_patients' | 'pef' | 'last_call_date';
 
 export interface TargetSort {
   key: TargetSortKey;
@@ -250,12 +279,6 @@ export interface TargetQuery {
   page: number;
   limit: number;
   sort: string;
-}
-
-export interface PageQuery {
-  page: number;
-  limit: number;
-  sort?: string;
 }
 
 /* ---------------------------------------------------------------- call prep */
@@ -291,6 +314,7 @@ export interface Participant {
   city: string;
   zip: string;
   is_primary: boolean;
+  segment_code: SegmentCode | null;
   stats: ParticipantStats;
   bullets: string[];
   interactions: Interaction[];
@@ -315,6 +339,14 @@ export interface TalkingPoint {
   previous_rank: number | null;
 }
 
+/** A point delivered on an earlier call: its date, reception and label ("Well Received", "Still Open"). */
+export interface DeliveredPoint extends TalkingPoint {
+  delivered_date: string;
+  reception: Reception | null;
+  label: string;
+  is_open: boolean;
+}
+
 export interface CallPrep {
   participant_id: string;
   category: Category;
@@ -325,6 +357,7 @@ export interface CallPrep {
   steps: string[];
   heading: string;
   points: TalkingPoint[];
+  delivered: DeliveredPoint[];
   source: 'ai' | 'rules';
 }
 
@@ -458,6 +491,8 @@ export interface Reference {
   reception_scale: { value: Reception; label: string }[];
   compliance: { rule_count: number; steps: string[]; severity_labels: Record<'high' | 'med' | 'low', string> };
   next_call_steps: string[];
+  /** One-click example notes per category; `{who}` is "HCP" or the role. */
+  example_notes: Record<AssessmentCategory, string[]>;
   /** AI activity steps per category; `{possessive}` is "Dr. Winters'" or "Kristen Casey's". */
   prep_steps: Record<Category, string[]>;
   limits: { points_per_category: number; note_max_length: number; additional_note_max_length: number };

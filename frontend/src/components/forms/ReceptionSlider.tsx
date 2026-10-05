@@ -14,7 +14,8 @@ interface ReceptionSliderProps {
 
 const KNOB = ['left-0 border-[#C2410C] opacity-100', 'left-1/2 border-[#D97706] opacity-100', 'left-full border-green opacity-100'];
 const FILL = ['w-0', 'w-1/2 bg-[#F2B45C]', 'w-full bg-linear-90 from-[#F2B45C] to-greenb'];
-const LABEL_ON = ['text-[#C2410C]', 'text-warn', 'text-green'];
+/** Selected option: a pill filled with the slider colour (orange, amber, green). */
+const PILL_ON = ['border-[#C2410C] bg-[#C2410C] text-white', 'border-[#B45309] bg-[#B45309] text-white', 'border-[#15803D] bg-[#15803D] text-white'];
 const STOPS = ['left-0', 'left-1/2', 'left-full'];
 
 /** 3-stop reception slider: drag, click a label or use the arrow keys. Starts unset. */
@@ -62,11 +63,11 @@ const ReceptionSlider = ({ name, onChange }: ReceptionSliderProps) => {
         onPointerDown={onPointerDown}
         onPointerMove={(e) => dragging.current && fromPointer(e)}
         onPointerUp={() => (dragging.current = false)}
-        className="relative mx-2.5 mb-2.5 mt-2 h-2 cursor-pointer touch-none rounded-full bg-line2 group-focus-visible:shadow-[0_0_0_3px_rgba(21,108,180,.25)]"
+        className="relative mx-2.5 mb-2.5 mt-2 h-2 cursor-pointer touch-none rounded-full bg-[#C9D3DE] group-focus-visible:shadow-[0_0_0_3px_rgba(21,108,180,.25)]"
       >
         <i className={cx('absolute inset-y-0 left-0 rounded-full transition-all duration-200', value === null ? 'w-0' : FILL[value])} />
         {STOPS.map((pos) => (
-          <span key={pos} className={cx('absolute top-1/2 -ml-1.5 -mt-1.5 size-3 rounded-full border-2 border-[#B9C7D6] bg-white', pos)} />
+          <span key={pos} className={cx('absolute top-1/2 -ml-1.5 -mt-1.5 size-3 rounded-full border-2 border-[#93A3B6] bg-white', pos)} />
         ))}
         <span
           className={cx(
@@ -75,17 +76,16 @@ const ReceptionSlider = ({ name, onChange }: ReceptionSliderProps) => {
           )}
         />
       </div>
-      <div className="flex justify-between gap-1.5">
+      <div className="mt-1 flex justify-between gap-2">
         {receptionLabels.map((label, index) => (
           <button
             key={label}
             type="button"
+            aria-pressed={value === index}
             onClick={() => set(index as Reception)}
             className={cx(
-              'rounded-md px-1 py-0.5 text-xs font-semibold leading-tight hover:bg-bluet hover:text-blued',
-              index === 1 && 'text-center',
-              index === 2 && 'text-right',
-              value === index ? LABEL_ON[index] : value === null ? 'text-[#51637A]' : 'text-ink3',
+              'rounded-full border-[1.5px] px-2.5 py-1 text-[12.4px] font-semibold leading-tight shadow-[0_1px_2px_rgba(16,40,80,.08)]',
+              value === index ? PILL_ON[index] : 'border-[#A9C4E2] bg-white text-[#0E3A63] hover:border-[#1B6FBF] hover:bg-[#E3EFFA]',
             )}
           >
             {label}

@@ -1,7 +1,7 @@
 # POVO – AI Guidance: architecture and contracts
 
 This document is the single source of truth for how the four parts fit together: `frontend/`, `backend/`, `n8n/` and `databricks/`.
-Behaviour comes from [POC_FUNCTIONAL_SPEC.md](POC_FUNCTIONAL_SPEC.md).
+Behaviour comes from [POC_FUNCTIONAL_SPEC.md](POC_FUNCTIONAL_SPEC.md), updated to the v2 POC `POVO_AI_Guidance_Step3_63_Alt 2.html` (2 KPI cards with the patient split, D1 removed, HS treatment segments, decile table, delivered points and Reinforce, voice and example notes, Submit).
 Conventions follow the Mosaic platform standard (`D:\Workspace\Mosaic\MOSAIC_ARCHITECTURE_PROMPT.md`) and the standalone-app pattern used by XR-CONVERSION.
 The Mosaic Admin Control Center, UI registry and auto-save framework are **not** part of this standalone app.
 
@@ -33,7 +33,8 @@ n8n schedule ──► backend /api/v1/jobs/* (service token)
 
 ```
 POVO-AI-GUIDANCE/
-  POVO_AI_Guidance_Step3_37.html   finalized POC (reference only)
+  POVO_AI_Guidance_Step3_37.html   first POC (reference only)
+  POVO_AI_Guidance_Step3_63_Alt 2.html   v2 POC (the current reference)
   README.md
   docker-compose.yml               n8n only (local dev)
   docs/  ARCHITECTURE.md  POC_FUNCTIONAL_SPEC.md  DEPLOYMENT.md
@@ -92,11 +93,11 @@ POVO-AI-GUIDANCE/
 | **DIM_ACCOUNT** | ACCOUNT_ID STRING, TERRITORY_ID, ACCOUNT_NAME, CITY, STATE, ZIP, CLAIMS_HS_PATIENTS INT, CLAIMS_POVO_PATIENTS INT, CLAIMS_MAIN_FOCUS STRING (focus code), IS_CLAIMS_ONLY BOOLEAN (no affiliated HCP) |
 | **DIM_HCP** | HCP_ID STRING (`H000123`), NPI STRING, FIRST_NAME, LAST_NAME, DEGREE (`MD`\|`DO`\|`NP`\|`PA`), ROLE_TYPE (`HCP`\|`NP`\|`PA`), SPECIALTY (`Dermatology`\|`Rheumatology`\|`General Surgery`), ACCOUNT_ID, PARENT_HCP_ID (the physician, for NP/PA; null for HCP), TERRITORY_ID, CITY, STATE, ZIP |
 | **FCT_HCP_METRICS** | HCP_ID, AS_OF_DATE DATE, HS_PATIENTS_12M INT, HS_VISITS_PER_MONTH INT, JAK_PATIENTS INT, POVO_PATIENTS INT, INCYTECARES_ENROLLED_PATIENTS INT. The backend uses the latest AS_OF_DATE per HCP. |
-| **DIM_CALL_PLAN_TARGET** | PLAN_YEAR INT, TERRITORY_ID, HCP_ID, DECILE INT (1–10), TIER_CODE (`SH`\|`MED`\|`LOW`, null for D1), SEGMENT_CODE (`imm`\|`conv`\|`exp`), COMPETITIVE_FOCUS (`cosentyx`\|`bimzelx`\|`humira`\|`jak`\|`conventional`), IS_IN_CALL_PLAN BOOLEAN (D2–D10), HS_RANK INT (1 = highest HS volume in the territory) |
+| **DIM_CALL_PLAN_TARGET** | PLAN_YEAR INT, TERRITORY_ID, HCP_ID, DECILE INT (2–10; D1 is not part of the POVO target universe and is ignored if present), TIER_CODE (`SH`\|`MED`\|`LOW`), SEGMENT_CODE (`imm` Advanced without JAK Inhibitors \| `exp` Advanced Biologics plus JAK Inhibitors \| `conv` Conventional: any JAK use → exp, else a biologic → imm, else conv), COMPETITIVE_FOCUS (`cosentyx`\|`bimzelx`\|`humira`\|`jak`\|`conventional`), IS_IN_CALL_PLAN BOOLEAN, HS_RANK INT (1 = highest HS volume in the territory) |
 | **REF_TIER** | TIER_CODE, TIER_NAME (`Super High`\|`Medium`\|`Low`), DECILE_MIN, DECILE_MAX, CALLS_PER_YEAR, REACH_GOAL_PCT, SORT_ORDER |
 | **REF_SEGMENT** | SEGMENT_CODE, SHORT_NAME, FULL_NAME, DESCRIPTION, COLOR_HEX, ARCHETYPE_NAME (`Tara`, `Marcus`), ARCHETYPE_DESC, SORT_ORDER |
 | **REF_COMPETITIVE_FOCUS** | FOCUS_CODE, LABEL (`Cosentyx`, `Bimzelx`, `Humira`, `JAK`, `Conventional therapy`), COLOR_HEX, SORT_ORDER |
-| **REF_KPI_METRIC** | METRIC_CODE (`PEF`\|`NRX`\|`NEW_PATIENTS`, as in FCT_TERRITORY_GOAL), EVENT_TYPE (the FCT_POVO_ACTIVITY event counted as actual), TITLE, UNIT, SORT_ORDER. Drives the KPI cards. |
+| **REF_KPI_METRIC** | METRIC_CODE (`PEF`\|`NEW_PATIENTS`, as in FCT_TERRITORY_GOAL), EVENT_TYPE (the FCT_POVO_ACTIVITY event counted as actual), TITLE, UNIT, SORT_ORDER. Drives the 2 KPI cards. |
 | **REF_INTERACTION_CHANNEL** | CHANNEL_CODE, TYPE_LABEL (`Direct call`, …), TEAM_LABEL (`POVO Sales`, …), SORT_ORDER |
 | **FCT_INTERACTION** | INTERACTION_ID STRING, HCP_ID, TERRITORY_ID, EMPLOYEE_ID (nullable; the rep, for channel `rep`), INTERACTION_DATE DATE, CHANNEL_CODE (`rep`\|`adfa`\|`opz`\|`msl`\|`spkr`\|`pr`), INTERACTION_TYPE (`Direct call`, `ADFA visit`, `Opz Sales call`, `MSL visit`, `Speaker program`, `PR visit`), POVO_DISCUSSED BOOLEAN, SUMMARY STRING |
 | **FCT_POVO_ACTIVITY** | ACTIVITY_ID STRING, TERRITORY_ID, HCP_ID, PATIENT_KEY STRING (anonymised token, never PHI), EVENT_DATE DATE, EVENT_TYPE (`PEF`\|`NRX`\|`NEW_PATIENT`). `NEW_PATIENT` is the first paid script. |
@@ -119,15 +120,15 @@ POVO-AI-GUIDANCE/
   - 8 Northeast territories: Portland ME (`NE-POR`), Boston MA, Hartford CT, Providence RI, Manchester NH, Burlington VT, Worcester MA, Springfield MA.
   - One rep per territory. Vince Turano (username `vturano`) is the Portland rep and the dev default user; Dana Whitaker (`p250611` / `3418`) is Hartford and Luis Ortega (`p250702` / `3526`) is Providence.
   - Plus 2 managers: Barbara Drake (`p250544` / `3351` / `bdrake`), home Boston, plus one more. A manager's own view shows their home territory.
-- **Targets per territory:** 142, split by decile like the POC (±15% per territory).
+- **Data window:** activity, calls and interactions run from the first day of the month three months before the as-of month (as of 10/05/2026: Jul 1 to Oct 5), so the dashboard always shows the current month plus the three before it. Goals run from that month to December.
+- **Targets per territory:** about 83 (D10–D2), split by decile like the POC (±15% per territory). 142 HCPs are modelled so the HS ranking stays realistic; the D1 HCPs are then left out of every table.
   - About 50 physicians, each with 0–2 affiliated NP/PA.
   - 6–8 accounts, plus 2 claims-only accounts.
   - Names use the POC's Portland names where they exist.
 - **Writers and activity**
-  - About 44 writers per territory, about 28 of them JAK users.
-  - Activity runs from January 1 of the as-of year to the as-of date.
-  - Totals are consistent: `FCT_HCP_METRICS.POVO_PATIENTS` equals the count of `NEW_PATIENT` events per HCP. NRx ≈ 1.2× new patients, PEF ≈ 1.36× new patients.
-- **Goals:** the POC monthly shape for the full year, scaled per territory. PEF goal = ×1.4, NRx goal = ×1.25.
+  - About 24 writers per territory, about 15 of them JAK users. A new writer has always been called.
+  - Totals are consistent: `FCT_HCP_METRICS.POVO_PATIENTS` equals the count of `NEW_PATIENT` events per HCP, and `INCYTECARES_ENROLLED_PATIENTS` (the PEFs column) equals the PEF events per HCP, so the PEFs of all targets add up to the PEF card. NRx ≈ 1.2× new patients, PEF ≈ 1.36× new patients.
+- **Goals:** the POC v2 shape from the data-start month (8, 12, 15, 17, 18, 19, then +1 a month), scaled per territory. PEF goal = ×1.4, NRx goal = ×1.25.
 - **Interactions**
   - Rep calls follow the tier calls/yr × attainment factor. Reach follows the tier reach factor.
   - Some Super High and Medium targets have no call for more than 21 days, and a few in-plan targets were never called.
@@ -181,24 +182,25 @@ Every response uses the Mosaic envelope `{data, status, message, page, limit, to
 
 **Territory Performance**
 
-- **`GET /api/v1/performance/kpis?period=month|quarter|ytd`** → `{period, period_label, period_start, period_end, remaining_working_days, cards: [{metric_code: PEF|NRX|NEW_PATIENTS, title, unit, goal, achieved, yet_to_achieve, pct_achieved, due_to_date, status: on_track|at_risk}]}`.
-- **`GET /api/v1/performance/guidance`** → `{missed: [{hcp_id, name, display_name, role_type, tier_code, days_since_call}], super_high_not_writing, strong: {best_segment: {segment_code, short_name, trial_pct}, top_writer: {hcp_id, display_name, povo_patients}|null, super_high_reach_pct}, focus: [{hcp_id, name, display_name, role_type, tier_code, reason, score}], source: live|snapshot, generated_at}`.
-- **`GET /api/v1/performance/segmentation`** → `{total_targets, not_writing, segments: [{segment_code, short_name, full_name, description, color_hex, hcp_count, pct, trial_pct, penetration_pct, adoption_pct, reach_pct}]}`.
-- **`GET /api/v1/performance/deciles`** → `{rows: [{decile, tier_code, targets, writers, yet_to_write, hs_patients, execution_pct, reach_pct, early_reach_count, productivity}], tiers: [{tier_code, tier_name, decile_min, decile_max, calls_per_year, reach_goal_pct, targets, writers}], super_high_total, super_high_not_writing}`.
-  - `rows` covers D10 → D2.
-  - `early_reach_count` is the number of targets reached in the first 60 days of the year.
-  - `productivity` is NRx per 10 calls.
-- **`GET /api/v1/performance/new-writers?grain=month|week`** → `{grain, total, range_label, x_axis_label, buckets: [{label, start_date, end_date, jak_writers, non_jak_writers, is_partial}]}`.
-  - A writer is a JAK user when `JAK_PATIENTS > 0`.
-  - Weekly returns the last 12 weeks, each ending on a Friday.
+- **`GET /api/v1/performance/kpis?period=month|quarter|ytd`** → `{period, period_label, period_start, period_end, remaining_working_days, data_start, cards: [{metric_code: PEF|NEW_PATIENTS, title, unit, goal, achieved, yet_to_achieve, pct_achieved, due_to_date, status: on_track|at_risk|no_goal, split?}]}`.
+  - Year to Date runs from the data start to 12/31; only activity from the data start counts.
+  - The NEW_PATIENTS card carries `split = {total, paid, bridge, free_trial, paid_pct, bridge_pct, free_trial_pct, new_patients, continuing_patients, as_of}`: Paid NRx = new patients in the period + 85% of the earlier ones; Bridge + Free Trial = 70% of the PEFs not yet paid (55% bridge); the % add up to 100 (largest remainder).
+- **`GET /api/v1/performance/guidance`** → `{missed: [{hcp_id, name, display_name, role_type, tier_code, days_since_call}], super_high_not_writing, strong: {best_segment: {segment_code, short_name, trial_pct}, top_writer: {hcp_id, display_name, povo_patients, ties: [display_name]}|null, super_high_reach_pct}, focus: [{hcp_id, name, display_name, role_type, tier_code, reason, score}], source: live|snapshot, generated_at}`. `ties` names every physician tied for the most POVO patients.
+- **`GET /api/v1/performance/segmentation`** → `{total_targets, not_writing, segments: [{segment_code, short_name, full_name, description, color_hex, hcp_count, pct, trial_pct, penetration_pct, adoption_pct, reach_pct, funnel: {reached, reached_pct, writers, writers_pct, adopters, adopters_pct, povo_patients, hs_patients}}]}`. The three `pct` add up to 100; the funnel is Targets > Reached (called in the data window) > Writing > 3+ POVO patients.
+- **`GET /api/v1/performance/deciles`** → `{rows: [{decile, tier_code, targets, writers, yet_to_write, hs_patients, avg_hs_patients, reached, reach_pct, reach_goal_pct, calls, avg_frequency|null, frequency_goal}], tiers: [{tier_code, tier_name, decile_min, decile_max, calls_per_year, reach_goal_pct, targets, writers, frequency_goal}], elapsed_pct, data_start, super_high_total, super_high_not_writing}`.
+  - `rows` covers D10 → D2. Reach = targets called in the data window / targets; avg frequency = calls / targets reached.
+  - `frequency_goal` = calls a year × `elapsed_pct` (working days from the data start to today / working days in the year).
+- **`GET /api/v1/performance/new-writers?grain=month|week`** → `{grain, total, range_label, x_axis_label, segment_codes, buckets: [{label, start_date, end_date, segments: {imm, exp, conv}, total, is_partial}]}`.
+  - Writers are stacked by HS treatment segment, so the stacks add up to the donut's writers.
+  - Monthly returns the current month plus the three before it; weekly the last 6 weeks, each ending on a Friday.
 
 **Targets and accounts**
 
-`Target` = `{hcp_id, name ("Last, First"), display_name ("Dr. Last" for HCP, "First Last" for NP/PA), role_type, degree, specialty, account_id, account_name, city, state, zip, competitive_focus, segment_code, decile, tier_code, is_in_call_plan, hs_patients, jak_patients, povo_patients, last_call_date|null, parent_hcp_id|null, is_must_win}`.
+`Target` = `{hcp_id, name ("Last, First"), display_name ("Dr. Last" for HCP, "First Last" for NP/PA), role_type, degree, specialty, account_id, account_name, city, state, zip, competitive_focus, segment_code, decile, tier_code, is_in_call_plan, hs_patients, jak_patients, povo_patients, pef, last_call_date|null, parent_hcp_id|null, is_must_win}`. `pef` = PEFs received through IncyteCARES (≥ povo_patients).
 
 - **`GET /api/v1/targets/must-wins`** → `{territory_name, hs_volume: Target[5], hs_jak: Target[5]}`.
 - **`GET /api/v1/targets`** → paginated `Target[]` (in-plan and not Must-Win).
-  - Parameters: `page`, `limit` (≤ 200, UI default 10), `sort` (default `hs_patients:desc`; whitelist `name`, `decile`, `hs_patients`, `last_call_date`).
+  - Parameters: `page`, `limit` (≤ 200, UI default 10), `sort` (default `hs_patients:desc`; whitelist `name`, `decile`, `hs_patients`, `pef`, `last_call_date`).
   - Filters are comma-separated lists: `focus`, `segment`, `tier`, `account_id`, `role`.
 - **`GET /api/v1/targets/facets`** → `{focus: [{code, label, color_hex, count}], segment: [{code, label, count}], tier: [{code, label, count}], account: [{code, label, count}], role: [{code, label, count}]}`. Counts are over the Full Call Plan universe.
 - **`GET /api/v1/accounts?page=&limit=&sort=`** → paginated `{account_id, account_name, city, state, zip, hs_patients, povo_patients, target_count, in_plan_count, main_focus, is_claims_only}`. The default sort is `hs_patients:desc`.
@@ -210,8 +212,9 @@ Every response uses the Mosaic envelope `{data, status, message, page, limit, to
   - When `hcp_id` is an NP or PA, the primary is the parent physician and both IDs are preselected.
   - `Participant` = `{hcp_id, role_type, degree, name, display_name, account_name, city, zip, is_primary, stats: {hs_patients, povo_patients, decile, tier_name, rank, rank_of, povo_discussions, last_call_date}, bullets: [string×5], interactions: [{interaction_id, date, channel_code, team_label, type_label, summary, is_new}], interaction_counts: {all, rep, adfa, opz, msl, spkr, pr}}`.
   - Assessed calls in `APP_CALL` are merged in as `is_new` "Direct call" interactions ("Call assessed"). They update `povo_discussions` and `last_call_date`, and bullet 5 becomes the post-call history line.
-- **`POST /api/v1/call-prep`** `{hcp_id, participant_id, category}` → `{participant_id, category, revision_no, is_revised, revised_from_date|null, banner: {summary, next_best_action}|null, steps: [string×3], heading, points: [{point_id, rank, pillar|null, text, detail|null, detail_label: Insight|Response|null, tags: [string], previous_text|null, previous_rank|null}], source: ai|rules}`.
-  - Returns the top 3 points.
+- **`POST /api/v1/call-prep`** `{hcp_id, participant_id, category}` → `{participant_id, category, revision_no, is_revised, revised_from_date|null, banner: {summary, next_best_action}|null, steps: [string×3], heading, points: [{point_id, rank, pillar|null, text, detail|null, detail_label: Insight|Response|null, tags: [string], previous_text|null, previous_rank|null}], delivered: [{…point, delivered_date, reception|null, label, is_open}], source: ai|rules}`.
+  - Returns the top 3 points still to deliver, then the points "Delivered on earlier calls" with their date and reception ("Well Received", "Still Open", "Reinforced · Moderately Received").
+  - Next-call tags: "Builds on well received", "Builds on moderate", "New". On screen the rep can mark a delivered point Reinforce; it is then assessed on the post-call under its own POINT_ID.
   - Uses the latest `APP_CALL_PREP_REVISION` for (territory, primary hcp, participant, category) when one exists.
   - When AI is enabled, calls the n8n call-prep webhook (cached in `APP_AI_CACHE` for 24 h by territory + participant + category + revision + content version). Falls back to rules.
 
@@ -232,11 +235,12 @@ Every response uses the Mosaic envelope `{data, status, message, page, limit, to
   - The LLM second pass can add issues and improve the rewrite, but can never remove a rules finding.
   - If a `call_id` is given, the assessment row's `compliance_status` and `compliance_check_id` are updated.
 - **`POST /api/v1/compliance/{check_id}/accept`** → marks `SUGGESTION_ACCEPTED`. The frontend then saves the note and re-checks it.
-- **`POST /api/v1/calls/{call_id}/next-call`**:
+- **`POST /api/v1/calls/{call_id}/next-call`** (the Submit button):
   - Re-checks every non-empty note on the server.
   - If any note is flagged, it returns **409** `{data: {flags: [{participant_id, category, point_id, chip}]}}`.
   - If nothing is answered, it returns **422**.
-  - Otherwise it builds and persists a revision for every participant × category, sets the call to `assessed`, increments `REVISION_NO`, and audits.
+  - Otherwise it builds and persists a revision for every participant × category (helpers/revision.py: raised points move to the delivered history; messaging and closings are re-ranked — follow-ups of well-received points, one unused point in a well-received theme, follow-ups of moderately received points, then unused and new points; a not-well-received theme is never suggested again), sets the call to `assessed`, increments `REVISION_NO`, and audits.
+  - The call's passed Additional Notes appear in the next profile as a bullet: "Last call note (Oct 13, 2026): …".
   - Response: `{call_id, revision_no, call_date, steps: [string×3], participants: [{participant_id, summary, next_best_action}], source}`.
 
 **Jobs** (header `X-POVO-Service-Token` = `POVO_SERVICE_TOKEN`; compared in constant time; 401 otherwise)

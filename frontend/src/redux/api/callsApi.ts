@@ -41,7 +41,7 @@ export const callsApi = baseApi.injectEndpoints({
     }),
     generateNextCall: build.mutation<NextCallResult, string>({
       query: (callId) => ({ url: `/calls/${encodeURIComponent(callId)}/next-call`, method: 'POST' }),
-      invalidatesTags: [TAGS.CALL, TAGS.CALL_PREP, TAGS.PROFILE, TAGS.TARGETS, TAGS.ACCOUNTS],
+      invalidatesTags: [TAGS.CALL, TAGS.CALL_PREP, TAGS.PROFILE, TAGS.TARGETS],
     }),
   }),
 });

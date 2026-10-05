@@ -21,7 +21,6 @@ export const PERMISSIONS = {
 } as const;
 
 export const TARGETS_PAGE_SIZE = 10;
-export const ACCOUNTS_PAGE_SIZE = 200;
 export const DEFAULT_TARGET_SORT = 'hs_patients:desc';
 export const EMPLOYEE_SEARCH_LIMIT = 8;
 export const EMPLOYEE_SEARCH_MIN_CHARS = 2;
@@ -40,8 +39,6 @@ export const TIMING = {
   AI_BOX_REMOVE_MS: 200,
   AI_POINT_MS: 420,
   AI_DONE_DELAY_MS: 400,
-  NEXT_CALL_STEP_MS: 800,
-  NEXT_CALL_FINISH_MS: 350,
   SCROLL_DELAY_MS: 120,
   LOOKUP_MIN_MS: 350,
 } as const;

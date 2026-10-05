@@ -23,9 +23,9 @@ interface CallPreparationCardProps {
 const C = LABELS.callPrep;
 
 const Header = ({ status, pill }: { status?: ReactNode; pill?: ReactNode }) => (
-  <header className="flex items-center gap-[9px] border-b border-line2 px-3 py-2 short:py-1.5 tall:px-4 tall:py-[11px]">
-    <Icon name="forum" className="text-[21.3px] text-teal" />
-    <b className="text-[16.2px] font-semibold text-ink">{C.preparationTitle}</b>
+  <header className="flex items-center gap-[9px] border-b-2 border-[#C3B8F2] bg-[#EEEAFC] px-3 py-2 short:py-1.5 tall:px-4 tall:py-[11px]">
+    <Icon name="forum" className="text-[21.3px] text-[#5A48B8]" />
+    <b className="text-[16.2px] font-bold text-[#3E2E94]">{C.preparationTitle}</b>
     {pill}
     {pill ? <span className="ml-auto">{status}</span> : status}
   </header>
@@ -83,7 +83,7 @@ const CallPreparationCard = ({ primaryId, participants }: CallPreparationCardPro
 
   const ready = Boolean(prep.data && category && key && !prep.isFetching);
   return (
-    <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-white shadow-e1">
+    <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border-[1.5px] border-t-4 border-[#B9CFE6] border-t-[#6D5BD0] bg-white shadow-e1">
       {ready && prep.data && category && key ? (
         <PrepPanel key={key} data={prep.data} category={category} animate={!revealed[key]} skipSteps={waitedFor === argsKey} onRevealed={onRevealed} renderHeader={renderHeader} controls={controls} />
       ) : (

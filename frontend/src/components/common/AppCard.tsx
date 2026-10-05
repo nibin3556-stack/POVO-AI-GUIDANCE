@@ -2,6 +2,15 @@ import { forwardRef, memo, type ReactNode } from 'react';
 import { cx } from '../../utils/cx';
 import HcpsText from './HcpsText';
 
+export type CardTone = 'grey' | 'blue' | 'green';
+
+/** One header pattern, a light tint per section (Must-Wins and Call Plan grey, Call Prep blue, Post-Call green). */
+const TONE: Record<CardTone, { bar: string; title: string }> = {
+  grey: { bar: 'border-b-2 border-[#C3C8CF] bg-[#F0F1F3]', title: 'text-navyd' },
+  blue: { bar: 'border-b-2 border-[#9EC2E4] bg-[#E3EDF8]', title: 'text-navyd' },
+  green: { bar: 'border-b-2 border-[#9FD3B1] bg-[#E4F3E9]', title: 'text-[#0F4A27]' },
+};
+
 interface AppCardProps {
   /** Uppercase section title in the tinted header bar. Omit for a plain card. */
   title?: string;
@@ -14,11 +23,12 @@ interface AppCardProps {
   /** Allow dropdowns and hover cards to escape the card. */
   overflowVisible?: boolean;
   testId?: string;
+  tone?: CardTone;
 }
 
-/** The POC `.sec` card: white, rounded, a light-blue header with an uppercase title. */
+/** The POC `.sec` card: white, rounded, a tinted header with an uppercase title. */
 const AppCard = forwardRef<HTMLElement, AppCardProps>(
-  ({ title, subtitle, actions, children, className, bodyClassName, overflowVisible = false, testId }, ref) => (
+  ({ title, subtitle, actions, children, className, bodyClassName, overflowVisible = false, testId, tone = 'blue' }, ref) => (
     <section
       ref={ref}
       data-testid={testId}
@@ -29,8 +39,8 @@ const AppCard = forwardRef<HTMLElement, AppCardProps>(
       )}
     >
       {title && (
-        <header className="flex flex-wrap items-center gap-2.5 rounded-t-[13px] border-b border-bluet2 bg-bluet px-4 py-2.5 short:py-[7px] tall:px-[18px] tall:py-3">
-          <h2 className="m-0 text-sm font-bold uppercase tracking-[.8px] text-blued">
+        <header className={cx('flex flex-wrap items-center gap-2.5 rounded-t-[13px] px-4 py-2.5 short:py-[7px] tall:px-[18px] tall:py-3', TONE[tone].bar)}>
+          <h2 className={cx('m-0 text-sm font-bold uppercase tracking-[.8px]', TONE[tone].title)}>
             <HcpsText text={title} />
           </h2>
           {subtitle && <span className="text-sm font-medium text-ink2">{subtitle}</span>}

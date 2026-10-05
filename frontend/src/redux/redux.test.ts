@@ -10,7 +10,8 @@ import {
   selectTargetQuery,
 } from './callSession/callSessionSelectors';
 import reducer, {
-  accountToggled,
+  accountsCleared,
+  assessmentSubmitted,
   complianceChecked,
   complianceChecking,
   complianceDialogOpened,
@@ -18,8 +19,10 @@ import reducer, {
   filterToggled,
   filtersCleared,
   initialCallSessionState,
-  nextCallCompleted,
   pageSelected,
+  recordingChanged,
+  reinforceToggled,
+  submittedFlashDone,
   participantToggled,
   participantsInitialised,
   revealCompleted,
@@ -79,9 +82,9 @@ describe('callSession slice', () => {
     expect(s.sort).toEqual({ key: 'hs_patients', direction: 'asc' });
     s = reducer(s, filtersCleared());
     expect(s.filters.focus).toEqual([]);
-    s = reducer(s, accountToggled('A1'));
-    expect(s.openAccountId).toBe('A1');
-    expect(reducer(s, accountToggled('A1')).openAccountId).toBeNull();
+    s = reducer(s, filterToggled({ group: 'account', value: 'A1' }));
+    expect(s.filters.account).toEqual(['A1']);
+    expect(reducer(s, accountsCleared()).filters.account).toEqual([]);
   });
   it('tracks compliance, the dialog and reveals', () => {
     let s = reducer(initialCallSessionState, complianceChecking({ key: 'k', note: 'n' }));
@@ -94,10 +97,19 @@ describe('callSession slice', () => {
     expect(s.compliance.j?.chip).toBe('Claim');
     s = reducer(s, revealCompleted('H2|messaging|0'));
     expect(s.revealed['H2|messaging|0']).toBe(true);
-    s = reducer(s, nextCallCompleted());
+    s = reducer(s, targetSelected({ hcpId: 'H2' }));
+    s = reducer(s, reinforceToggled({ scope: 'H2|messaging', pointId: 'M1' }));
+    expect(s.reinforced['H2|messaging']).toEqual(['M1']);
+    s = reducer(s, recordingChanged('k'));
+    expect(s.recordingKey).toBe('k');
+    s = reducer(s, assessmentSubmitted('H2'));
     expect(s.compliance).toEqual({});
-    expect(s.prepCategory).toBe('messaging');
+    expect(s.selectedHcpId).toBeNull();
+    expect(s.reinforced).toEqual({});
+    expect(s.recordingKey).toBeNull();
+    expect(s.justSubmittedHcpId).toBe('H2');
     expect(s.revealed['H2|messaging|0']).toBe(true);
+    expect(reducer(s, submittedFlashDone()).justSubmittedHcpId).toBeNull();
   });
   it('derives state with memoised selectors', () => {
     const base = setupStore().getState();

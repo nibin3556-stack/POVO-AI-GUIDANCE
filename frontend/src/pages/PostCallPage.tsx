@@ -29,11 +29,12 @@ const PostCallPage = () => {
   const { hcpId } = useParams();
   const dispatch = useAppDispatch();
   const selectedHcpId = useAppSelector(selectSelectedHcpId);
+  const justSubmitted = useAppSelector((s) => s.callSession.justSubmittedHcpId);
 
-  // Sync: a deep link selects its target.
+  // Sync: a deep link selects its target (but not the one just submitted, while Submit leaves this page).
   useEffect(() => {
-    if (hcpId && hcpId !== selectedHcpId) dispatch(targetSelected({ hcpId }));
-  }, [dispatch, hcpId, selectedHcpId]);
+    if (hcpId && hcpId !== selectedHcpId && hcpId !== justSubmitted) dispatch(targetSelected({ hcpId }));
+  }, [dispatch, hcpId, justSubmitted, selectedHcpId]);
 
   if (!hcpId) return <EmptyState message={LABELS.postCall.noParticipants} variant="hint" />;
   return (

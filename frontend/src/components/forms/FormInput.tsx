@@ -21,6 +21,8 @@ export interface FormInputProps {
   autoFocus?: boolean;
   autoComplete?: string;
   size?: TextFieldProps['size'];
+  /** Replaces the placeholder for a moment (e.g. "Listening…" while a voice note records). */
+  placeholderOverride?: string;
 }
 
 const flaggedSx = {
@@ -29,7 +31,7 @@ const flaggedSx = {
 };
 
 /** MUI TextField bound to Formik (`useField`): error text shows once touched. */
-const FormInput = ({ name, label, placeholder, maxLength, startIcon, onEnter, onBlur, flagged, inputRef, ariaLabel, autoFocus, autoComplete = 'off', size = 'small' }: FormInputProps) => {
+const FormInput = ({ name, label, placeholder, maxLength, startIcon, onEnter, onBlur, flagged, inputRef, ariaLabel, autoFocus, autoComplete = 'off', size = 'small', placeholderOverride }: FormInputProps) => {
   const [field, meta] = useField<string>(name);
   const hasError = meta.touched && Boolean(meta.error);
 
@@ -51,7 +53,7 @@ const FormInput = ({ name, label, placeholder, maxLength, startIcon, onEnter, on
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       label={label}
-      placeholder={placeholder}
+      placeholder={placeholderOverride ?? placeholder}
       error={hasError}
       helperText={hasError ? meta.error : undefined}
       fullWidth

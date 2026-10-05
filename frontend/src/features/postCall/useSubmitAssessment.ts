@@ -2,22 +2,19 @@ import { useFormikContext } from 'formik';
 import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router';
-import { TIMING, preCallPath } from '../../constants/constant';
+import { ROUTES } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
 import { useGenerateNextCallMutation } from '../../redux/api/callsApi';
 import {
   assessCategorySelected,
   assessParticipantSelected,
+  assessmentSubmitted,
   complianceFlagged,
-  nextCallCompleted,
 } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch } from '../../redux/hooks';
 import type { ApiError } from '../../types/api';
 import type { Category, NextCallFlag } from '../../types/models';
 import { additionalKey, itemKey, type AssessmentFormValues } from '../../utils/assessment';
-import { delay } from '../../utils/format';
-
-export const NEXT_CALL_DURATION_MS = TIMING.NEXT_CALL_STEP_MS * 3 + TIMING.NEXT_CALL_FINISH_MS;
 
 const readFlags = (error: ApiError): NextCallFlag[] => {
   const data = error.data as { flags?: NextCallFlag[] } | null;
@@ -32,18 +29,21 @@ export const flagsToEntries = (flags: NextCallFlag[], values: AssessmentFormValu
     return { key, note: note.trim(), chip: f.chip };
   });
 
-interface NextCallDeps {
+interface SubmitDeps {
   callId: string;
   primaryId: string;
+  /** "Dr. Winters": named in the confirmation. */
+  physicianName: string;
   flush: () => Promise<void>;
 }
 
 /**
- * "AI Suggestions for Next Call": save, run the 3-step stepper while the server
- * re-checks every note and builds the revision, then return to Tab 2.
+ * Submit: save, let the server re-check every note and build the next-call
+ * plan, then return to Pre-Call Planning with no target open; a toast says
+ * where the plan appears and the submitted target's row flashes.
  * 409 highlights the flagged notes; 422 means nothing was answered.
  */
-export const useNextCall = (hcpId: string, { callId, primaryId, flush }: NextCallDeps) => {
+export const useSubmitAssessment = (hcpId: string, { callId, primaryId, physicianName, flush }: SubmitDeps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { values } = useFormikContext<AssessmentFormValues>();
@@ -60,28 +60,28 @@ export const useNextCall = (hcpId: string, { callId, primaryId, flush }: NextCal
           dispatch(assessParticipantSelected(first.participant_id));
           dispatch(assessCategorySelected(first.category as Category));
         }
-        toast.error(LABELS.postCall.flaggedByServer(flags.length), { id: 'next-call' });
+        toast.error(LABELS.postCall.flaggedByServer(flags.length), { id: 'submit' });
         return;
       }
-      toast.error(error.status === 422 ? LABELS.postCall.nothingAnswered : error.message, { id: 'next-call' });
+      toast.error(error.status === 422 ? LABELS.postCall.nothingAnswered : error.message, { id: 'submit' });
     },
     [dispatch, primaryId, values],
   );
 
-  const run = useCallback(async () => {
+  const submit = useCallback(async () => {
     setRunning(true);
-    const started = Date.now();
     try {
       await flush();
       await generate(callId).unwrap();
-      await delay(Math.max(0, NEXT_CALL_DURATION_MS - (Date.now() - started)));
-      dispatch(nextCallCompleted());
-      navigate(preCallPath(hcpId));
+      // Leave the post-call route first, so it does not re-select the target.
+      navigate(ROUTES.PRE_CALL);
+      dispatch(assessmentSubmitted(hcpId));
+      toast.success(LABELS.postCall.submitted(physicianName, LABELS.tabs.preCall), { id: 'submit', duration: 4200 });
     } catch (error) {
       setRunning(false);
       handleError(error as ApiError);
     }
-  }, [callId, dispatch, flush, generate, handleError, hcpId, navigate]);
+  }, [callId, dispatch, flush, generate, handleError, hcpId, navigate, physicianName]);
 
-  return { run, running };
+  return { submit, running };
 };

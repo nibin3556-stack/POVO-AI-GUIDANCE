@@ -25,6 +25,24 @@ NEXT_CALL_STEPS = ("Reading the post-call assessment", "Running the AI complianc
                    "Drafting next-call talking points")
 
 
+#: One-click example notes under each point and under Additional Notes (POC exBank).
+#: {who} is "HCP" for a physician, else the role ("PA", "NP").
+EXAMPLE_NOTES = {
+    "messaging": ["{who} was interested in the Week 12 HiSCR50 results and asked for the lesion and pain data",
+                  "{who} asked how lab monitoring works before a first POVO start",
+                  "{who} agreed POVO may fit patients with active HS despite antibiotics"],
+    "objection": ["Resolved after reviewing the approved HiSCR50 Week 12 data with the {who}",
+                  "Still open; {who} wants to review the boxed warning section before deciding",
+                  "{who} accepted the response and asked for the Prescribing Information"],
+    "closing": ["{who} agreed to identify 2 HS patients to reassess before the next visit",
+                "{who} asked for an ADFA call with the office about POVO access next week",
+                "{who} agreed to start the next appropriate HS patient on POVO this month"],
+    "additional": ["Office asked for HSTruths.com patient resources; follow-up visit planned in 2 weeks",
+                   "Office manager confirmed HS prescriptions are submitted by PEF; ADFA to follow up on access",
+                   "HCP asked about the 45 mg and 75 mg doses; reviewed the dosing section of the Prescribing Information"],
+}
+
+
 def next_call_steps(note_count: int) -> list[str]:
     word = "note" if note_count == 1 else "notes"
     return [s.format(n=note_count, notes=word) for s in NEXT_CALL_STEPS]
@@ -51,6 +69,7 @@ def build_reference() -> dict:
         "compliance": {"rule_count": len(lib.compliance_rules), "steps": compliance_steps(),
                        "severity_labels": dict(LABEL_BY_SEVERITY)},
         "next_call_steps": list(NEXT_CALL_STEPS),
+        "example_notes": {k: list(v) for k, v in EXAMPLE_NOTES.items()},
         "prep_steps": {cat: list(lines) for cat, lines in PREP_STEPS.items()},
         "limits": {"points_per_category": TP_SHOW, "note_max_length": DEFAULT_NOTE_LIMIT,
                    "additional_note_max_length": NOTE_LIMIT["additional"]},

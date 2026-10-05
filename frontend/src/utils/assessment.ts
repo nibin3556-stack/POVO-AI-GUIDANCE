@@ -90,6 +90,3 @@ export const countAnswered = (values: AssessmentFormValues, participantId: strin
   ).length;
 
 export const anyAnswered = (values: AssessmentFormValues): boolean => Object.values(values.items).some((i) => i.was_raised);
-
-export const countNotes = (values: AssessmentFormValues): number =>
-  Object.values(values.items).filter((i) => i.note.trim()).length + (values.additional_note.trim() ? 1 : 0);

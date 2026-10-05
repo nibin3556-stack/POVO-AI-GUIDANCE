@@ -1,19 +1,22 @@
-import { useField } from 'formik';
+import { useField, useFormikContext } from 'formik';
 import { memo, useCallback } from 'react';
 import CheckMark from '../../components/common/CheckMark';
+import StatusChip from '../../components/common/StatusChip';
 import FormInput from '../../components/forms/FormInput';
 import ReceptionSlider from '../../components/forms/ReceptionSlider';
 import { useReference } from '../../hooks/useReference';
 import { LABELS } from '../../constants/labels';
 import { complianceDialogOpened } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import type { Category, TalkingPoint } from '../../types/models';
-import { newItem, type AssessmentItemValues } from '../../utils/assessment';
+import type { Category, RoleType, TalkingPoint } from '../../types/models';
+import { newItem, type AssessmentFormValues, type AssessmentItemValues } from '../../utils/assessment';
 import { chipList } from '../../utils/compliance';
 import { cx } from '../../utils/cx';
 import { useAssessment } from './AssessmentContext';
 import ComplianceIcon from './ComplianceIcon';
+import ExampleNotes from './ExampleNotes';
 import ResponseChip from './ResponseChip';
+import VoiceButton from './VoiceButton';
 
 interface PointRowProps {
   itemKey: string;
@@ -24,13 +27,19 @@ interface PointRowProps {
   open: boolean;
   context: string;
   onOpenChange: (pointId: string | null) => void;
+  /** The participant's role: example notes say "HCP", "PA" or "NP". */
+  role: RoleType;
+  /** A delivered point the rep chose to reinforce on this call. */
+  reinforced?: boolean;
 }
 
 /** One point raised (or not) on the call: checkbox, text, reception slider, note and the AI compliance state. */
-const PointRow = ({ itemKey, participantId, category, point, index, open, context, onOpenChange }: PointRowProps) => {
+const PointRow = ({ itemKey, participantId, category, point, index, open, context, onOpenChange, role, reinforced = false }: PointRowProps) => {
   const dispatch = useAppDispatch();
-  const { runCheck, registerInput } = useAssessment();
-  const { limits } = useReference().data;
+  const { runCheck, registerInput, voice } = useAssessment();
+  const ref = useReference();
+  const { limits } = ref.data;
+  const { setFieldValue } = useFormikContext<AssessmentFormValues>();
   const [field, , helpers] = useField<AssessmentItemValues | undefined>(`items.${itemKey}`);
   const entry = useAppSelector((s) => s.callSession.compliance[itemKey]);
   const item = field.value;
@@ -68,6 +77,20 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
   };
   const openReport = () => (entry?.result ? dispatch(complianceDialogOpened({ key: itemKey, context })) : check(item?.note ?? '', true));
   const flagged = entry?.status === 'flagged';
+  const notePath = `items.${itemKey}.note`;
+  const recording = voice.recordingKey === itemKey;
+  const busyElsewhere = Boolean(voice.recordingKey) && !recording;
+  const record = () =>
+    voice.toggle({
+      key: itemKey,
+      maxLength: limits.note_max_length,
+      onText: (text) => void setFieldValue(notePath, text),
+      onDone: (text) => check(text),
+    });
+  const pickExample = (note: string) => {
+    void setFieldValue(notePath, note);
+    check(note);
+  };
 
   return (
     <div
@@ -92,7 +115,14 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
           <CheckMark checked={asked} tone="green" size="lg" />
         </span>
         <span className={cx('flex size-[22px] flex-none items-center justify-center rounded-md text-xs font-bold', asked ? 'bg-[#CDE8D6] text-green' : 'bg-bluet text-blued')}>{index + 1}</span>
-        <span className="flex-1 text-sm font-semibold leading-[1.4] text-ink2">{point.text}</span>
+        <span className="flex-1 text-sm font-semibold leading-[1.4] text-ink2">
+          {point.text}
+          {reinforced && (
+            <StatusChip variant="days" className="ml-2 align-[1px]">
+              {LABELS.postCall.reinforcedChip}
+            </StatusChip>
+          )}
+        </span>
         {asked && !expanded && item && <ResponseChip item={item} category={category} entry={entry} />}
         <ComplianceIcon entry={entry} onOpen={openReport} />
       </div>
@@ -100,7 +130,7 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
         <div className="border-t border-dashed border-[#F6D38B] px-3 pb-3 pl-11 pt-2.5">
           <div className={cx('grid items-center gap-4 max-bp900:grid-cols-1', category === 'objection' ? 'grid-cols-1' : 'grid-cols-2')}>
             {category !== 'objection' && <ReceptionSlider name={`items.${itemKey}.reception`} />}
-            <div className="group relative">
+            <div className="group relative flex items-center gap-2">
               <FormInput
                 name={`items.${itemKey}.note`}
                 placeholder={category === 'objection' ? LABELS.postCall.notesObjection : LABELS.postCall.notes}
@@ -110,7 +140,9 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
                 onBlur={(v) => check(v)}
                 flagged={flagged}
                 inputRef={(el: HTMLInputElement | null) => registerInput(itemKey, el)}
+                placeholderOverride={recording ? LABELS.postCall.listening : undefined}
               />
+              <VoiceButton recording={recording} disabled={busyElsewhere} supported={voice.supported} onClick={record} />
               {flagged && entry?.result && (
                 <span className="absolute bottom-[calc(100%+6px)] left-0 z-30 hidden max-w-full items-start gap-1.5 rounded-lg bg-[#7F1D1D] px-2.5 py-1.5 text-[12.4px] font-semibold leading-[1.35] text-white shadow-pop group-focus-within:flex group-hover:flex">
                   {LABELS.postCall.noteHint(chipList(entry.result.issues))}
@@ -118,6 +150,7 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
               )}
             </div>
           </div>
+          <ExampleNotes notes={ref.exampleNotes(category, role)} disabled={Boolean(voice.recordingKey)} onPick={pickExample} />
         </div>
       )}
     </div>

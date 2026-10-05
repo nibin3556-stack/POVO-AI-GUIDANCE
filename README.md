@@ -6,7 +6,7 @@ A field-sales guidance app for POVO (HS) reps. It has three steps:
 2. **Pre-Call Planning**: Must-Wins, the call plan, and AI call prep.
 3. **Post-Call Assessment**: ratings, an AI compliance check on notes, and AI next-call suggestions.
 
-It was built from the finalized POC, [POVO_AI_Guidance_Step3_37.html](POVO_AI_Guidance_Step3_37.html), which stays at the repo root as the reference.
+It was built from the POC [POVO_AI_Guidance_Step3_37.html](POVO_AI_Guidance_Step3_37.html) and updated to v2, [POVO_AI_Guidance_Step3_63_Alt 2.html](POVO_AI_Guidance_Step3_63_Alt%202.html). Both stay at the repo root as the reference.
 
 | Path | What it is |
 |---|---|
@@ -46,6 +46,10 @@ docker compose up -d     # http://localhost:5680, then import the n8n/ workflows
 - `bdrake` is a manager and can impersonate other users.
 
 To switch user, change `VITE_DEV_USER` and restart `npm run dev`.
+
+After changing the generator or the content JSON, refresh a SQLite dev database with `python databricks/seed/generate_seed_data.py` then `backend\.venv\Scripts\python backend\scripts\load_sqlite_bronze.py` (stop the backend first).
+
+**Voice notes** use the browser's speech recognition (Microsoft Edge or Google Chrome). Other browsers show the microphone disabled with an explanation; typed and example notes always work.
 
 ## Tests
 

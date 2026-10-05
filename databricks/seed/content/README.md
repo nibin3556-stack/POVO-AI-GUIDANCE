@@ -2,17 +2,17 @@
 
 These three files are the source of the `REF_` content tables. The seeder copies them into
 `seed/output/*.csv` unchanged; the backend reads the tables through the warehouse and falls back
-to these files when the tables are empty. `CONTENT_VERSION` is `2026.1`; it is part of the AI
+to these files when the tables are empty. `CONTENT_VERSION` is `2026.2`; it is part of the AI
 cache key, so bump it whenever the text changes.
 
 | File | Table | Rows |
 |---|---|---|
-| `talking_points.json` | `REF_TALKING_POINT` | 63 |
-| `objection_rules.json` | `REF_OBJECTION_RULE` | 8 |
+| `talking_points.json` | `REF_TALKING_POINT` | 62 |
+| `objection_rules.json` | `REF_OBJECTION_RULE` | 10 |
 | `compliance_rules.json` | `REF_COMPLIANCE_RULE` | 14 |
 
-The text is copied verbatim from the finalized POC (`POVO_AI_Guidance_Step3_37.html`). It is the
-MLR draft copy: `MLR_CODE` is `DRAFT-POC-3.37` until real approval codes are assigned. The LLM never
+The text is copied verbatim from the v2 POC (`POVO_AI_Guidance_Step3_63_Alt 2.html`). It is the
+MLR draft copy: `MLR_CODE` is `DRAFT-POC-3.63` until real approval codes are assigned. The LLM never
 rewrites it; it can only choose points, order them and write insight lines.
 
 ## Template syntax
@@ -34,15 +34,16 @@ the first one without a condition. This keeps every word in content, not in code
 |---|---|---|
 | `{display_name}` | The participant: "Dr. Last" for a physician, "First Last" for an NP/PA | `Dr. Winters` |
 | `{physician_display_name}` | The primary physician (for NP/PA text) | `Dr. Winters` |
+| `{physician_possessive}` | The primary physician, possessive | `Dr. Winters'` |
 | `{account_name}` | The participant's account | `Maine Medical Partners Dermatology` |
 | `{hs_patients}` | HS patients, last 12 months | `133` |
 | `{hs_not_on_povo}` | HS patients minus POVO patients | `124` |
 | `{povo_patients}` | POVO patients | `9` |
 | `{jak_patients}` | HS patients on a JAK inhibitor | `4` |
 | `{decile}` | Decile, 1 to 10 | `10` |
-| `{rank}` / `{rank_of}` | HS rank in the territory / number of POVO Targets | `1` / `142` |
+| `{rank}` / `{rank_of}` | HS rank in the territory / number of POVO Targets | `1` / `83` |
 | `{focus_label}` | Competitive focus label | `Humira` |
-| `{segment_short_name}` | Segment short name | `Immediate` |
+| `{segment_short_name}` | Segment short name | `Advanced Biologics plus JAK` |
 | `{msl_date_short}` | Latest MSL visit (physician) | `Sep 12` |
 | `{speaker_date_short}` | Latest speaker program (physician) | `Sep 3` |
 | `{adfa_date_short}` | Latest ADFA visit (physician's office) | `Aug 28` |
@@ -60,9 +61,8 @@ the first one without a condition. This keeps every word in content, not in code
 | `jak_one` | JAK focus and exactly 1 JAK patient |
 | `has_msl_visit` / `has_speaker_program` / `has_adfa_visit` | the physician has such an interaction |
 | `never_called` | no rep call on record for the participant |
+| `seg_imm` / `seg_exp` / `seg_conv` | the participant's HS treatment segment |
 | `well_received` | next-call closings: the closing was rated Well Received |
-| `open_objections` | extra closings: an objection is still open after the call |
-| `low_reception` | extra closings: a message was removed as not well received |
 
 ## Selection rules
 
@@ -71,9 +71,9 @@ the first one without a condition. This keeps every word in content, not in code
   wins (segment before audience before `ALL`). The screen shows the first 3.
 - **Objections:** the `REF_OBJECTION_RULE` row matching audience, segment, decile range and writer
   state, with the lowest `PRIORITY`, lists the ordered `POINT_ID`s.
-- **Next call:** `NEXT_CALL_TEMPLATE` is the "Changed" message variant or the closing variant
-  (`[well_received]` or the other text). `peer` is the message that replaces a removed one, and
-  `extra` rows are the "New AI suggestion" closings.
+- **Next call:** `NEXT_CALL_TEMPLATE` is the follow-up of a delivered point ("Builds on well
+  received" / "Builds on moderate"); closings choose the `[well_received]` or the other text. The
+  `peer` row and the `pool` rows are the new messages the ranking can add ("New").
 
 ## Compliance rules
 

@@ -1,4 +1,6 @@
-"""Next-call revision rules on hand-built lists (POC applyRevision, final)."""
+"""Next-call revision rules on hand-built lists (POC applyRevision + rankNext, Step 3_63)."""
+from datetime import date
+
 import pytest
 
 from helpers.content.library import get_library
@@ -6,6 +8,8 @@ from helpers.content.select import item
 from helpers.revision import objection_state, revise
 
 DOT = "·"
+CALL = date(2026, 10, 13)
+WELL, MOD = "Builds on well received", "Builds on moderate"
 
 
 @pytest.fixture()
@@ -16,16 +20,23 @@ def lib():
 @pytest.fixture()
 def ctx():
     return {"values": {"display_name": "Dr. Winters", "physician_display_name": "Dr. Winters",
-                       "call_date": "10/13/2026", "call_date_long": "Oct 13, 2026"},
-            "flags": set(), "person": {"role_type": "HCP"}, "primary": {}}
+                       "segment_short_name": "Conventional", "call_date": "10/13/2026",
+                       "call_date_long": "Oct 13, 2026"},
+            "flags": {"seg_conv"}, "person": {"role_type": "HCP", "segment_code": "conv", "decile": 10,
+                                              "povo_patients": 0}, "primary": {}}
 
 
 def _lists(lib):
     m = [item(pid, lib.point(pid)["PILLAR"], lib.point(pid)["TEXT_TEMPLATE"], f"ins {pid}")
          for pid in ("MSG_EFF_HCP", "MSG_SAF_HCP", "MSG_SEG_CONV_HCP", "MSG_MECH_HCP", "MSG_PAIN_HCP")]
     o = [item(f"OBJ_{k:02d}", None, f"objection {k}", "response") for k in (10, 12, 1, 16, 17)]
-    c = [item(f"CLS_HCP_{k}", None, f"closing {k}", None) for k in range(1, 6)]
+    c = [item(pid, None, f"closing {k}", None)
+         for k, pid in enumerate(("CLS_HCP_CONV_1", "CLS_HCP_CONV_2", "CLS_HCP_3", "CLS_HCP_4", "CLS_HCP_5"), 1)]
     return {"messaging": m, "objection": o, "closing": c}
+
+
+def _ids(points):
+    return [x["point_id"] for x in points]
 
 
 def test_objection_state_regex():
@@ -43,67 +54,84 @@ def test_full_revision(lib, ctx):
                       "MSG_SEG_CONV_HCP": {"reception": 0, "note": ""}},
         "objection": {"OBJ_10": {"reception": None, "note": "Resolved after reviewing data"},
                       "OBJ_12": {"reception": None, "note": "Still concerned about safety"}},
-        "closing": {"CLS_HCP_1": {"reception": 2, "note": "Agreed to identify 2 patients"}},
+        "closing": {"CLS_HCP_CONV_1": {"reception": 2, "note": "Agreed to identify 2 patients"}},
     }
-    r = revise(lib, ctx, _lists(lib), answers, "10/13/2026")
+    r = revise(lib, ctx, _lists(lib), answers, CALL, "10/13/2026")
+
     m = r["lists"]["messaging"]
-    assert [x["point_id"] for x in m] == ["MSG_PEER", "MSG_SAF_HCP", "MSG_EFF_HCP", "MSG_MECH_HCP", "MSG_PAIN_HCP"]
-    assert m[0]["tags"] == [f"New {DOT} replaces a removed message"]
-    assert m[0]["pillar"] == "Disease progression" and m[0]["previous_text"].startswith("Active HS despite")
-    assert m[0]["detail"] == "The message it replaces was not well received on the 10/13/2026 call"
-    assert m[1]["tags"] == ["Changed"]
-    assert m[1]["text"] == "Open with overall safety, then the monitoring section of the Prescribing Information"
-    assert m[1]["detail"] == "From the 10/13/2026 call: Asked for the monitoring data"
-    assert m[2]["tags"] == [f"Retained {DOT} well received", "▼ was #1"]
-    assert m[3]["tags"] == [] and m[3]["previous_rank"] == 4
+    # Well-received follow-up, then 1 unused point from the well-received theme (efficacy: lesions and pain),
+    # then the moderate follow-up; delivered: well, moderately, not well received.
+    assert _ids(m) == ["MSG_EFF_HCP~F", "MSG_PAIN_HCP", "MSG_SAF_HCP~F",
+                       "MSG_EFF_HCP", "MSG_SAF_HCP", "MSG_SEG_CONV_HCP"]
+    assert m[0]["tags"] == [WELL] and m[1]["tags"] == [] and m[2]["tags"] == [MOD]
+    assert m[0]["text"] == "Restate the Week 12 HiSCR50 result, then share the lesion and pain data"
+    assert m[0]["detail"] == "Builds on the Efficacy message, well received on 10/13/2026"
+    assert [x["label"] for x in m[3:]] == ["Well Received", "Moderately Received", "Not Well Received"]
+    assert all(x["delivered"] and x["delivered_date"] == "2026-10-13" for x in m[3:])
+    assert not any(x["delivered"] for x in m[:3])
 
     o = r["lists"]["objection"]
-    assert [x["point_id"] for x in o] == ["OBJ_12", "OBJ_01", "OBJ_16", "OBJ_17", "OBJ_10"]
-    assert o[0]["tags"] == [f"Still open {DOT} address first", "▲ was #2"]
-    assert o[-1]["tags"] == ["Resolved last call", "▼ was #1"]
+    assert _ids(o) == ["OBJ_01", "OBJ_16", "OBJ_17", "OBJ_10", "OBJ_12"]
+    assert (o[3]["label"], o[3]["is_open"]) == ("Resolved", False)
+    assert (o[4]["label"], o[4]["is_open"], o[4]["detail"]) == ("Still Open", True, "response")
 
     c = r["lists"]["closing"]
-    assert c[0]["tags"] == ["New"]
-    assert c[0]["text"] == "Thank you, Dr. Winters. I will follow up next week on the patients we identified"
-    assert c[1]["tags"] == ["New AI suggestion"] and c[2]["tags"] == ["New AI suggestion"]
-    assert c[1]["text"].startswith("I will bring answers to the open questions from our Oct 13, 2026 call")
-    assert c[2]["text"] == "I will bring the approved information on the data you asked about"
-    assert c[1]["previous_text"] == "closing 2" and c[3]["tags"] == []
+    assert _ids(c)[:3] == ["CLS_HCP_CONV_1~F2", "CLS_HCP_CONV_2", "CLS_HCP_3"]
+    assert c[0]["text"] == "Let's confirm the first patient we identified starts POVO this month"
+    assert c[0]["tags"] == [WELL] and c[3]["label"] == "Well Received"
 
-    assert r["summaries"] == {"messaging": f"1 changed {DOT} 1 reordered {DOT} 1 removed",
-                              "objection": f"3 objections moved up {DOT} 1 resolved",
-                              "closing": f"1 new closing {DOT} 2 replaced with AI suggestions"}
-    assert r["next_best_action"] == ("Open with safety, clear the open objection first and confirm the agreed "
+    assert r["summaries"] == {
+        "messaging": f"3 delivered {DOT} 1 well received {DOT} 3 new messages for the next call",
+        "objection": f"2 delivered {DOT} 1 still open {DOT} 3 new objections for the next call",
+        "closing": f"1 delivered {DOT} 1 well received {DOT} 3 new closings for the next call"}
+    assert r["next_best_action"] == ("Lead with efficacy, answer the open objection and confirm the agreed "
                                      "next step")
     assert r["history_line"] == ("1 of 3 messages well received, 1 objection still open, "
                                  "1 closing well received")
 
 
-def test_second_not_well_is_changed_and_retained_stays(lib, ctx):
-    answers = {"messaging": {"MSG_EFF_HCP": {"reception": 0, "note": ""}, "MSG_SAF_HCP": {"reception": 0, "note": ""},
-                             "MSG_SEG_CONV_HCP": {"reception": 2, "note": ""}},
-               "objection": {}, "closing": {}}
-    r = revise(lib, ctx, _lists(lib), answers, "10/13/2026")
-    m = r["lists"]["messaging"]
-    assert m[0]["point_id"] == "MSG_PEER"
-    assert m[1]["point_id"] == "MSG_SAF_HCP" and m[1]["tags"][0] == "Changed"
-    assert m[2]["point_id"] == "MSG_SEG_CONV_HCP" and m[2]["tags"] == [f"Retained {DOT} well received"]
-    assert r["next_best_action"] == "Open with safety"
-
-
-def test_peer_message_never_duplicated(lib, ctx):
-    lists = _lists(lib)
+def test_not_well_received_theme_is_never_suggested_again(lib, ctx):
     answers = {"messaging": {"MSG_EFF_HCP": {"reception": 0, "note": ""}}, "objection": {}, "closing": {}}
-    first = revise(lib, ctx, lists, answers, "10/13/2026")["lists"]
-    again = revise(lib, ctx, {**lists, "messaging": first["messaging"]},
-                   {"messaging": {"MSG_SAF_HCP": {"reception": 0, "note": ""}}, "objection": {}, "closing": {}},
+    m = revise(lib, ctx, _lists(lib), answers, CALL, "10/13/2026")["lists"]["messaging"]
+    # Efficacy is closed: no lesions-and-pain point and no disease-progression peer message.
+    assert _ids(m) == ["MSG_SAF_HCP", "MSG_SEG_CONV_HCP", "MSG_MECH_HCP", "MSG_EFF_HCP"]
+    assert m[-1]["label"] == "Not Well Received"
+
+
+def test_pool_fills_in_new_messages(lib, ctx):
+    answers = {"messaging": {"MSG_EFF_HCP": {"reception": 2, "note": ""}, "MSG_SAF_HCP": {"reception": 2, "note": ""},
+                             "MSG_SEG_CONV_HCP": {"reception": 2, "note": ""}}, "objection": {}, "closing": {}}
+    m = revise(lib, ctx, _lists(lib), answers, CALL, "10/13/2026")["lists"]["messaging"]
+    assert _ids(m)[:3] == ["MSG_EFF_HCP~F", "MSG_SAF_HCP~F", "MSG_SEG_CONV_HCP~F"]
+    assert all(x["tags"] == [WELL] for x in m[:3])
+
+
+def test_reinforced_point_is_updated_in_the_history(lib, ctx):
+    first = revise(lib, ctx, _lists(lib), {"messaging": {"MSG_EFF_HCP": {"reception": 2, "note": ""}},
+                                           "objection": {}, "closing": {}}, CALL, "10/13/2026")["lists"]
+    later = date(2026, 10, 20)
+    again = revise(lib, ctx, first, {"messaging": {"MSG_EFF_HCP": {"reception": 1, "note": ""}},
+                                     "objection": {}, "closing": {}}, later, "10/20/2026")["lists"]["messaging"]
+    eff = next(x for x in again if x["point_id"] == "MSG_EFF_HCP")
+    assert eff["delivered"] and eff["delivered_date"] == "2026-10-20"
+    assert eff["label"] == f"Reinforced {DOT} Moderately Received" and eff["reception"] == 1
+    assert len(_ids(again)) == len(set(_ids(again)))
+
+
+def test_follow_up_of_a_follow_up_is_not_created(lib, ctx):
+    first = revise(lib, ctx, _lists(lib), {"messaging": {"MSG_EFF_HCP": {"reception": 2, "note": ""}},
+                                           "objection": {}, "closing": {}}, CALL, "10/13/2026")["lists"]
+    again = revise(lib, ctx, first, {"messaging": {"MSG_EFF_HCP~F": {"reception": 2, "note": ""}},
+                                     "objection": {}, "closing": {}}, date(2026, 10, 20),
                    "10/20/2026")["lists"]["messaging"]
-    assert [x["point_id"] for x in again].count("MSG_PEER") == 1
+    assert not any(x["point_id"].count("~") > 1 for x in again)
+    assert [x["point_id"] for x in again].count("MSG_EFF_HCP~F") == 1
 
 
 def test_llm_states_override_regex(lib, ctx):
     answers = {"messaging": {}, "objection": {"OBJ_10": {"reception": None, "note": "Talked it through"}},
                "closing": {}}
-    r = revise(lib, ctx, _lists(lib), answers, "10/13/2026", llm_states={"OBJ_10": "resolved"})
+    r = revise(lib, ctx, _lists(lib), answers, CALL, "10/13/2026", llm_states={"OBJ_10": "resolved"})
     assert r["lists"]["objection"][-1]["point_id"] == "OBJ_10"
+    assert r["lists"]["objection"][-1]["label"] == "Resolved"
     assert r["counts"]["o_res"] == 1

@@ -10,8 +10,10 @@ The "current list" for (participant, category) is, in order of precedence:
      participant + category + revision + content version, so the list the rep
      prepared with is the list the next-call revision starts from.
 
-The screen shows the top 3 (TP_SHOW); the revision works on the full list,
-because points 4 and 5 can move up.
+The screen shows the top 3 (TP_SHOW) points still to deliver, then the points
+"Delivered on earlier calls" (each with its date and reception, and a Reinforce
+toggle on screen). The revision works on the full list, because points 4 and 5
+can move up.
 """
 from __future__ import annotations
 
@@ -28,7 +30,7 @@ from database.tables import app
 from database.warehouse import get_warehouse, to_date
 from helpers import n8n_client
 from helpers.content.library import get_library
-from helpers.content.select import LABELS, initial_points, participant_context, person
+from helpers.content.select import LABELS, initial_points, participant_context, person, possessive
 from helpers.dates import fmt_long, fmt_mdy, now_utc, today
 from helpers.targets import Universe
 
@@ -186,10 +188,6 @@ PREP_STEPS = {
 }
 
 
-def possessive(name: str) -> str:
-    return f"{name}'" if name.endswith("s") else f"{name}'s"
-
-
 def steps(category: str, name: str, revised_from=None) -> list[str]:
     if revised_from:
         return [f"Reading the {fmt_mdy(revised_from)} post-call assessment for {name}",
@@ -206,6 +204,17 @@ def point_out(x: dict, rank: int, category: str) -> dict:
             "previous_rank": x.get("previous_rank")}
 
 
+def delivered_out(x: dict, category: str) -> dict:
+    """A point delivered on an earlier call: date, reception and its label ("Well Received", "Still Open")."""
+    return {**point_out(x, 0, category), "delivered_date": x.get("delivered_date"),
+            "reception": x.get("reception"), "label": x.get("label") or "", "is_open": bool(x.get("is_open"))}
+
+
+def split_points(points: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(points still to deliver, points delivered on earlier calls)."""
+    return [x for x in points if not x.get("delivered")], [x for x in points if x.get("delivered")]
+
+
 def call_prep(u: Universe, hcp_id: str, participant_id: str, category: str, request_id: str) -> dict:
     primary = resolve_primary(u, hcp_id)
     p = resolve_participant(u, primary, participant_id)
@@ -215,17 +224,20 @@ def call_prep(u: Universe, hcp_id: str, participant_id: str, category: str, requ
     banner = None
     if rev and (rev.get("SUMMARY_TEXT") or ""):
         banner = {"summary": rev["SUMMARY_TEXT"], "next_best_action": rev.get("NEXT_BEST_ACTION")}
+    fresh, delivered = split_points(cur["points"])
     return {"participant_id": p["hcp_id"], "category": category, "revision_no": int(rev["REVISION_NO"]) if rev else 0,
             "is_revised": rev is not None, "revised_from_date": revised_from, "banner": banner,
             "steps": steps(category, p["display_name"], revised_from),
             "heading": f"{'Next-call ' if rev else ''}{LABELS[category]} for {p['display_name']} ({p['role_type']})",
-            "points": [point_out(x, i + 1, category) for i, x in enumerate(cur["points"][:TP_SHOW])],
+            "points": [point_out(x, i + 1, category) for i, x in enumerate(fresh[:TP_SHOW])],
+            "delivered": [delivered_out(x, category) for x in delivered],
             "source": cur["source"]}
 
 
 # ---------------------------------------------------------------------------
-def _bullets(u: Universe, p: dict, primary: dict, history: Optional[tuple]) -> list[str]:
-    """POC histBullets (final): five lines per participant."""
+def _bullets(u: Universe, p: dict, primary: dict, history: Optional[tuple],
+             last_note: Optional[tuple] = None) -> list[str]:
+    """POC histBullets (final): five lines per participant, plus the last call's Additional Notes."""
     dot = "·"
     seg = u.refs.segment(p.get("segment_code"))
     focus = p.get("competitive_focus")
@@ -237,7 +249,7 @@ def _bullets(u: Universe, p: dict, primary: dict, history: Optional[tuple]) -> l
         visits = int(visits) if visits else max(1, round(hs / 12))
         lines = [
             f"Decile D{p['decile']} {dot} #{p['_hs_rank']} of {len(u.list)} POVO Targets {dot} about {visits} HS visits a month",
-            f"{seg['SHORT_NAME']} Opportunity {dot} primary focus: {u.refs.focus_label(focus)}"
+            f"{seg['FULL_NAME']} {dot} primary focus: {u.refs.focus_label(focus)}"
             f"{' (off label in HS)' if focus == 'jak' else ''} {dot} discuss patients like "
             f"{seg.get('ARCHETYPE_NAME') or ''}",
             f"{povo} POVO {'patient' if povo == 1 else 'patients'}; {hs - povo} HS patients not yet on POVO" if povo
@@ -259,7 +271,30 @@ def _bullets(u: Universe, p: dict, primary: dict, history: Optional[tuple]) -> l
             else "No POVO conversation on record"]
     if history:
         lines[4] = f"Post-call {fmt_mdy(history[0])}: {history[1]}"
+    if last_note:
+        lines.append(f"Last call note ({fmt_long(last_note[0])}): {last_note[1]}")
     return lines
+
+
+def last_call_notes(rows: list[dict]) -> dict[str, tuple]:
+    """Per participant, the Additional Notes of the call behind their latest revision (passed notes only).
+
+    The note is carried into the next pre-call plan (POC REV.note).
+    """
+    latest: dict[str, dict] = {}
+    for r in sorted(rows, key=lambda r: (r["REVISION_NO"], str(r["CREATED_AT"]))):
+        latest[r["PARTICIPANT_ID"]] = r
+    call_ids = sorted({r["CALL_ID"] for r in latest.values() if r.get("CALL_ID")})
+    notes: dict[str, str] = {}
+    for cid in call_ids:
+        found = get_warehouse().query(
+            f"SELECT NOTE FROM {app('APP_CALL_POINT_ASSESSMENT')} WHERE CALL_ID = :cid AND CATEGORY = 'additional' "
+            f"AND COMPLIANCE_STATUS = 'passed'", {"cid": cid})
+        text = next((f["NOTE"].strip() for f in found if (f.get("NOTE") or "").strip()), "")
+        if text:
+            notes[cid] = text
+    return {pid: (to_date(r["CALL_DATE"]), notes[r["CALL_ID"]])
+            for pid, r in latest.items() if r.get("CALL_ID") in notes}
 
 
 def profile(u: Universe, hcp_id: str) -> dict:
@@ -270,8 +305,10 @@ def profile(u: Universe, hcp_id: str) -> dict:
     pre = [primary["hcp_id"]] + ([hcp_id] if hcp_id != primary["hcp_id"] else [])
     # Latest post-call history line per participant (bullet 5).
     hist_rows = get_warehouse().query(
-        f"SELECT PARTICIPANT_ID, CALL_DATE, HISTORY_LINE, REVISION_NO, CREATED_AT FROM {app('APP_CALL_PREP_REVISION')} "
-        f"WHERE TERRITORY_ID = :tid AND HCP_ID = :hcp", {"tid": u.td.territory_id, "hcp": primary["hcp_id"]})
+        f"SELECT PARTICIPANT_ID, CALL_ID, CALL_DATE, HISTORY_LINE, REVISION_NO, CREATED_AT "
+        f"FROM {app('APP_CALL_PREP_REVISION')} WHERE TERRITORY_ID = :tid AND HCP_ID = :hcp",
+        {"tid": u.td.territory_id, "hcp": primary["hcp_id"]})
+    notes = last_call_notes(hist_rows)
     latest: dict[str, tuple] = {}
     for r in sorted(hist_rows, key=lambda r: (r["REVISION_NO"], str(r["CREATED_AT"]))):
         latest[r["PARTICIPANT_ID"]] = (to_date(r["CALL_DATE"]), r["HISTORY_LINE"])
@@ -293,11 +330,11 @@ def profile(u: Universe, hcp_id: str) -> dict:
         out.append({
             "hcp_id": p["hcp_id"], "role_type": p["role_type"], "degree": p.get("degree"), "name": p["name"],
             "display_name": p["display_name"], "account_name": p.get("account_name"), "city": p.get("city"),
-            "zip": p.get("zip"), "is_primary": p["hcp_id"] == primary["hcp_id"],
+            "zip": p.get("zip"), "is_primary": p["hcp_id"] == primary["hcp_id"], "segment_code": p.get("segment_code"),
             "stats": {"hs_patients": p["hs_patients"], "povo_patients": p["povo_patients"], "decile": p["decile"],
                       "tier_name": tier["TIER_NAME"] if tier else "Not in call plan", "rank": p["_hs_rank"],
                       "rank_of": len(u.list), "povo_discussions": p["_discussions"],
                       "last_call_date": p["last_call_date"]},
-            "bullets": _bullets(u, p, primary, latest.get(p["hcp_id"])),
+            "bullets": _bullets(u, p, primary, latest.get(p["hcp_id"]), notes.get(p["hcp_id"])),
             "interactions": ints, "interaction_counts": counts})
     return {"primary_hcp_id": primary["hcp_id"], "preselected_participant_ids": pre, "participants": out}

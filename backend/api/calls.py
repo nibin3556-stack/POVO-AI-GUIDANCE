@@ -1,15 +1,17 @@
-"""Calls, assessment autosave and "AI Suggestions for Next Call".
+"""Calls, assessment autosave and Submit (the next-call revision).
 
 A call belongs to its effective rep: another rep (or another territory) gets
 404, while a manager impersonating that rep sees it. Writes record both the
 effective rep (REP_EMPLOYEE_ID) and the real actor (ACTED_BY_EMPLOYEE_ID /
 UPDATED_BY).
 
-Next call (POST /{call_id}/next-call):
+Submit (POST /{call_id}/next-call):
   1. re-check every non-empty note with the rules      -> 409 + data.flags
   2. nothing answered                                  -> 422
   3. per participant with an answer: revise the three lists (helpers/revision),
-     asking n8n only for objection states, summary and next best action
+     asking n8n only for objection states, summary and next best action. A
+     delivered point the rep marked Reinforce is assessed under its own
+     POINT_ID and is updated in the delivered history.
   4. persist the revisions, mark the call assessed, audit
 """
 from __future__ import annotations
@@ -221,7 +223,7 @@ def next_call(call_id: str, ctx: RequestContext = Guard) -> dict:
                           "point_id": a["POINT_ID"], "chip": res["issues"][0]["chip"]})
     if flags:
         raise ApiError(409, f"Clear {len(flags)} compliance {'flag' if len(flags) == 1 else 'flags'} "
-                            f"to enable AI Suggestions for Next Call", {"flags": flags})
+                            f"to submit the assessment", {"flags": flags})
 
     # 2. Something must be answered.
     answered = [a for a in rows if a.get("WAS_RAISED") and a["CATEGORY"] in CATEGORIES]
@@ -245,7 +247,7 @@ def next_call(call_id: str, ctx: RequestContext = Guard) -> dict:
         answers = {c: {a["POINT_ID"]: {"reception": a.get("RECEPTION"), "note": a.get("NOTE")}
                        for a in mine if a["CATEGORY"] == c} for c in CATEGORIES}
         ai = _ai_next_call(u, p, call_date, mine, ctx.request_id)
-        res = revise(lib, pctx, lists, answers, fmt_mdy(call_date), ai["states"] if ai else None)
+        res = revise(lib, pctx, lists, answers, call_date, fmt_mdy(call_date), ai["states"] if ai else None)
         engine = "ai" if ai else "rules"
         sources.add(engine)
         nba = ai["nba"] if ai else res["next_best_action"]

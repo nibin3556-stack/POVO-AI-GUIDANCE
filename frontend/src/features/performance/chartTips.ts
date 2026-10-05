@@ -1,39 +1,44 @@
 import type { ChartTip } from '../../components/charts/ChartCard';
 import type { TierBand } from '../../components/charts/DecileBarChart';
-import type { ColumnDatum } from '../../components/charts/StackedColumnChart';
+import type { ColumnDatum, ColumnSeries } from '../../components/charts/StackedColumnChart';
 import { CHART_COLORS, COLORS } from '../../constants/colors';
 import { LABELS } from '../../constants/labels';
-import type { DecileRow, Deciles, Grain, NewWriters, Segment, Segmentation, Tier, WriterBucket } from '../../types/models';
-import { formatLongDate, formatMDY, formatNumber, formatShortMD } from '../../utils/format';
+import type { DecileRow, Deciles, Grain, NewWriters, Segment, Segmentation, SegmentCode, Tier, WriterBucket } from '../../types/models';
+import type { ReferenceLookup } from '../../utils/reference';
+import { formatLongDate, formatMDY, formatShortMD } from '../../utils/format';
 
 const T = LABELS.performance.tip;
 
+/** Funnel tooltip: Targets > Reached > Writing (Trial) > 3+ patients (Adoption), then Penetration. */
 export const segmentTip = (segment: Segment, data: Segmentation): ChartTip => {
   const color = segment.color_hex;
+  const f = segment.funnel;
   return {
-    title: T.opportunity(segment.short_name),
+    title: segment.full_name,
     rows: [
-      { key: 'n', color, value: segment.hcp_count, text: T.hcps(Math.round(segment.pct), data.total_targets) },
-      { key: 'trial', color, value: `${segment.trial_pct}%`, text: T.trial },
-      { key: 'pen', color, value: `${segment.penetration_pct}%`, text: T.penetration },
-      { key: 'adopt', color, value: `${segment.adoption_pct}%`, text: T.adoption },
-      { key: 'reach', color, value: `${segment.reach_pct}%`, text: T.reach },
+      { key: 'n', color, value: segment.hcp_count, text: T.hcps(segment.pct, data.total_targets) },
+      { key: 'reach', color, value: f.reached, text: T.reach(f.reached_pct), group: T.funnel },
+      { key: 'trial', color, value: f.writers, text: T.trial(f.writers_pct) },
+      { key: 'adopt', color, value: f.adopters, text: T.adoption(f.adopters_pct) },
     ],
-    footer: segment.description,
+    footer: T.penetration(segment.penetration_pct, f.povo_patients, f.hs_patients),
   };
 };
 
-export const decileTip = (row: DecileRow, tier: Tier | undefined): ChartTip => ({
+export const decileTip = (row: DecileRow, tier: Tier | undefined, elapsedPct: number): ChartTip => ({
   title: T.decile(row.decile, tier?.tier_name ?? ''),
   rows: [
-    { key: 'w', color: CHART_COLORS.writing, value: row.writers, text: T.writingHcps },
+    { key: 'w', color: CHART_COLORS.writing, value: row.writers, text: T.newWriters },
     { key: 'y', color: CHART_COLORS.yetToWrite, value: row.yet_to_write, text: T.yetHcps },
-    { key: 'hs', color: COLORS.ink3, value: row.targets, text: T.opportunityHs(formatNumber(row.hs_patients)) },
-    { key: 'ex', color: COLORS.ink3, value: `${row.execution_pct}%`, text: T.execution },
-    { key: 'rc', color: COLORS.ink3, value: `${row.reach_pct}%`, text: T.reachDecile(row.tier_code === 'SH' ? row.early_reach_count : null) },
-    { key: 'pr', color: COLORS.ink3, value: row.productivity.toFixed(1), text: T.productivity },
+    { key: 'rc', color: COLORS.ink3, value: `${row.reach_pct}%`, text: T.reachDecile(row.reached, row.targets, row.reach_goal_pct) },
+    {
+      key: 'fq',
+      color: COLORS.ink3,
+      value: row.avg_frequency === null ? '–' : row.avg_frequency.toFixed(1),
+      text: T.frequencyDecile(row.calls, row.reached, row.frequency_goal.toFixed(1), tier?.calls_per_year ?? 0, elapsedPct),
+    },
   ],
-  footer: tier ? T.tierLine(tier.tier_name, tier.decile_min, tier.decile_max, tier.calls_per_year, tier.reach_goal_pct) : undefined,
+  footer: T.decileTargets(row.targets, row.avg_hs_patients),
 });
 
 const bucketTitle = (bucket: WriterBucket, grain: Grain): string =>
@@ -41,13 +46,19 @@ const bucketTitle = (bucket: WriterBucket, grain: Grain): string =>
     ? T.weekEnding(formatMDY(bucket.end_date), bucket.is_partial)
     : T.monthToDate(formatLongDate(bucket.start_date).replace(/ \d+,/, ''), bucket.is_partial);
 
-export const writersTip = (bucket: WriterBucket, grain: Grain): ChartTip => ({
+/** Writers stack bottom to top in the reference segment order. */
+export const writerSeries = (data: NewWriters, ref: ReferenceLookup): ColumnSeries[] =>
+  data.segment_codes.map((code) => ({ key: code, color: ref.segmentColor(code) }));
+
+export const writersTip = (bucket: WriterBucket, grain: Grain, codes: SegmentCode[], ref: ReferenceLookup): ChartTip => ({
   title: bucketTitle(bucket, grain),
-  rows: [
-    { key: 'j', color: CHART_COLORS.jak, value: bucket.jak_writers, text: T.jak },
-    { key: 'n', color: CHART_COLORS.nonJak, value: bucket.non_jak_writers, text: T.nonJak },
-  ],
-  footer: T.firstTime(bucket.jak_writers + bucket.non_jak_writers),
+  rows: codes.map((code) => ({
+    key: code,
+    color: ref.segmentColor(code),
+    value: bucket.segments[code] ?? 0,
+    text: ref.segment(code)?.full_name ?? code,
+  })),
+  footer: T.firstTime(bucket.total),
 });
 
 /** Consecutive rows of the same tier become one background band. */
@@ -61,12 +72,10 @@ export const buildBands = (data: Deciles): TierBand[] => {
   return bands;
 };
 
-
 export const toColumns = (data: NewWriters): ColumnDatum[] =>
   data.buckets.map((b) => ({
     label: data.grain === 'week' ? formatShortMD(b.end_date) || b.label : b.label,
-    primary: b.jak_writers,
-    secondary: b.non_jak_writers,
+    values: { ...b.segments },
+    total: b.total,
     partial: b.is_partial,
   }));
-

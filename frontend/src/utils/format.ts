@@ -10,6 +10,10 @@ const isValidIso = (iso: string | null | undefined): iso is string => Boolean(is
 export const formatLongDate = (iso: string | null | undefined): string =>
   isValidIso(iso) ? parse(iso).format('MMMM D, YYYY') : '';
 
+/** "Oct 13, 2026" */
+export const formatMediumDate = (iso: string | null | undefined): string =>
+  isValidIso(iso) ? parse(iso).format('MMM D, YYYY') : '';
+
 /** "10/13/2026" */
 export const formatMDY = (iso: string | null | undefined): string => (isValidIso(iso) ? parse(iso).format('MM/DD/YYYY') : '');
 
@@ -46,18 +50,24 @@ export interface TextSegment {
 }
 
 /**
- * Copy rule: "HCPs" always keeps a lowercase "s", even inside labels styled in
- * all caps. Splits the text so the "s" can be rendered with `normal-case`.
+ * Copy rule: "HCPs" and "PEFs" always keep a lowercase "s", even inside labels
+ * styled in all caps. Splits the text so the "s" can be rendered with `normal-case`.
  */
 export const splitHcps = (text: string): TextSegment[] => {
-  const parts = text.split('HCPs');
+  // split() with a capture group keeps the word: [text, 'HCP' | 'PEF', text, ...]
+  const parts = text.split(/(HCP|PEF)s/);
+  if (parts.length === 1) return text ? [{ text, lowercase: false }] : [];
   const out: TextSegment[] = [];
+  let pending = '';
   parts.forEach((part, index) => {
-    const isLast = index === parts.length - 1;
-    const head = isLast ? part : `${part}HCP`;
-    if (head) out.push({ text: head, lowercase: false });
-    if (!isLast) out.push({ text: 's', lowercase: true });
+    if (index % 2 === 0) {
+      pending += part;
+      return;
+    }
+    out.push({ text: `${pending}${part}`, lowercase: false }, { text: 's', lowercase: true });
+    pending = '';
   });
+  if (pending) out.push({ text: pending, lowercase: false });
   return out;
 };
 

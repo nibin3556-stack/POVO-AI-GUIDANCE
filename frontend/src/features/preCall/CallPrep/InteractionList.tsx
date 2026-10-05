@@ -27,7 +27,7 @@ const InteractionList = ({ participant, filter, onFilter }: InteractionListProps
   );
   return (
     <div className="mt-auto border-t border-dashed border-line pt-2 tall:pt-3">
-      <div className="mb-[5px] text-[11.2px] font-bold uppercase tracking-[.6px] text-ink3">{C.interactionsWith(participant.display_name)}</div>
+      <div className="mb-[5px] text-[11.2px] font-bold uppercase tracking-[.6px] text-[#0B5F5D]">{C.interactionsWith(participant.display_name)}</div>
       <div role="group" aria-label={C.interactionFilterAria} className="mb-2 flex flex-wrap gap-1.5 short:mb-1.5">
         {filters.map((f) => {
           const n = f === 'all' ? (counts.all ?? participant.interactions.length) : (counts[f] ?? 0);
@@ -56,8 +56,8 @@ const InteractionList = ({ participant, filter, onFilter }: InteractionListProps
           <div
             key={i.interaction_id}
             className={cx(
-              'flex min-w-0 flex-col items-start gap-[3px] overflow-hidden rounded-[9px] border border-line2 bg-white px-[9px] py-1.5 tall:px-[11px] tall:py-2',
-              i.is_new && 'border-2 border-green bg-[#EAF6EE] animate-green-glow',
+              'flex min-w-0 flex-col items-start gap-[3px] overflow-hidden rounded-[9px] border border-[#C9D6E3] bg-[#F7F9FC] px-[9px] py-1.5 tall:px-[11px] tall:py-2',
+              i.is_new && 'border-[1.5px] border-[#2E9E52]',
               active !== 'all' && index === 0 && 'border-blued shadow-[0_0_0_2px_rgba(17,80,136,.35)]',
             )}
           >

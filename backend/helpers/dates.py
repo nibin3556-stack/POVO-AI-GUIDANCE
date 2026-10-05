@@ -48,6 +48,23 @@ def pct(a: float, b: float) -> int:
     return js_round(a / b * 100) if b else 0
 
 
+def spread_lr(total: int, weights: list[float]) -> list[int]:
+    """POC spreadLR: split a whole number by weights with largest-remainder rounding.
+
+    The parts always add up to the total (segment shares to 100%, the patient
+    split to its card total).
+    """
+    s = sum(weights)
+    if total <= 0 or s <= 0:
+        return [0] * len(weights)
+    raw = [total * w / s for w in weights]
+    parts = [math.floor(x) for x in raw]
+    order = sorted(range(len(raw)), key=lambda i: (-(raw[i] - parts[i]), i))
+    for i in order[: total - sum(parts)]:
+        parts[i] += 1
+    return parts
+
+
 # --- holidays ---------------------------------------------------------------
 def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
     d = date(year, month, 1)
@@ -111,6 +128,36 @@ class WorkCalendar:
 
 def month_end(year: int, month: int) -> date:
     return date(year, month, calendar.monthrange(year, month)[1])
+
+
+# --- data window ------------------------------------------------------------
+#: The dashboard shows the current month plus this many months before it
+#: (today 10/05/2026 -> Jul 1 to Oct 5). The seeder uses the same rule.
+DATA_WINDOW_MONTHS = 3
+
+
+def add_months(year: int, month: int, n: int) -> tuple[int, int]:
+    k = year * 12 + month - 1 + n
+    return k // 12, k % 12 + 1
+
+
+def data_start(t: date) -> date:
+    """First day of the data window: the 1st of the month DATA_WINDOW_MONTHS before today's."""
+    y, m = add_months(t.year, t.month, -DATA_WINDOW_MONTHS)
+    return date(y, m, 1)
+
+
+def month_list(start: date, end: date) -> list[tuple[int, int]]:
+    """(year, month) from start's month to end's month, inclusive."""
+    out, ym = [], (start.year, start.month)
+    while ym <= (end.year, end.month):
+        out.append(ym)
+        ym = add_months(ym[0], ym[1], 1)
+    return out
+
+
+def month_label(ym: tuple[int, int]) -> str:
+    return MONS[ym[1] - 1]
 
 
 def fmt_mdy(d: date) -> str:

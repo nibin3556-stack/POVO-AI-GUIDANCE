@@ -8,8 +8,13 @@ import StatusChip from '../../../components/common/StatusChip';
 import { LABELS } from '../../../constants/labels';
 import { useAiReveal } from '../../../hooks/useAiReveal';
 import { useReference } from '../../../hooks/useReference';
+import { reinforceToggled } from '../../../redux/callSession/callSessionSlice';
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import type { CallPrep, Category } from '../../../types/models';
+import { reinforceScope } from '../../../utils/callPrep';
+import { cx } from '../../../utils/cx';
 import { formatMDY } from '../../../utils/format';
+import DeliveredList from './DeliveredList';
 import TalkingPointCard from './TalkingPointCard';
 
 interface PrepPanelProps {
@@ -25,6 +30,10 @@ interface PrepPanelProps {
 }
 
 const C = LABELS.callPrep;
+const EMPTY: string[] = [];
+
+/** The top 3 suggestions sit in a framed blue panel (same pattern as Delivered on earlier calls). */
+const FRAME = 'flex flex-col gap-2 overflow-hidden rounded-xl border-[2.5px] border-[#1B5E9E] bg-[#E6F0FA] px-2.5 pb-2.5 shadow-[0_6px_18px_rgba(16,60,110,.14)]';
 
 const RevisionBanner = ({ data }: { data: CallPrep }) =>
   data.banner ? (
@@ -45,12 +54,16 @@ const RevisionBanner = ({ data }: { data: CallPrep }) =>
  * triple, so the AI activity (steps, then points one by one) plays once per key.
  */
 const PrepPanel = ({ data, category, animate, skipSteps = false, onRevealed, renderHeader, controls }: PrepPanelProps) => {
+  const dispatch = useAppDispatch();
+  const scope = reinforceScope(data.participant_id, category);
+  const reinforced = useAppSelector((s) => s.callSession.reinforced[scope] ?? EMPTY);
   const handleDone = useCallback(() => onRevealed(), [onRevealed]);
+  const toggle = useCallback((pointId: string) => dispatch(reinforceToggled({ scope, pointId })), [dispatch, scope]);
   const { categoryLabel } = useReference();
   const reveal = useAiReveal(data.steps, data.points.length, animate, handleDone, skipSteps);
   const revised = data.is_revised;
   const pill = revised ? (
-    <StatusChip variant="purple" className="ml-2.5 animate-tag-glow border-purple2! bg-purple2! text-white!">
+    <StatusChip variant="purple" className="ml-2.5 border-purplebd! bg-purplet! text-[#4B3AA6]!">
       {C.revisedPill(formatMDY(data.revised_from_date))}
     </StatusChip>
   ) : null;
@@ -60,18 +73,23 @@ const PrepPanel = ({ data, category, animate, skipSteps = false, onRevealed, ren
       <div className="flex flex-1 flex-col gap-[9px] p-3 short:gap-[7px] tall:gap-3 tall:p-4">
         {controls}
         {revised && <RevisionBanner data={data} />}
-        <div className="flex flex-wrap items-center gap-[7px] text-[13.2px] font-medium text-ink2">
-          <Icon name="forum" className="text-[17.9px] text-teal" />
-          <b className="font-semibold text-blued">{data.heading}</b>
-        </div>
         {reveal.boxVisible && <AiActivityBox title={C.aiPreparing(categoryLabel(category))} steps={reveal.steps} fading={reveal.boxFading} />}
-        {!reveal.boxVisible && data.points.length === 0 && <EmptyState message={C.noPoints} />}
         {!reveal.boxVisible && (
-          <div className="point-rail relative flex flex-col gap-[7px] tall:gap-2.5">
-            {data.points.map((point, index) => (
-              <TalkingPointCard key={point.point_id} point={point} index={index} category={category} revised={revised} visible={index < reveal.visiblePoints} />
-            ))}
-          </div>
+          <section className={cx(FRAME)} aria-label={data.heading} data-testid="suggestions">
+            <div className="-mx-2.5 mb-0.5 flex items-center gap-1.5 bg-[#0E3E6E] px-3 py-[9px] text-[12.6px] font-bold uppercase tracking-[.7px] text-white">
+              <Icon name="forum" className="text-base text-white" />
+              {data.heading}
+            </div>
+            {data.points.length === 0 && <EmptyState message={C.noPoints} />}
+            <div className="flex flex-col gap-[7px] tall:gap-2">
+              {data.points.map((point, index) => (
+                <TalkingPointCard key={point.point_id} point={point} index={index} category={category} revised={revised} visible={index < reveal.visiblePoints} />
+              ))}
+            </div>
+          </section>
+        )}
+        {!reveal.boxVisible && reveal.visiblePoints >= data.points.length && (
+          <DeliveredList points={data.delivered} reinforced={reinforced} onToggle={toggle} />
         )}
       </div>
     </>

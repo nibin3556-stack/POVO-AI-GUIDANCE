@@ -10,7 +10,8 @@ extraClosings, peerMsg). Here the same choices come from the content tables:
   * objections: the REF_OBJECTION_RULE row that matches audience, segment,
     decile range and writer state with the LOWEST priority lists the ordered
     POINT_IDs; each text opens with the POC's rotating opener.
-  * extra closings and the peer message: `extra` / `peer` variant rows.
+  * the next-call pool: the `peer` message and the `pool` rows, which the
+    next-call ranking draws new messages from.
 
 Everything the templates need about the person is built once in
 `participant_context()`: display values plus the boolean flags the template
@@ -54,6 +55,7 @@ def person(u: Universe, hcp_id: str) -> Optional[dict]:
             "jak_patients": int(m.get("JAK_PATIENTS") or 0), "povo_patients": int(m.get("POVO_PATIENTS") or 0),
             "last_call_date": dates[-1] if dates else None, "parent_hcp_id": h.get("PARENT_HCP_ID"),
             "is_must_win": False, "_hs_rank": 0, "_visits": m.get("HS_VISITS_PER_MONTH"),
+            "pef": int(m.get("INCYTECARES_ENROLLED_PATIENTS") or 0),
             "_incyte": int(m.get("INCYTECARES_ENROLLED_PATIENTS") or 0), "_rep_dates": dates,
             "_discussions": u.discussions.get(hcp_id, 0)}
 
@@ -72,6 +74,7 @@ def participant_context(u: Universe, p: dict, primary: dict, call_date: date) ->
     focus = p.get("competitive_focus")
     values = {
         "display_name": p["display_name"], "physician_display_name": primary["display_name"],
+        "physician_possessive": possessive(primary["display_name"]),
         "account_name": p.get("account_name") or "", "hs_patients": p["hs_patients"],
         "hs_not_on_povo": max(0, p["hs_patients"] - p["povo_patients"]), "povo_patients": p["povo_patients"],
         "jak_patients": p["jak_patients"], "decile": p["decile"], "rank": p["_hs_rank"],
@@ -98,7 +101,14 @@ def participant_context(u: Universe, p: dict, primary: dict, call_date: date) ->
         flags.add("has_adfa_visit")
     if not p["last_call_date"]:
         flags.add("never_called")
+    if p.get("segment_code"):
+        flags.add(f"seg_{p['segment_code']}")
     return {"values": values, "flags": flags, "person": p, "primary": primary}
+
+
+def possessive(name: str) -> str:
+    """"Dr. Winters'" / "Dr. Berg's" (POC poss)."""
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
 
 
 def item(point_id: str, pillar, text, detail, **extra) -> dict:
@@ -151,6 +161,14 @@ def initial_points(lib: Library, category: str, ctx: dict) -> list[dict]:
         out.append(item(r["POINT_ID"], r.get("PILLAR") if category == "messaging" else None,
                         render(r["TEXT_TEMPLATE"], vals, flags), detail))
     return out
+
+
+def pool_points(lib: Library, ctx: dict) -> list[dict]:
+    """New messages the next-call ranking can add: the peer message, then the `pool` rows."""
+    role, vals, flags = ctx["person"]["role_type"], ctx["values"], ctx["flags"]
+    rows = variant_rows(lib, "messaging", "peer", role) + variant_rows(lib, "messaging", "pool", role)
+    return [item(r["POINT_ID"], r.get("PILLAR"), render(r["TEXT_TEMPLATE"], vals, flags),
+                 render(r.get("DETAIL_TEMPLATE"), vals, flags)) for r in rows]
 
 
 def next_call_text(lib: Library, point_id: str, ctx: dict, well_received: bool = False) -> Optional[str]:

@@ -1,4 +1,4 @@
-import type { Account, FilterGroup, RoleType, Participant, Target, TargetFilters, TargetSort } from '../types/models';
+import type { FilterGroup, RoleType, Participant, Target, TargetFilters, TargetSort } from '../types/models';
 
 /** "Dr. Winters, John, MD" for a physician, "Kristen Casey, PA" for an NP or PA. */
 export const targetFullName = (t: Pick<Target, 'role_type' | 'name' | 'display_name' | 'degree'>): string =>
@@ -30,19 +30,6 @@ export const filterParams = (filters: TargetFilters): Record<string, string> => 
   return out;
 };
 
-/** Client-side filter used for account sub-tables (in-plan targets that pass the active filters). */
-export const passesFilters = (t: Target, filters: TargetFilters): boolean => {
-  const has = (group: FilterGroup, value: string | null) => !filters[group].length || (value !== null && filters[group].includes(value));
-  return (
-    t.is_in_call_plan &&
-    has('focus', t.competitive_focus) &&
-    has('segment', t.segment_code) &&
-    has('tier', t.tier_code) &&
-    has('account', t.account_id) &&
-    has('role', t.role_type)
-  );
-};
-
 /** Empty list = every role shown. Returns the next "shown roles" list after toggling one role. */
 export const nextRoles = (current: string[], role: string, allRoles: readonly RoleType[]): string[] => {
   const shown: string[] = current.length ? current : [...allRoles];
@@ -50,10 +37,4 @@ export const nextRoles = (current: string[], role: string, allRoles: readonly Ro
   return next.length === allRoles.length ? [] : next;
 };
 
-
-/** Accounts are few per territory: fetched once, filtered by account and main focus on the client. */
-export const filterAccounts = (accounts: Account[], filters: TargetFilters): Account[] =>
-  accounts.filter(
-    (a) => (!filters.account.length || filters.account.includes(a.account_id)) && (!filters.focus.length || filters.focus.includes(a.main_focus)),
-  );
 

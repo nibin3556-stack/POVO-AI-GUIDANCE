@@ -11,7 +11,7 @@ interface TabBarProps {
 const TAB =
   'flex h-9 items-center justify-center rounded-[4px] border-[1.5px] px-4 text-center text-[14.5px] font-semibold no-underline transition-colors';
 const IDLE = 'border-line bg-[#F1F5F9] text-ink3 hover:border-bluet2 hover:bg-bluet hover:text-blued';
-const ACTIVE = 'border-blued bg-blue text-white';
+const ACTIVE = 'border-tabon bg-tabon text-white';
 
 const tabClass = ({ isActive }: { isActive: boolean }) => cx(TAB, isActive ? ACTIVE : IDLE);
 

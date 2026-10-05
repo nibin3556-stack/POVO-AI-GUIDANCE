@@ -2,17 +2,23 @@ import { memo } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { CHART_COLORS, COLORS } from '../../constants/colors';
 
+export interface ColumnSeries {
+  key: string;
+  color: string;
+}
+
+/** One column: a value per series key (flattened for recharts), its total and whether it is partial. */
 export interface ColumnDatum {
   label: string;
-  primary: number;
-  secondary: number;
+  values: Record<string, number>;
+  total: number;
   partial: boolean;
 }
 
 interface StackedColumnChartProps {
   data: ColumnDatum[];
-  primaryColor?: string;
-  secondaryColor?: string;
+  /** Bottom to top. */
+  series: ColumnSeries[];
   xAxisLabel: string;
   yAxisLabel: string;
   partialLabel: string;
@@ -59,33 +65,27 @@ const segmentLabel = (props: unknown) => {
   );
 };
 
-/** Stacked columns (JAK bottom, non-JAK top); the last, partial bar at 60% opacity labelled "to date". */
-const StackedColumnChart = ({
-  data,
-  primaryColor = CHART_COLORS.jak,
-  secondaryColor = CHART_COLORS.nonJak,
-  xAxisLabel,
-  yAxisLabel,
-  partialLabel,
-  onHover,
-  ariaLabel,
-}: StackedColumnChartProps) => {
+/** Stacked columns, one stack per series; the last, partial bar at 60% opacity labelled "to date". */
+const StackedColumnChart = ({ data, series, xAxisLabel, yAxisLabel, partialLabel, onHover, ariaLabel }: StackedColumnChartProps) => {
   const lastIndex = data.length - 1;
+  const rows = data.map((d) => ({ label: d.label, ...d.values }));
   const totalLabel = (props: unknown) => {
     const { x = 0, y = 0, width = 0, index = 0 } = props as { x?: number; y?: number; width?: number; index?: number };
     const d = data[index];
-    if (!d) return null;
+    if (!d || !d.total) return null;
     return (
       <text x={Number(x) + Number(width) / 2} y={Number(y) - 6} textAnchor="middle" fontSize={14} fontWeight={700} fill={COLORS.navy}>
-        {d.primary + d.secondary}
+        {d.total}
       </text>
     );
   };
+  // The total sits on the topmost non-empty segment of each column.
+  const topKey = (d: ColumnDatum) => [...series].reverse().find((s) => d.values[s.key])?.key;
   return (
     <div role="img" aria-label={ariaLabel} className="size-full min-h-[120px]">
       <ResponsiveContainer width="100%" height="100%" minHeight={120}>
         <BarChart
-          data={data}
+          data={rows}
           margin={{ top: 22, right: 10, bottom: 22, left: 14 }}
           onMouseMove={(state, event) => {
             const index = Number(state?.activeTooltipIndex);
@@ -113,19 +113,22 @@ const StackedColumnChart = ({
             width={40}
             label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', offset: -6, style: { textAnchor: 'middle' }, fontSize: 12.6, fontWeight: 600, fill: COLORS.blued }}
           />
-          <Bar dataKey="primary" stackId="writers" fill={primaryColor} maxBarSize={46} isAnimationActive animationDuration={700}>
-            {data.map((d) => (
-              <Cell key={`p-${d.label}`} fillOpacity={d.partial ? 0.6 : 1} />
-            ))}
-            <LabelList dataKey="primary" content={segmentLabel} />
-          </Bar>
-          <Bar dataKey="secondary" stackId="writers" fill={secondaryColor} radius={[3, 3, 0, 0]} maxBarSize={46} isAnimationActive animationDuration={700}>
-            {data.map((d) => (
-              <Cell key={`s-${d.label}`} fillOpacity={d.partial ? 0.6 : 1} />
-            ))}
-            <LabelList dataKey="secondary" content={segmentLabel} />
-            <LabelList dataKey="secondary" content={totalLabel} />
-          </Bar>
+          {series.map((s) => (
+            <Bar key={s.key} dataKey={s.key} stackId="writers" fill={s.color} maxBarSize={46} isAnimationActive animationDuration={700}>
+              {data.map((d) => (
+                <Cell key={`${s.key}-${d.label}`} fillOpacity={d.partial ? 0.6 : 1} />
+              ))}
+              <LabelList dataKey={s.key} content={segmentLabel} />
+              <LabelList
+                dataKey={s.key}
+                content={(props: unknown) => {
+                  const index = (props as { index?: number }).index ?? -1;
+                  const d = data[index];
+                  return d && topKey(d) === s.key ? totalLabel(props) : null;
+                }}
+              />
+            </Bar>
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>

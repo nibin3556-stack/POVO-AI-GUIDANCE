@@ -22,6 +22,7 @@ import pytest
 
 DATABRICKS = Path(__file__).resolve().parents[1]
 AS_OF = dt.date(2026, 10, 13)   # the POC demo date
+START = dt.date(2026, 7, 1)     # data window: the current month plus the three before it
 SEED = 42
 
 
@@ -144,20 +145,41 @@ def test_targets_per_territory_and_decile_split(data):
         by_t[r["TERRITORY_ID"]][int(r["DECILE"])] += 1
     assert len(by_t) == 8
     for tid, counts in by_t.items():
-        assert sum(counts.values()) == 142, tid
-        for dec, poc in zip(gen.DECILES, gen.POC_DECILE_TARGETS):
+        assert 1 not in counts, tid  # D1 is not part of the POVO target universe
+        assert 75 <= sum(counts.values()) <= 92, tid
+        for dec, poc in zip(gen.DECILES[:-1], gen.POC_DECILE_TARGETS[:-1]):
             assert abs(counts[dec] - poc) <= 0.15 * poc, (tid, dec, counts[dec], poc)
+    assert sum(by_t["NE-POR"].values()) == 83
+
+
+def test_no_d1_anywhere(data):
+    targets = {t["HCP_ID"] for t in data["DIM_CALL_PLAN_TARGET"]}
+    for table in ("DIM_HCP", "FCT_HCP_METRICS", "FCT_INTERACTION", "FCT_POVO_ACTIVITY"):
+        assert {r["HCP_ID"] for r in data[table]} <= targets, table
 
 
 def test_tiers_and_call_plan(data):
     for r in data["DIM_CALL_PLAN_TARGET"]:
         d = int(r["DECILE"])
-        expected = "SH" if d >= 7 else "MED" if d >= 5 else "LOW" if d >= 2 else ""
-        assert r["TIER_CODE"] == expected
-        assert r["IS_IN_CALL_PLAN"] == ("true" if d >= 2 else "false")
+        expected = "SH" if d >= 7 else "MED" if d >= 5 else "LOW"
+        assert r["TIER_CODE"] == expected and r["IS_IN_CALL_PLAN"] == "true"
         assert r["SEGMENT_CODE"] in ("imm", "conv", "exp")
         assert r["COMPETITIVE_FOCUS"] in ("cosentyx", "bimzelx", "humira", "jak", "conventional")
         assert int(r["PLAN_YEAR"]) == AS_OF.year
+
+
+def test_segments_are_three_exclusive_treatment_groups(data):
+    """Any JAK inhibitor use -> exp; else a biologic -> imm; else conventional therapy only -> conv."""
+    jak = {m["HCP_ID"]: int(m["JAK_PATIENTS"]) for m in data["FCT_HCP_METRICS"]}
+    spec = {h["HCP_ID"]: h["SPECIALTY"] for h in data["DIM_HCP"]}
+    for r in data["DIM_CALL_PLAN_TARGET"]:
+        seg, focus = r["SEGMENT_CODE"], r["COMPETITIVE_FOCUS"]
+        assert (jak[r["HCP_ID"]] > 0) == (seg == "exp") == (focus == "jak"), r
+        if seg == "imm":
+            assert focus in ("humira", "cosentyx", "bimzelx")
+        if seg == "conv":
+            assert focus == "conventional"
+        assert spec[r["HCP_ID"]] in ("Dermatology", "General Surgery")
 
 
 def test_hcp_foreign_keys(data):
@@ -193,7 +215,7 @@ def test_np_pa_have_physician_parent(data):
             children[h["PARENT_HCP_ID"]] += 1
     assert max(children.values()) <= 2
     per_t = Counter(h["TERRITORY_ID"] for h in hcps.values() if h["ROLE_TYPE"] == "HCP")
-    assert all(48 <= n <= 56 for n in per_t.values()), per_t
+    assert all(40 <= n <= 56 for n in per_t.values()), per_t
 
 
 def test_accounts_per_territory(data):
@@ -225,7 +247,7 @@ def test_hs_rank_orders_hs_volume(data):
         by_t[t["TERRITORY_ID"]].append(t)
     for tid, rows in by_t.items():
         rows.sort(key=lambda r: int(r["HS_RANK"]))
-        assert [int(r["HS_RANK"]) for r in rows] == list(range(1, 143)), tid
+        assert [int(r["HS_RANK"]) for r in rows] == list(range(1, len(rows) + 1)), tid
         vols = [hs[r["HCP_ID"]] for r in rows]
         assert vols == sorted(vols, reverse=True), tid
         decs = [int(r["DECILE"]) for r in rows]
@@ -262,7 +284,7 @@ def test_patient_funnel_order_and_opaque_keys(data):
             assert ev["PEF"][0] <= ev["NRX"][0] <= ev["NEW_PATIENT"][0]
 
 
-def test_writers_about_44_and_jak_share(data):
+def test_writers_about_24_and_jak_share(data):
     metrics = {m["HCP_ID"]: m for m in data["FCT_HCP_METRICS"]}
     by_t = defaultdict(list)
     for h in data["DIM_HCP"]:
@@ -270,30 +292,33 @@ def test_writers_about_44_and_jak_share(data):
     for tid, rows in by_t.items():
         writers = [m for m in rows if int(m["POVO_PATIENTS"]) > 0]
         jak = [m for m in writers if int(m["JAK_PATIENTS"]) > 0]
-        assert 34 <= len(writers) <= 54, (tid, len(writers))
+        assert 17 <= len(writers) <= 30, (tid, len(writers))
         assert 0.5 <= len(jak) / len(writers) <= 0.72, (tid, len(jak), len(writers))
 
 
-def test_new_writers_spread_through_the_year(data):
+def test_new_writers_spread_through_the_window(data):
     first = {}
+    new = Counter()
     for e in data["FCT_POVO_ACTIVITY"]:
         if e["EVENT_TYPE"] == "NEW_PATIENT" and e["TERRITORY_ID"] == "NE-POR":
             d = date(e["EVENT_DATE"])
             first[e["HCP_ID"]] = min(first.get(e["HCP_ID"], d), d)
+            new[d.month] += 1
     per_month = Counter(d.month for d in first.values())
-    assert all(per_month[m] >= 1 for m in range(1, AS_OF.month)), per_month
-    assert max(per_month.values()) <= 10
+    assert all(per_month[m] >= 1 for m in range(START.month, AS_OF.month)), per_month
+    # A new writer's first script is a new patient, so writers never exceed new patients in a month.
+    assert all(per_month[m] <= new[m] for m in per_month), (per_month, new)
 
 
-def test_goals_full_year_poc_shape(data):
+def test_goals_from_the_data_start_poc_shape(data):
     goals = defaultdict(dict)
     for g in data["FCT_TERRITORY_GOAL"]:
         goals[(g["TERRITORY_ID"], g["METRIC_CODE"])][int(g["GOAL_MONTH"])] = int(g["GOAL_VALUE"])
     assert len(goals) == 8 * 3
     por = goals[("NE-POR", "NEW_PATIENTS")]
-    assert [por[m] for m in range(1, 13)] == gen.POC_GOAL_SHAPE
+    assert [por[m] for m in range(7, 13)] == gen.POC_GOAL_SHAPE == [8, 12, 15, 17, 18, 19]
     for (tid, code), months in goals.items():
-        assert sorted(months) == list(range(1, 13))
+        assert sorted(months) == list(range(START.month, 13))
         if code != "NEW_PATIENTS":
             base = goals[(tid, "NEW_PATIENTS")]
             factor = 1.4 if code == "PEF" else 1.25
@@ -316,7 +341,7 @@ def test_some_territories_on_track_and_some_at_risk(data):
     frac = len(_working_days(month_start, AS_OF, holidays)) / len(_working_days(month_start, month_end, holidays))
     status = {}
     for tid, g in goal.items():
-        due = round(sum(g[m] for m in range(1, AS_OF.month)) + g[AS_OF.month] * frac)
+        due = round(sum(g[m] for m in range(START.month, AS_OF.month)) + g[AS_OF.month] * frac)
         actual = sum(1 for e in data["FCT_POVO_ACTIVITY"]
                      if e["TERRITORY_ID"] == tid and e["EVENT_TYPE"] == "NEW_PATIENT")
         status[tid] = actual >= due
@@ -324,11 +349,20 @@ def test_some_territories_on_track_and_some_at_risk(data):
 
 
 # ---- interactions ----------------------------------------------------------
-def test_no_future_dates(data):
+def test_dates_inside_the_data_window(data):
     for e in data["FCT_POVO_ACTIVITY"]:
-        assert dt.date(AS_OF.year, 1, 1) <= date(e["EVENT_DATE"]) <= AS_OF
+        assert START <= date(e["EVENT_DATE"]) <= AS_OF
     for i in data["FCT_INTERACTION"]:
-        assert dt.date(AS_OF.year, 1, 1) <= date(i["INTERACTION_DATE"]) <= AS_OF
+        assert START <= date(i["INTERACTION_DATE"]) <= AS_OF
+
+
+def test_pefs_per_target_add_up_and_writers_were_called(data):
+    pef_events = Counter(e["HCP_ID"] for e in data["FCT_POVO_ACTIVITY"] if e["EVENT_TYPE"] == "PEF")
+    called = {i["HCP_ID"] for i in data["FCT_INTERACTION"] if i["CHANNEL_CODE"] == "rep"}
+    for m in data["FCT_HCP_METRICS"]:
+        assert int(m["INCYTECARES_ENROLLED_PATIENTS"]) == pef_events.get(m["HCP_ID"], 0)
+        if int(m["POVO_PATIENTS"]) > 0:
+            assert m["HCP_ID"] in called, m["HCP_ID"]
 
 
 def test_interaction_channels(data):
@@ -374,13 +408,12 @@ def test_missed_opportunities_and_never_called(data):
         never = [t for t in rows if t["IS_IN_CALL_PLAN"] == "true" and t["HCP_ID"] not in last]
         assert len(stale) >= 2, tid
         assert len(never) >= 1, tid
-        assert all(t["HCP_ID"] not in last for t in rows if t["DECILE"] == "1"), tid
 
 
 def test_calls_follow_tier_rates_and_reach(data):
     holidays = {date(h["HOLIDAY_DATE"]) for h in data["REF_US_HOLIDAY"]}
     year = _working_days(dt.date(AS_OF.year, 1, 1), dt.date(AS_OF.year, 12, 31), holidays)
-    elapsed = sum(d <= AS_OF for d in year) / len(year)
+    elapsed = sum(START <= d <= AS_OF for d in year) / len(year)
     calls = Counter(i["HCP_ID"] for i in data["FCT_INTERACTION"] if i["CHANNEL_CODE"] == "rep")
     for code, _n, _lo, _hi, per_year, _goal, attain, reach in gen.TIERS:
         for tid in {t["TERRITORY_ID"] for t in data["DIM_TERRITORY"]}:
@@ -400,9 +433,11 @@ def test_reference_tables(data):
     assert {s["SEGMENT_CODE"] for s in data["REF_SEGMENT"]} == {"imm", "conv", "exp"}
     assert len(data["REF_COMPETITIVE_FOCUS"]) == 5
     assert all(s["ARCHETYPE_NAME"] for s in data["REF_SEGMENT"])
+    assert [s["SEGMENT_CODE"] for s in data["REF_SEGMENT"]] == ["imm", "exp", "conv"]
     kpi = {m["METRIC_CODE"]: m for m in data["REF_KPI_METRIC"]}
-    assert set(kpi) == {g["METRIC_CODE"] for g in data["FCT_TERRITORY_GOAL"]}
-    assert {m["EVENT_TYPE"] for m in kpi.values()} == {a["EVENT_TYPE"] for a in data["FCT_POVO_ACTIVITY"]}
+    assert list(kpi) == ["PEF", "NEW_PATIENTS"]
+    assert set(kpi) <= {g["METRIC_CODE"] for g in data["FCT_TERRITORY_GOAL"]}
+    assert {m["EVENT_TYPE"] for m in kpi.values()} <= {a["EVENT_TYPE"] for a in data["FCT_POVO_ACTIVITY"]}
     channels = {c["CHANNEL_CODE"] for c in data["REF_INTERACTION_CHANNEL"]}
     assert {i["CHANNEL_CODE"] for i in data["FCT_INTERACTION"]} <= channels
     years = {date(h["HOLIDAY_DATE"]).year for h in data["REF_US_HOLIDAY"]}
@@ -415,11 +450,14 @@ def test_reference_tables(data):
 def test_other_as_of_dates(tmp_path, as_of):
     gen.generate(tmp_path, as_of, SEED, content_dir=tmp_path / "none")
     targets = read(tmp_path, "DIM_CALL_PLAN_TARGET")
-    assert len(targets) == 8 * 142
+    assert 8 * 75 <= len(targets) <= 8 * 92 and all(int(t["DECILE"]) >= 2 for t in targets)
+    start = gen.data_start(as_of)
     for e in read(tmp_path, "FCT_POVO_ACTIVITY"):
-        assert date(e["EVENT_DATE"]) <= as_of
+        assert start <= date(e["EVENT_DATE"]) <= as_of
     for i in read(tmp_path, "FCT_INTERACTION"):
-        assert date(i["INTERACTION_DATE"]) <= as_of
+        assert start <= date(i["INTERACTION_DATE"]) <= as_of
+    goal_months = {(int(g["GOAL_YEAR"]), int(g["GOAL_MONTH"])) for g in read(tmp_path, "FCT_TERRITORY_GOAL")}
+    assert min(goal_months) == (start.year, start.month) and max(goal_months) == (as_of.year, 12)
     new = Counter(e["HCP_ID"] for e in read(tmp_path, "FCT_POVO_ACTIVITY") if e["EVENT_TYPE"] == "NEW_PATIENT")
     for m in read(tmp_path, "FCT_HCP_METRICS"):
         assert int(m["POVO_PATIENTS"]) == new.get(m["HCP_ID"], 0)

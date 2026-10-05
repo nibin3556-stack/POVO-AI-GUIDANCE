@@ -6,7 +6,7 @@ export interface DataColumn<T> {
   key: string;
   header: string;
   render: (row: T) => ReactNode;
-  align?: 'left' | 'right';
+  align?: 'left' | 'center' | 'right';
   /** Percentage width, e.g. "18%". */
   width?: string;
   sortable?: boolean;
@@ -35,15 +35,19 @@ interface DataTableProps<T> {
   renderExpanded?: (row: T) => ReactNode;
   compact?: boolean;
   ariaLabel: string;
+  /** Extra classes per row (e.g. the flash after a submitted assessment). */
+  rowClassName?: (row: T) => string | undefined;
 }
+
+const ALIGN = { left: 'text-left', center: 'text-center', right: 'text-right' } as const;
 
 const sortGlyph = (active: boolean, direction: 'asc' | 'desc'): string => (active ? (direction === 'desc' ? '▼' : '▲') : '↕');
 
 const HeaderCell = <T,>({ column, sort, onSort, sortLabel }: { column: DataColumn<T> } & Pick<DataTableProps<T>, 'sort' | 'onSort' | 'sortLabel'>) => {
   const active = sort?.key === column.key;
   const base = cx(
-    'sticky top-0 z-[2] border-b border-bluet2 bg-[#EEF4FA] px-[7px] py-2 align-bottom text-[11.8px] font-bold uppercase leading-tight tracking-[.5px] text-blued tall:py-2.5 short:py-1.5',
-    column.align === 'right' ? 'text-right' : 'text-left',
+    'sticky top-0 z-[2] border-b-[1.5px] border-[#9EC2E4] bg-[#DCE9F6] px-[7px] py-2 align-bottom text-[11.8px] font-bold uppercase leading-tight tracking-[.5px] text-navyd tall:py-2.5 short:py-1.5',
+    ALIGN[column.align ?? 'left'],
   );
   if (!column.sortable || !onSort) {
     return (
@@ -54,10 +58,10 @@ const HeaderCell = <T,>({ column, sort, onSort, sortLabel }: { column: DataColum
     );
   }
   return (
-    <th scope="col" className={cx(base, 'cursor-pointer select-none hover:bg-bluet', active && 'text-blue')} aria-sort={active ? (sort.direction === 'desc' ? 'descending' : 'ascending') : 'none'}>
+    <th scope="col" className={cx(base, 'cursor-pointer select-none hover:bg-bluet', active && 'text-navyd')} aria-sort={active ? (sort.direction === 'desc' ? 'descending' : 'ascending') : 'none'}>
       <button type="button" onClick={() => onSort(column.key)} title={sortLabel?.(column.header)} className="uppercase tracking-[.5px]">
         <HcpsText text={column.header} />
-        <i className="ml-[3px] text-[11px] not-italic text-blue">{sortGlyph(active, sort?.direction ?? 'desc')}</i>
+        <i className="ml-[3px] text-[11px] not-italic text-navyd">{sortGlyph(active, sort?.direction ?? 'desc')}</i>
       </button>
     </th>
   );
@@ -65,7 +69,7 @@ const HeaderCell = <T,>({ column, sort, onSort, sortLabel }: { column: DataColum
 
 /** Table in the POC `.rtbl` style: sticky header, sortable columns, row selection, optional expansion. */
 function DataTable<T>(props: DataTableProps<T>) {
-  const { columns, rows, getRowKey, onRowClick, selectedKey, emptyMessage, expandedKey, renderExpanded, compact, ariaLabel } = props;
+  const { columns, rows, getRowKey, onRowClick, selectedKey, emptyMessage, expandedKey, renderExpanded, compact, ariaLabel, rowClassName } = props;
   return (
     <table className="w-full table-fixed border-collapse" aria-label={ariaLabel}>
       <colgroup>
@@ -98,11 +102,13 @@ function DataTable<T>(props: DataTableProps<T>) {
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 aria-selected={onRowClick ? selected : undefined}
                 className={cx(
-                  'transition-colors even:bg-[#F7F9FC] hover:bg-bluet',
+                  'transition-colors even:bg-[#F3F8FD] hover:bg-[#E3EFFA]',
                   onRowClick && 'cursor-pointer',
-                  selected && 'bg-[#E3EFFA]! shadow-[inset_4px_0_0_var(--color-blue)]',
+                  selected && 'bg-[#D3E6F8]! shadow-[inset_4px_0_0_#1B6FBF]',
                   expanded && 'bg-[#E3EFFA]!',
+                  rowClassName?.(row),
                 )}
+                data-row-key={key}
               >
                 {columns.map((c) => (
                   <td
@@ -111,7 +117,7 @@ function DataTable<T>(props: DataTableProps<T>) {
                     className={cx(
                       'overflow-hidden text-ellipsis whitespace-nowrap border-b border-line2 px-[7px] text-[13px] font-medium text-ink2',
                       compact ? 'py-1.5' : 'py-[7px] tall:py-[9px] short:py-[5px]',
-                      c.align === 'right' && 'text-right',
+                      ALIGN[c.align ?? 'left'],
                       c.cellClassName,
                     )}
                   >

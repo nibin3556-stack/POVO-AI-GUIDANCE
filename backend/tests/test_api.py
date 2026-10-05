@@ -3,6 +3,8 @@ import uuid
 
 import pytest
 
+from helpers.dates import js_round
+
 from tests.conftest import DATA_SOURCE, SERVICE_TOKEN, ident, seed_rows
 
 ENVELOPE = {"data", "status", "message", "page", "limit", "total_pages", "total_items"}
@@ -103,22 +105,41 @@ def test_manager_impersonates_and_scope_follows(client, manager, rep, other_rep)
 
 # --- performance ------------------------------------------------------------
 def test_kpis_shape_and_consistency(client):
-    for period, label in (("month", "October"), ("quarter", "Oct – Dec"), ("ytd", "Jan – Dec")):
+    for period, label in (("month", "October"), ("quarter", "Oct – Dec"), ("ytd", "Jul – Dec")):
         d = _data(client.get(f"/api/v1/performance/kpis?period={period}"))
-        assert d["period_label"] == label
-        assert [c["metric_code"] for c in d["cards"]] == ["PEF", "NRX", "NEW_PATIENTS"]
+        assert d["period_label"] == label and d["data_start"] == "2026-07-01"
+        assert [c["metric_code"] for c in d["cards"]] == ["PEF", "NEW_PATIENTS"]
         for c in d["cards"]:
             assert c["yet_to_achieve"] == max(0, c["goal"] - c["achieved"])
             assert c["status"] == ("on_track" if c["achieved"] >= c["due_to_date"] else "at_risk")
+        split = d["cards"][1]["split"]
+        assert split["total"] == split["paid"] + split["bridge"] + split["free_trial"]
+        assert split["paid"] == split["new_patients"] + split["continuing_patients"]
+        assert split["paid_pct"] + split["bridge_pct"] + split["free_trial_pct"] == 100
+        assert split["new_patients"] == d["cards"][1]["achieved"]
     assert _data(client.get("/api/v1/performance/kpis?period=month"))["remaining_working_days"] == 13
     assert client.get("/api/v1/performance/kpis?period=week").status_code == 422
 
 
-def test_ytd_new_patients_match_activity(client):
+def test_ytd_counts_the_data_window_only(client):
     d = _data(client.get("/api/v1/performance/kpis?period=ytd"))
-    n = sum(1 for a in seed_rows("FCT_POVO_ACTIVITY") if a["TERRITORY_ID"] == "NE-POR"
-            and a["EVENT_TYPE"] == "NEW_PATIENT" and "2026-01-01" <= a["EVENT_DATE"] <= "2026-10-13")
-    assert d["cards"][2]["achieved"] == n
+    rows = [a for a in seed_rows("FCT_POVO_ACTIVITY") if a["TERRITORY_ID"] == "NE-POR"]
+    assert all(a["EVENT_DATE"] >= "2026-07-01" for a in rows)
+    n = sum(1 for a in rows if a["EVENT_TYPE"] == "NEW_PATIENT" and a["EVENT_DATE"] <= "2026-10-13")
+    pefs = sum(1 for a in rows if a["EVENT_TYPE"] == "PEF" and a["EVENT_DATE"] <= "2026-10-13")
+    assert d["cards"][1]["achieved"] == n and d["cards"][0]["achieved"] == pefs >= n
+    assert d["cards"][1]["split"]["continuing_patients"] == 0  # Year to Date starts at the data start
+    q = _data(client.get("/api/v1/performance/kpis?period=quarter"))
+    assert d["cards"][1]["goal"] >= q["cards"][1]["goal"]
+
+
+def test_pefs_per_target_add_up_to_the_pef_card(client):
+    d = _data(client.get("/api/v1/performance/kpis?period=ytd"))
+    targets = _data(client.get("/api/v1/targets?limit=200"))
+    mw = _data(client.get("/api/v1/targets/must-wins"))
+    every = {t["hcp_id"]: t for t in targets + mw["hs_volume"] + mw["hs_jak"]}
+    assert all(t["pef"] >= t["povo_patients"] for t in every.values())
+    assert sum(t["pef"] for t in every.values()) == d["cards"][0]["achieved"]
 
 
 def test_guidance(client):
@@ -132,14 +153,32 @@ def test_guidance(client):
 def test_segmentation_deciles_writers(client):
     s = _data(client.get("/api/v1/performance/segmentation"))
     assert s["total_targets"] == sum(x["hcp_count"] for x in s["segments"])
+    assert [x["segment_code"] for x in s["segments"]] == ["imm", "exp", "conv"]
+    assert sum(x["pct"] for x in s["segments"]) == 100
+    for x in s["segments"]:
+        f = x["funnel"]
+        assert x["hcp_count"] >= f["reached"] >= f["writers"] >= f["adopters"]
+        assert x["penetration_pct"] == js_round(f["povo_patients"] / f["hs_patients"] * 100)
+    writers = sum(x["funnel"]["writers"] for x in s["segments"])
+    assert writers == s["total_targets"] - s["not_writing"]
+
     dz = _data(client.get("/api/v1/performance/deciles"))
     assert [r["decile"] for r in dz["rows"]] == list(range(10, 1, -1))
     assert [t["tier_code"] for t in dz["tiers"]] == ["SH", "MED", "LOW"]
+    assert sum(r["targets"] for r in dz["rows"]) == s["total_targets"]
+    for r in dz["rows"]:
+        assert r["reached"] >= r["writers"]  # a new POVO writer has always been called
+        tier = next(t for t in dz["tiers"] if t["tier_code"] == r["tier_code"])
+        assert r["frequency_goal"] == tier["frequency_goal"] and r["reach_goal_pct"] == tier["reach_goal_pct"]
+        assert r["avg_frequency"] is None or r["avg_frequency"] == js_round(r["calls"] / r["reached"] * 10) / 10
+
     m = _data(client.get("/api/v1/performance/new-writers?grain=month"))
-    assert len(m["buckets"]) == 10 and m["buckets"][-1]["is_partial"] and m["range_label"] == "Jan–Oct 2026"
+    assert [b["label"] for b in m["buckets"]] == ["Jul", "Aug", "Sep", "Oct"] and m["buckets"][-1]["is_partial"]
+    assert m["range_label"] == "Jul 1 – Oct 13, 2026" and m["segment_codes"] == ["imm", "exp", "conv"]
+    assert m["total"] == writers == sum(sum(b["segments"].values()) for b in m["buckets"])
     w = _data(client.get("/api/v1/performance/new-writers?grain=week"))
-    assert len(w["buckets"]) == 12 and w["buckets"][-1]["end_date"] == "2026-10-13"
-    assert w["x_axis_label"] == "Week ending Friday, 2026"
+    assert len(w["buckets"]) == 6 and w["buckets"][-1]["end_date"] == "2026-10-13"
+    assert w["x_axis_label"] == "Week ending Friday, 2026" and w["range_label"].startswith("last 6 weeks, ")
 
 
 # --- targets and accounts -----------------------------------------------------
@@ -149,11 +188,13 @@ def test_targets_pagination_sort_filters(client):
     assert body["page"] == 1 and body["limit"] == 5 and len(body["data"]) == 5 and body["total_items"] > 5
     hs = [t["hs_patients"] for t in body["data"]]
     assert hs == sorted(hs, reverse=True)
-    assert all(t["is_in_call_plan"] and not t["is_must_win"] for t in body["data"])
+    assert all(t["is_in_call_plan"] and not t["is_must_win"] and t["decile"] >= 2 for t in body["data"])
     assert client.get("/api/v1/targets?limit=201").status_code == 422
     assert client.get("/api/v1/targets?sort=npi:asc").status_code == 422
     asc = _data(client.get("/api/v1/targets?sort=decile:asc&limit=200"))
-    assert [t["decile"] for t in asc] == sorted(t["decile"] for t in asc)
+    assert [t["decile"] for t in asc] == sorted(t["decile"] for t in asc) and asc[0]["decile"] == 2
+    pef = [t["pef"] for t in _data(client.get("/api/v1/targets?sort=pef:desc&limit=200"))]
+    assert pef == sorted(pef, reverse=True)
     pa = _data(client.get("/api/v1/targets?role=PA&limit=200"))
     assert pa and all(t["role_type"] == "PA" for t in pa)
     facets = _data(client.get("/api/v1/targets/facets"))
@@ -200,6 +241,7 @@ def test_profile_np_pa_resolves_to_physician(client, target_with_pa):
     assert d["primary_hcp_id"] == phys and d["preselected_participant_ids"] == [phys, pa]
     p0 = d["participants"][0]
     assert p0["is_primary"] and len(p0["bullets"]) == 5 and p0["bullets"][0].startswith("Decile D")
+    assert p0["segment_code"] in ("imm", "exp", "conv") and "Opportunity" not in p0["bullets"][1]
     assert p0["interaction_counts"]["all"] == len(p0["interactions"])
     pa_p = next(p for p in d["participants"] if p["hcp_id"] == pa)
     assert pa_p["bullets"][2] == "Handles prior authorizations for new HS starts"
@@ -210,13 +252,18 @@ def test_call_prep_rules(client, target_with_pa):
     for cat, label in (("messaging", "Insight"), ("objection", "Response"), ("closing", None)):
         d = _data(client.post("/api/v1/call-prep", json={"hcp_id": phys, "participant_id": phys, "category": cat}))
         assert d["source"] == "rules" and not d["is_revised"] and len(d["points"]) == 3 and len(d["steps"]) == 3
+        assert d["delivered"] == []
         assert all("{" not in p["text"] for p in d["points"])
         assert all(p["detail_label"] == label for p in d["points"])
     obj = _data(client.post("/api/v1/call-prep", json={"hcp_id": phys, "participant_id": phys, "category": "objection"}))
     assert obj["points"][0]["text"].startswith("Expect Dr. ")
     assert obj["points"][2]["text"].startswith("Be advised that Dr. ")
     pa_msg = _data(client.post("/api/v1/call-prep", json={"hcp_id": phys, "participant_id": pa, "category": "messaging"}))
-    assert pa_msg["heading"].endswith("(PA)") and [p["pillar"] for p in pa_msg["points"]] == ["Efficacy", "Safety", "Access"]
+    segments = {s["code"]: s["short_name"] for s in _data(client.get("/api/v1/reference"))["segments"]}
+    pa_seg = next(p for p in _data(client.get(f"/api/v1/targets/{pa}/profile"))["participants"]
+                  if p["hcp_id"] == pa)["segment_code"]
+    assert pa_msg["heading"].endswith("(PA)")
+    assert [p["pillar"] for p in pa_msg["points"]] == ["Efficacy", "Safety", segments[pa_seg]]
 
 
 def test_full_call_loop(client, target_with_pa, other_rep):
@@ -271,32 +318,58 @@ def test_full_call_loop(client, target_with_pa, other_rep):
     assert r.json()["data"]["flags"] == [{"participant_id": phys, "category": "objection",
                                           "point_id": o[1]["point_id"], "chip": "Adverse event"}]
 
-    # Fix the note: still open.
+    # Fix the note: still open. Add a compliant Additional Note (it carries into the next pre-call plan).
     items[2]["note"] = "Still concerned about JAK safety for HS patients with risk factors"
-    _data(client.put(f"/api/v1/calls/{cid}/assessments", json={"items": [items[2]]}))
+    note = "Office asked for HSTruths.com patient resources; follow-up visit planned in 2 weeks"
+    extra = {"participant_id": phys, "category": "additional", "point_id": "additional", "point_rank": 0,
+             "point_text": "", "was_raised": False, "reception": None, "note": note}
+    _data(client.put(f"/api/v1/calls/{cid}/assessments", json={"items": [items[2], extra]}))
+    assert _data(client.post("/api/v1/compliance/check", json={
+        "call_id": cid, "participant_id": phys, "category": "additional", "point_id": "additional",
+        "point_text": "", "note": note}))["status"] == "passed"
     done = _data(client.post(f"/api/v1/calls/{cid}/next-call"))
     assert done["revision_no"] == 1 and done["source"] == "rules" and len(done["steps"]) == 3
     assert [p["participant_id"] for p in done["participants"]] == [phys]  # the PA answered nothing
-    assert "clear the open objection first" in done["participants"][0]["next_best_action"]
+    assert "answer the open objection" in done["participants"][0]["next_best_action"]
 
     rev_m = _data(client.post("/api/v1/call-prep", json={"hcp_id": phys, "participant_id": phys,
                                                           "category": "messaging"}))
     assert rev_m["is_revised"] and rev_m["revision_no"] == 1 and rev_m["revised_from_date"] == "2026-10-13"
-    assert rev_m["heading"].startswith("Next-call Suggested Messaging")
-    assert rev_m["points"][0]["point_id"] == "MSG_PEER" and rev_m["banner"]["summary"]
+    assert rev_m["heading"].startswith("Next-call Suggested Messaging") and len(rev_m["points"]) == 3
+    assert rev_m["points"][0]["point_id"] == f"{m[0]['point_id']}~F"
+    assert rev_m["points"][0]["tags"] == ["Builds on well received"]
+    assert rev_m["banner"]["summary"].startswith("2 delivered · 1 well received")
+    assert [(x["point_id"], x["label"]) for x in rev_m["delivered"]] == [
+        (m[0]["point_id"], "Well Received"), (m[2]["point_id"], "Not Well Received")]
+    assert all(x["delivered_date"] == "2026-10-13" for x in rev_m["delivered"])
     rev_o = _data(client.post("/api/v1/call-prep", json={"hcp_id": phys, "participant_id": phys,
                                                           "category": "objection"}))
-    assert rev_o["points"][0]["point_id"] == o[1]["point_id"]
-    assert rev_o["points"][0]["tags"][0] == "Still open · address first"
+    assert rev_o["points"][0]["point_id"] == o[0]["point_id"]
+    assert [(x["point_id"], x["label"], x["is_open"]) for x in rev_o["delivered"]] == [
+        (o[1]["point_id"], "Still Open", True)]
 
     prof = _data(client.get(f"/api/v1/targets/{phys}/profile"))["participants"][0]
     assert prof["stats"]["last_call_date"] == "2026-10-13"
     assert prof["interactions"][0]["is_new"] and prof["interactions"][0]["summary"] == "Call assessed"
-    assert prof["bullets"][4].startswith("Post-call 10/13/2026: 1 of 3 messages well received")
+    assert prof["bullets"][4].startswith("Post-call 10/13/2026: 1 of 2 messages well received")
+    assert prof["bullets"][5] == f"Last call note (Oct 13, 2026): {note}"
 
     assert client.post(f"/api/v1/calls/{cid}/next-call").status_code == 409  # already assessed
     assert client.put(f"/api/v1/calls/{cid}/assessments", json={"items": [items[0]]}).status_code == 409
     assert _data(client.get(f"/api/v1/calls/active?hcp_id={phys}")) is None
+
+    # Second call: the rep reinforces the delivered Efficacy message.
+    second = _data(client.post("/api/v1/calls", json={"hcp_id": phys, "participant_ids": []}))
+    assert second["call_id"] != cid
+    reinforce = {"participant_id": phys, "category": "messaging", "point_id": m[0]["point_id"], "point_rank": 4,
+                 "point_text": m[0]["text"], "was_raised": True, "reception": 1,
+                 "note": "HCP asked for the lesion and pain data again"}
+    _data(client.put(f"/api/v1/calls/{second['call_id']}/assessments", json={"items": [reinforce]}))
+    assert _data(client.post(f"/api/v1/calls/{second['call_id']}/next-call"))["revision_no"] == 2
+    again = _data(client.post("/api/v1/call-prep", json={"hcp_id": phys, "participant_id": phys,
+                                                          "category": "messaging"}))
+    eff = next(x for x in again["delivered"] if x["point_id"] == m[0]["point_id"])
+    assert eff["label"] == "Reinforced · Moderately Received" and eff["reception"] == 1
 
 
 def test_compliance_check_without_call(client, target_with_pa):
@@ -331,11 +404,26 @@ def test_reference_lookups(client):
     assert d["compliance"]["steps"][1] == "Checking against 14 compliance rules"
     assert d["limits"] == {"points_per_category": 3, "note_max_length": 200, "additional_note_max_length": 600}
     assert {c["code"] for c in d["interaction_channels"]} == {"rep", "adfa", "opz", "msl", "spkr", "pr"}
-    assert [m["title"] for m in d["kpi_metrics"]] == ["Patient Enrollment Forms", "NRx", "New POVO Patients"]
+    assert [m["title"] for m in d["kpi_metrics"]] == ["Patient Enrollment Forms", "Total Patients Receiving POVO"]
+    assert [s["code"] for s in d["segments"]] == ["imm", "exp", "conv"]
+    assert d["segments"][1]["full_name"] == "Advanced Biologics plus JAK Inhibitors"
+    assert set(d["example_notes"]) == {"messaging", "objection", "closing", "additional"}
+    assert all(len(v) == 3 for v in d["example_notes"].values())
     assert d["prep_steps"]["messaging"][0] == "Analyzing {possessive} profile, decile and HS volume"
 
 
 def test_kpi_cards_follow_ref_kpi_metric(client):
     d = _data(client.get("/api/v1/performance/kpis?period=month"))
-    assert [(c["metric_code"], c["unit"]) for c in d["cards"]] == [("PEF", "PEFs"), ("NRX", "new scripts"),
-                                                                  ("NEW_PATIENTS", "patients")]
+    assert [(c["metric_code"], c["unit"]) for c in d["cards"]] == [("PEF", "PEFs"), ("NEW_PATIENTS", "new patients")]
+
+
+def test_example_notes_pass_the_compliance_check(client, target_with_pa):
+    phys, _ = target_with_pa
+    ref = _data(client.get("/api/v1/reference"))["example_notes"]
+    for cat, notes in ref.items():
+        for text in notes:
+            note = text.format(who="HCP")
+            d = _data(client.post("/api/v1/compliance/check", json={
+                "participant_id": phys, "category": cat, "point_id": "additional" if cat == "additional" else "X",
+                "point_text": "HiSCR50 primary endpoint met at Week 12 for POVO in HS", "note": note}))
+            assert d["status"] == "passed", (cat, note, d["issues"])

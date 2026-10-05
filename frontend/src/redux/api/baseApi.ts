@@ -5,7 +5,6 @@ export const TAGS = {
   ME: 'Me',
   PERFORMANCE: 'Performance',
   TARGETS: 'Targets',
-  ACCOUNTS: 'Accounts',
   PROFILE: 'Profile',
   CALL_PREP: 'CallPrep',
   CALL: 'Call',

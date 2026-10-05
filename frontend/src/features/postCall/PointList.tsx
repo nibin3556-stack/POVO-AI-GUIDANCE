@@ -1,5 +1,5 @@
 import { useFormikContext } from 'formik';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import AsyncContent from '../../components/common/AsyncContent';
 import { LABELS } from '../../constants/labels';
 import { useReference } from '../../hooks/useReference';
@@ -8,6 +8,7 @@ import { pointOpened } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import type { Category, Participant } from '../../types/models';
 import { itemKey, type AssessmentFormValues } from '../../utils/assessment';
+import { reinforceScope } from '../../utils/callPrep';
 import { useAssessment } from './AssessmentContext';
 import PointRow from './PointRow';
 
@@ -19,7 +20,12 @@ interface PointListProps {
 const pointContext = (categoryLabel: string, index: number, name: string): string =>
   LABELS.postCall.pointContext(categoryLabel, index + 1, name);
 
-/** The (top 3) points shown in prep for this participant × category, as assessment rows. */
+const EMPTY: string[] = [];
+
+/**
+ * The top 3 points shown in prep for this participant × category, then any
+ * delivered point the rep marked Reinforce, as assessment rows.
+ */
 const PointList = ({ participant, category }: PointListProps) => {
   const dispatch = useAppDispatch();
   const ref = useReference();
@@ -29,7 +35,14 @@ const PointList = ({ participant, category }: PointListProps) => {
   const scope = `${participant.hcp_id}|${category}`;
   const openId = useAppSelector((s) => s.callSession.openPoints[scope] ?? null);
   const prep = useGetCallPrepQuery({ hcp_id: primaryId, participant_id: participant.hcp_id, category });
-  const points = (prep.data?.points ?? []).slice(0, ref.data.limits.points_per_category);
+  const reinforced = useAppSelector((s) => s.callSession.reinforced[reinforceScope(participant.hcp_id, category)] ?? EMPTY);
+  const limit = ref.data.limits.points_per_category;
+  const points = useMemo(() => {
+    const top = (prep.data?.points ?? []).slice(0, limit);
+    const again = (prep.data?.delivered ?? []).filter((p) => reinforced.includes(p.point_id)).map((p, i) => ({ ...p, rank: limit + i + 1 }));
+    return [...top, ...again];
+  }, [limit, prep.data, reinforced]);
+  const reinforcedIds = useMemo(() => new Set(reinforced), [reinforced]);
 
   const handleOpen = useCallback(
     (pointId: string | null) => {
@@ -60,6 +73,8 @@ const PointList = ({ participant, category }: PointListProps) => {
             open={openId === point.point_id}
             context={pointContext(categoryLabel, index, participant.display_name)}
             onOpenChange={handleOpen}
+            role={participant.role_type}
+            reinforced={reinforcedIds.has(point.point_id)}
           />
         ))}
       </div>

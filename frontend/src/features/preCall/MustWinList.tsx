@@ -16,6 +16,7 @@ interface MustWinListProps {
   showJak: boolean;
   selectedId: string | null;
   onSelect: (hcpId: string) => void;
+  flashId: string | null;
 }
 
 const L = LABELS.preCall;
@@ -33,13 +34,28 @@ const TipBody = ({ t }: { t: Target }) => (
   </span>
 );
 
-const Row = memo(({ t, index, showJak, selected, onSelect }: { t: Target; index: number; showJak: boolean; selected: boolean; onSelect: (id: string) => void }) => (
+interface RowProps {
+  t: Target;
+  index: number;
+  showJak: boolean;
+  selected: boolean;
+  flash: boolean;
+  onSelect: (id: string) => void;
+}
+
+const Row = memo(({ t, index, showJak, selected, flash, onSelect }: RowProps) => (
   <Tooltip title={<TipBody t={t} />} placement="right" enterDelay={200} disableInteractive>
     <button
       type="button"
       aria-pressed={selected}
       onClick={() => onSelect(t.hcp_id)}
-      className={cx(GRID, '-mx-1 rounded-md px-1 py-px text-left transition-colors hover:bg-[#F2F7FC]', selected && 'bg-[#E3EFFA] shadow-[inset_3px_0_0_var(--color-blue)]')}
+      data-row-key={t.hcp_id}
+      className={cx(
+        GRID,
+        '-mx-1 rounded-md px-1 py-px text-left transition-colors hover:bg-[#F2F7FC]',
+        selected && 'bg-[#D3E6F8] shadow-[inset_3px_0_0_#1B6FBF]',
+        flash && 'relative z-[1] animate-just-done',
+      )}
     >
       <span className="min-w-0 text-[13.4px]">
         <TargetName target={t} selected={selected} index={index} />
@@ -54,7 +70,7 @@ const Row = memo(({ t, index, showJak, selected, onSelect }: { t: Target; index:
         {t.hs_patients}
         {showJak && <span className="whitespace-nowrap text-[11.6px] font-semibold text-purple2">{L.jakCount(t.jak_patients)}</span>}
       </span>
-      <span className="flex justify-end whitespace-nowrap text-[12.2px] font-semibold text-ink2">
+      <span className="flex justify-center whitespace-nowrap text-[12.2px] font-semibold text-ink2">
         <LastCallCell date={t.last_call_date} />
       </span>
     </button>
@@ -63,20 +79,20 @@ const Row = memo(({ t, index, showJak, selected, onSelect }: { t: Target; index:
 Row.displayName = 'MustWinRow';
 
 /** One Must-Wins list: top 5 with competitive focus, decile, HS patients and last call. */
-const MustWinList = ({ title, targets, showJak, selectedId, onSelect }: MustWinListProps) => (
+const MustWinList = ({ title, targets, showJak, selectedId, onSelect, flashId }: MustWinListProps) => (
   <div className="flex min-w-0 flex-1 flex-col rounded-xl border border-line bg-white px-[13px] pb-2.5 pt-[9px] tall:px-4 tall:pb-3.5 tall:pt-3">
-    <div className="text-[15.2px] font-semibold text-blued">{title}</div>
+    <div className="text-[15.2px] font-bold text-navyd">{title}</div>
     <div className={cx(GRID, 'mt-2 mb-[-4px]')}>
       <span />
       <span className={HEAD}>{L.competitiveFocus}</span>
       <span className={cx(HEAD, 'text-center')}>{L.decile}</span>
       <span className={cx(HEAD, 'text-center')}>{L.hsPatients}</span>
-      <span className={cx(HEAD, 'text-right')}>{L.lastCall}</span>
+      <span className={cx(HEAD, 'text-center')}>{L.lastCall}</span>
     </div>
     <div className="mt-2 flex flex-1 flex-col justify-evenly gap-1.5">
       {targets.length === 0 && <EmptyState message={L.mustWinsEmpty} />}
       {targets.map((t, i) => (
-        <Row key={t.hcp_id} t={t} index={i + 1} showJak={showJak} selected={t.hcp_id === selectedId} onSelect={onSelect} />
+        <Row key={t.hcp_id} t={t} index={i + 1} showJak={showJak} selected={t.hcp_id === selectedId} flash={t.hcp_id === flashId} onSelect={onSelect} />
       ))}
     </div>
   </div>

@@ -8,15 +8,15 @@ interface AiStatusChipProps {
   className?: string;
 }
 
-/** "AI generating" (purple, spinning) → "AI generated" (green, glowing). */
+/** "AI generating" (purple, spinning) → "AI generated" (purple, soft glow). */
 const AiStatusChip = ({ generating, className }: AiStatusChipProps) => (
   <span
     role="status"
     className={cx(
       'inline-flex items-center gap-[5px] whitespace-nowrap rounded-full border py-[3px] pl-[7px] pr-2.5 text-xs font-bold',
       generating
-        ? 'animate-ai-glow border-purplebd bg-purplet text-purple2'
-        : 'animate-ai-glow-green border-greenbd bg-greenbg text-green',
+        ? 'border-[1.5px] border-[#B7A9F0] bg-purplet text-[#4B3AA6]'
+        : 'animate-ai-glow-soft border-[1.5px] border-[#B7A9F0] bg-purplet text-[#4B3AA6]',
       className,
     )}
   >

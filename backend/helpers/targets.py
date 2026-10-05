@@ -1,7 +1,8 @@
 """The POVO Target universe of one territory, as the screens see it.
 
-A target is an HCP with a DIM_CALL_PLAN_TARGET row for the plan year (about 142
-per territory, deciles 1 to 10). Each target carries the contract `Target`
+A target is an HCP with a DIM_CALL_PLAN_TARGET row for the plan year in
+deciles 2 to 10 (about 83 per territory). D1 is not part of the POVO target
+universe and never appears, even if the plan feed carries D1 rows. Each target carries the contract `Target`
 fields plus a few private keys (prefixed `_`) that the metric modules use.
 
 Assessed calls in APP_CALL are overlaid on the bronze rep interactions: once a
@@ -26,8 +27,10 @@ from helpers.territory_data import TerritoryData, as_int, get_refs, get_territor
 
 TARGET_FIELDS = ["hcp_id", "name", "display_name", "role_type", "degree", "specialty", "account_id",
                  "account_name", "city", "state", "zip", "competitive_focus", "segment_code", "decile",
-                 "tier_code", "is_in_call_plan", "hs_patients", "jak_patients", "povo_patients",
+                 "tier_code", "is_in_call_plan", "hs_patients", "jak_patients", "povo_patients", "pef",
                  "last_call_date", "parent_hcp_id", "is_must_win"]
+#: Lowest decile in the POVO target universe (D10 to D2).
+MIN_DECILE = 2
 
 
 def display_name(h: dict) -> str:
@@ -80,7 +83,7 @@ class Universe:
         self.targets: dict[str, dict] = {}
         for hid, p in td.plan.items():
             h = td.hcps.get(hid)
-            if h is not None:
+            if h is not None and as_int(p.get("DECILE")) >= MIN_DECILE:
                 self.targets[hid] = self._target(h, p)
         self.list = sorted(self.targets.values(),
                            key=lambda t: (-t["hs_patients"], 0 if t["role_type"] == "HCP" else 1, t["hcp_id"]))
@@ -116,6 +119,8 @@ class Universe:
             "hs_patients": as_int(m.get("HS_PATIENTS_12M")),
             "jak_patients": as_int(m.get("JAK_PATIENTS")),
             "povo_patients": as_int(m.get("POVO_PATIENTS")),
+            # PEFs received through IncyteCARES; every POVO patient has one, so pef >= povo_patients.
+            "pef": as_int(m.get("INCYTECARES_ENROLLED_PATIENTS")),
             "last_call_date": dates[-1] if dates else None,
             "parent_hcp_id": h.get("PARENT_HCP_ID") or None,
             "is_must_win": False,

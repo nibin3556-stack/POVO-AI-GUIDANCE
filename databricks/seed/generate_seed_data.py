@@ -12,9 +12,16 @@ Why a hand-rolled generator (no pandas, no faker): pandas is blocked on the
 managed machines, and a fixed-seed standard-library generator gives the same
 bytes on every machine, which the tests rely on.
 
-The numbers are modelled on the POC (``POVO_AI_Guidance_Step3_37.html``):
+The numbers are modelled on the POC (``POVO_AI_Guidance_Step3_63_Alt 2.html``):
 decile split, writers by decile, monthly goal shape, tier call rates, reach and
 attainment factors, the Portland named HCPs and the impersonation territories.
+
+Data window: activity, calls and goals start on the first day of the month
+three months before the as-of month (as of 10/05/2026: Jul 1 to Oct 5), so the
+dashboard always shows the current month plus the three before it.
+
+D1 is not part of the POVO target universe: the D1 HCPs are modelled (so the
+HS ranking and the D2-D10 split stay realistic) and then left out of every table.
 
 Usage
     python databricks/seed/generate_seed_data.py
@@ -92,10 +99,14 @@ CONTENT_FILES = {
 # POC business numbers (POC_FUNCTIONAL_SPEC.md section 8)
 # --------------------------------------------------------------------------
 DECILES = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
-POC_DECILE_TARGETS = [1, 2, 4, 5, 8, 10, 13, 19, 21, 59]   # D10 -> D1, total 142
-POC_DECILE_WRITERS = [1, 2, 3, 4, 5, 6, 7, 7, 7, 2]         # D10 -> D1, total 44
+POC_DECILE_TARGETS = [1, 2, 4, 5, 8, 10, 13, 19, 21, 59]   # D10 -> D1, 142 modelled (83 targets, D1 dropped)
+POC_DECILE_WRITERS = [1, 2, 3, 3, 4, 4, 3, 2, 2, 0]         # D10 -> D1, total 24; D1 never writes
 POC_DECILE_AVG_HS = [133, 64, 39, 31, 24, 19, 16, 12, 10, 6]
-POC_GOAL_SHAPE = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]  # new patients per month
+#: New-patient goal per month from the data-start month; later months add 1 each.
+POC_GOAL_SHAPE = [8, 12, 15, 17, 18, 19]
+#: The data window: the current month plus this many months before it.
+DATA_WINDOW_MONTHS = 3
+TARGET_MIN_DECILE = 2
 PEF_GOAL_FACTOR, NRX_GOAL_FACTOR = 1.4, 1.25
 PEF_ACTUAL_FACTOR, NRX_ACTUAL_FACTOR = 1.36, 1.2
 
@@ -106,23 +117,24 @@ TIERS = [
     ("LOW", "Low", 2, 4, 20, 75, 0.68, 0.64),
 ]
 
+# HS treatment segments: 3 exclusive groups (any JAK inhibitor use first, then biologic use, then neither).
 SEGMENTS = [
-    ("imm", "Immediate", "HS Biologic and HS JAK Prescribers",
-     "Treating HS patients with biologics and/or oral JAK inhibitors", "#156CB4",
+    ("imm", "Advanced without JAK", "Advanced without JAK Inhibitors",
+     "Treating HS patients with a biologic (Humira, Cosentyx or Bimzelx) and no JAK inhibitor", "#156CB4",
      "Tara", "losing control on a biologic"),
-    ("conv", "Conversion", "Advanced Therapy Naïve HS Treaters",
-     "Managing HS patients with no prior biologic or oral JAK inhibitor use for HS", "#0E8A8A",
-     "Marcus", "stuck on conventional therapy"),
-    ("exp", "Expansion", "Broader JAK Prescribers",
-     "Prescribing oral JAK inhibitors in non-HS indications", "#7C6BD6",
-     "Marcus", "stuck on conventional therapy"),
+    ("exp", "Advanced Biologics plus JAK", "Advanced Biologics plus JAK Inhibitors",
+     "Treating HS patients with a JAK inhibitor (off label in HS), with or without a biologic", "#7C6BD6",
+     "Tara", "now on an off-label JAK inhibitor"),
+    ("conv", "Conventional", "Conventional",
+     "Managing HS patients with conventional therapy only (no biologic or JAK inhibitor)", "#0E8A8A",
+     "Marcus", "still cycling antibiotics"),
 ]
 
 # KPI definitions shown on the Territory Performance cards (METRIC_CODE matches FCT_TERRITORY_GOAL).
+# The patients card adds the Paid NRx / Bridge NRx / Free Trial NRx split on top of its goal.
 KPI_METRICS = [
     ("PEF", "PEF", "Patient Enrollment Forms", "PEFs"),
-    ("NRX", "NRX", "NRx", "new scripts"),
-    ("NEW_PATIENTS", "NEW_PATIENT", "New POVO Patients", "patients"),
+    ("NEW_PATIENTS", "NEW_PATIENT", "Total Patients Receiving POVO", "new patients"),
 ]
 
 # Interaction channels: the card type and the team shown on the filter chips.
@@ -137,7 +149,7 @@ INTERACTION_CHANNELS = [
 
 FOCUS = [
     ("cosentyx", "Cosentyx", "#0E8A8A"),
-    ("bimzelx", "Bimzelx", "#C2410C"),
+    ("bimzelx", "Bimzelx", "#8A6A12"),
     ("humira", "Humira", "#7C3AED"),
     ("jak", "JAK", "#156CB4"),
     ("conventional", "Conventional therapy", "#64748B"),
@@ -273,7 +285,7 @@ PROVIDENCE_NAMED = _gends(
 #   shape  - POC MSHAPE, varies the month-by-month writer mix
 #   writers / jak_share - writers target and share of them that are JAK users
 TERRITORIES: list[dict[str, Any]] = [
-    dict(id="NE-POR", city="Portland", state="ME", scale=1.00, perf=0.88, shape=0, writers=44, jak_share=28 / 44,
+    dict(id="NE-POR", city="Portland", state="ME", scale=1.00, perf=0.88, shape=0, writers=24, jak_share=15 / 24,
          keep_poc_deciles=True,
          accounts=[("Maine Medical Partners Dermatology", "Portland, ME"),
                    ("Northern Light Mercy Dermatology", "Portland, ME"),
@@ -284,7 +296,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Saco Bay Surgical Associates", "Saco, ME"),
                       ("Portland Wound and Skin Clinic", "Portland, ME")],
          named=PORTLAND_NAMED, pad=PORTLAND_PAD),
-    dict(id="NE-BOS", city="Boston", state="MA", scale=1.12, perf=1.08, shape=1, writers=50, jak_share=35 / 54,
+    dict(id="NE-BOS", city="Boston", state="MA", scale=1.12, perf=1.08, shape=1, writers=27, jak_share=16 / 27,
          accounts=[("Mass General Dermatology Associates", "Boston, MA"),
                    ("Brigham Dermatology Associates", "Boston, MA"),
                    ("Beth Israel Lahey Dermatology", "Burlington, MA"),
@@ -295,7 +307,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Brookline Surgical Associates", "Brookline, MA"),
                       ("Boston Wound and Skin Clinic", "Boston, MA")],
          named=BOSTON_NAMED, pad=[]),
-    dict(id="NE-HFD", city="Hartford", state="CT", scale=0.92, perf=0.90, shape=2, writers=40, jak_share=22 / 38,
+    dict(id="NE-HFD", city="Hartford", state="CT", scale=0.92, perf=0.90, shape=2, writers=22, jak_share=13 / 22,
          accounts=[("Hartford HealthCare Dermatology", "Hartford, CT"),
                    ("UConn Health Dermatology", "Farmington, CT"),
                    ("Saint Francis Dermatology", "Hartford, CT"),
@@ -305,7 +317,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Bristol Surgical Associates", "Bristol, CT"),
                       ("Capitol Region Wound Center", "Hartford, CT")],
          named=HARTFORD_NAMED, pad=[]),
-    dict(id="NE-PVD", city="Providence", state="RI", scale=0.86, perf=1.07, shape=3, writers=38, jak_share=19 / 33,
+    dict(id="NE-PVD", city="Providence", state="RI", scale=0.86, perf=1.07, shape=3, writers=19, jak_share=11 / 19,
          accounts=[("Lifespan Dermatology", "Providence, RI"),
                    ("Rhode Island Dermatology Institute", "Warwick, RI"),
                    ("Newport Coastal Dermatology", "Newport, RI"),
@@ -315,7 +327,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Kent County Surgical Group", "Warwick, RI"),
                       ("Providence Wound Care Clinic", "Providence, RI")],
          named=PROVIDENCE_NAMED, pad=[]),
-    dict(id="NE-MAN", city="Manchester", state="NH", scale=0.90, perf=1.10, shape=4, writers=42, jak_share=0.62,
+    dict(id="NE-MAN", city="Manchester", state="NH", scale=0.90, perf=1.10, shape=4, writers=23, jak_share=0.62,
          accounts=[("Granite State Dermatology", "Manchester, NH"),
                    ("Nashua Dermatology Associates", "Nashua, NH"),
                    ("Concord Skin and Laser", "Concord, NH"),
@@ -325,7 +337,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Merrimack Valley Surgical Associates", "Nashua, NH"),
                       ("Queen City Wound Care", "Manchester, NH")],
          named=[], pad=[]),
-    dict(id="NE-BTV", city="Burlington", state="VT", scale=0.85, perf=0.82, shape=5, writers=40, jak_share=0.60,
+    dict(id="NE-BTV", city="Burlington", state="VT", scale=0.85, perf=0.82, shape=5, writers=21, jak_share=0.60,
          accounts=[("Champlain Valley Dermatology", "Burlington, VT"),
                    ("Green Mountain Dermatology", "South Burlington, VT"),
                    ("Rutland Regional Dermatology", "Rutland, VT"),
@@ -335,7 +347,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Lake Champlain Surgical Group", "Burlington, VT"),
                       ("Central Vermont Wound Clinic", "Barre, VT")],
          named=[], pad=[]),
-    dict(id="NE-WOR", city="Worcester", state="MA", scale=1.05, perf=1.07, shape=6, writers=46, jak_share=0.65,
+    dict(id="NE-WOR", city="Worcester", state="MA", scale=1.05, perf=1.07, shape=6, writers=25, jak_share=0.65,
          accounts=[("Worcester Dermatology Associates", "Worcester, MA"),
                    ("MetroWest Dermatology", "Framingham, MA"),
                    ("Nashoba Valley Dermatology", "Leominster, MA"),
@@ -346,7 +358,7 @@ TERRITORIES: list[dict[str, Any]] = [
          claims_only=[("Wachusett Surgical Associates", "Leominster, MA"),
                       ("Worcester Wound Care Center", "Worcester, MA")],
          named=[], pad=[]),
-    dict(id="NE-SPR", city="Springfield", state="MA", scale=0.95, perf=0.93, shape=7, writers=42, jak_share=0.64,
+    dict(id="NE-SPR", city="Springfield", state="MA", scale=0.95, perf=0.93, shape=7, writers=23, jak_share=0.64,
          accounts=[("Pioneer Valley Dermatology", "Springfield, MA"),
                    ("Holyoke Dermatology Associates", "Holyoke, MA"),
                    ("Northampton Skin Center", "Northampton, MA"),
@@ -449,6 +461,32 @@ def working_days(start: dt.date, end: dt.date, holidays: set[dt.date]) -> list[d
     return out
 
 
+def data_start(as_of: dt.date) -> dt.date:
+    """First day of the month DATA_WINDOW_MONTHS before the as-of month (Oct 5 -> Jul 1)."""
+    k = as_of.year * 12 + as_of.month - 1 - DATA_WINDOW_MONTHS
+    return dt.date(k // 12, k % 12 + 1, 1)
+
+
+def month_list(start: dt.date, end: dt.date) -> list[tuple[int, int]]:
+    """(year, month) from the month of start to the month of end, inclusive."""
+    out, y, m = [], start.year, start.month
+    while (y, m) <= (end.year, end.month):
+        out.append((y, m))
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out
+
+
+def month_bounds(ym: tuple[int, int]) -> tuple[dt.date, dt.date]:
+    y, m = ym
+    nxt = dt.date(y + (m == 12), m % 12 + 1, 1)
+    return dt.date(y, m, 1), nxt - dt.timedelta(days=1)
+
+
+def goal_shape(k: int) -> int:
+    """New-patient goal of the k-th month from the data start (POC shape, then +1 a month)."""
+    return POC_GOAL_SHAPE[k] if k < len(POC_GOAL_SHAPE) else POC_GOAL_SHAPE[-1] + (k - len(POC_GOAL_SHAPE) + 1)
+
+
 def today_new_york() -> dt.date:
     """Today in America/New_York, with a DST-rule fallback when tzdata is missing."""
     try:
@@ -520,10 +558,16 @@ class SeedGenerator:
         self.as_of = as_of
         self.seed = seed
         self.year = as_of.year
-        self.holidays = {d for d, _ in us_holidays(self.year)}
+        self.data_start = data_start(as_of)
+        self.holidays = {d for y in {self.data_start.year, self.year} for d, _ in us_holidays(y)}
         self.year_days = working_days(dt.date(self.year, 1, 1), dt.date(self.year, 12, 31), self.holidays)
-        self.elapsed_days = [d for d in self.year_days if d <= as_of]
+        # Working days in the data window (data start to as-of); every event and call falls on one.
+        self.elapsed_days = working_days(self.data_start, as_of, self.holidays)
+        # Share of a working year the window covers: scales the yearly call rates.
         self.elapsed_frac = len(self.elapsed_days) / len(self.year_days)
+        self.months = month_list(self.data_start, as_of)
+        # Goals run from the data-start month to the end of the as-of year.
+        self.goal_months = month_list(self.data_start, dt.date(self.year, 12, 31))
         self.tables: dict[str, list[dict]] = {t: [] for t in COLUMNS}
         self.summary: dict[str, dict] = {}
         self._hcp_seq = self._acct_seq = self._ix_seq = self._act_seq = 0
@@ -567,7 +611,7 @@ class SeedGenerator:
         for i, (code, label, color) in enumerate(FOCUS, 1):
             self.tables["REF_COMPETITIVE_FOCUS"].append(dict(FOCUS_CODE=code, LABEL=label, COLOR_HEX=color,
                                                              SORT_ORDER=i))
-        for year in (self.year, self.year + 1):
+        for year in sorted({self.data_start.year, self.year, self.year + 1}):
             for d, name in us_holidays(year):
                 self.tables["REF_US_HOLIDAY"].append(dict(HOLIDAY_DATE=d, HOLIDAY_NAME=name))
         for cfg in TERRITORIES:
@@ -589,14 +633,19 @@ class SeedGenerator:
     def _territory(self, cfg: dict, rep_id: str) -> None:
         tid = cfg["id"]
         accounts = self._accounts(cfg)
-        targets = self._targets(cfg, accounts)
-        self._assign_hs_and_deciles(cfg, targets)
-        monthly_goal = [max(1, round(g * cfg["scale"])) for g in POC_GOAL_SHAPE]
+        modelled = self._targets(cfg, accounts)
+        self._assign_hs_and_deciles(cfg, modelled)
+        # D1 is outside the POVO target universe; an NP/PA always ranks below its physician,
+        # so dropping D1 never orphans a D2-D10 NP/PA.
+        targets = [t for t in modelled if t["decile"] >= TARGET_MIN_DECILE]
+        kept = {id(t) for t in targets}
+        assert all(t["parent"] is None or id(t["parent"]) in kept for t in targets), cfg["id"]
+        monthly_goal = [max(1, round(goal_shape(k) * cfg["scale"])) for k in range(len(self.goal_months))]
         actual = self._monthly_actuals(cfg, monthly_goal)
         writers = self._writers(cfg, targets, actual)
         self._segments(cfg, targets)
-        events = self._povo_events(cfg, targets, actual)
         self._rep_calls(cfg, targets, rep_id)
+        events = self._povo_events(cfg, targets, actual)
         self._other_interactions(cfg, targets)
         self._finish_targets(cfg, targets, accounts, events)
         self._goals(tid, monthly_goal)
@@ -607,8 +656,9 @@ class SeedGenerator:
             accounts=len(accounts),
             writers=len(writers),
             jak_writers=sum(t["jak"] > 0 for t in writers),
-            new_patients_ytd=sum(actual),
-            goal_new_patients_year=sum(monthly_goal),
+            data_start=self.data_start.isoformat(),
+            new_patients_in_window=sum(actual),
+            goal_new_patients_to_year_end=sum(monthly_goal),
         )
 
     def _accounts(self, cfg: dict) -> list[dict]:
@@ -731,31 +781,28 @@ class SeedGenerator:
             t["tier"] = next((c for c, _n, lo, hi, *_ in TIERS if lo <= dec <= hi), None)
         self._decile_targets = counts
 
+    def _month_frac(self, k: int) -> float:
+        """Share of the k-th window month's working days that have passed by the as-of date."""
+        month_days = working_days(*month_bounds(self.months[k]), self.holidays)
+        done = [d for d in month_days if d <= self.as_of]
+        return len(done) / len(month_days) if month_days else 0
+
     def _monthly_actuals(self, cfg: dict, goal: list[int]) -> list[int]:
-        """New patients per month up to the as-of month; the current month is pro-rated by working days."""
+        """New patients per window month; the current month is pro-rated by working days."""
         rng = self._rng("actuals", cfg["id"], self.as_of)
-        out = []
-        for m in range(self.as_of.month):
-            month_days = [d for d in self.year_days if d.month == m + 1]
-            done = [d for d in month_days if d <= self.as_of]
-            frac = len(done) / len(month_days) if month_days else 0
-            out.append(max(0, round(goal[m] * cfg["perf"] * rng.uniform(0.93, 1.07) * frac)))
-        return out
+        return [max(0, round(goal[k] * cfg["perf"] * rng.uniform(0.93, 1.07) * self._month_frac(k)))
+                for k in range(len(self.months))]
 
     def _writer_slots(self, cfg: dict, rng: random.Random, actual: list[int]) -> tuple[list[int], list[int]]:
         """JAK and non-JAK first-time writers per month, with the POC buildSeg weights."""
         total_w = min(round(cfg["writers"] * rng.uniform(0.96, 1.04)), sum(actual))
         total_j = round(total_w * cfg["jak_share"])
-        months = len(actual)
-        mi = months - 1
-        cur_days = [d for d in self.year_days if d.month == months]
-        part = len([d for d in cur_days if d <= self.as_of]) / len(cur_days) if cur_days else 0
         s = cfg["shape"]
         wj, wn = [], []
-        for m in range(months):
-            f = part if m == mi else 1
-            wj.append((1 + m * 0.04 + ((m + s) % 3) * 0.08) * f)
-            wn.append((1.1 - ((m + s) % 2) * 0.15 + m * 0.02) * f)
+        for k, (_y, month) in enumerate(self.months):
+            f, m = self._month_frac(k), month - 1
+            wj.append((1 + k * 0.12 + ((m + s) % 3) * 0.08) * f)
+            wn.append((1.1 - ((m + s) % 2) * 0.15 + k * 0.05) * f)
         return self._fit_slots(spread_lr(total_j, wj), spread_lr(total_w - total_j, wn), actual)
 
     @staticmethod
@@ -849,40 +896,44 @@ class SeedGenerator:
         return counts
 
     def _segments(self, cfg: dict, targets: list[dict]) -> None:
-        """Segment, competitive focus and specialty, following the POC enrich() rules."""
+        """HS treatment segment, competitive focus and specialty (POC enrich(), Step 3_63).
+
+        Three exclusive groups: any JAK inhibitor use -> exp (Advanced Biologics plus
+        JAK Inhibitors), else biologic use -> imm (Advanced without JAK Inhibitors),
+        else conv (Conventional).
+        """
         rng = self._rng("segments", cfg["id"], self.as_of)
         for t in targets:
-            bio_p = 0.55 if t["decile"] >= 7 else (0.35 if t["decile"] >= 5 else 0.15)
+            bio_p = 0.55 if t["decile"] >= 7 else (0.35 if t["decile"] >= 5 else 0.18)
             if t["jak"] > 0:
-                t["segment"], t["focus"] = "imm", "jak"
+                t["segment"], t["focus"] = "exp", "jak"
             elif rng.random() < bio_p:
                 r = rng.random()
                 t["segment"] = "imm"
                 t["focus"] = "humira" if r < 0.5 else ("cosentyx" if r < 0.8 else "bimzelx")
-            elif rng.random() < 0.34:
-                t["segment"], t["focus"] = "exp", "conventional"
             else:
                 t["segment"], t["focus"] = "conv", "conventional"
             spec_rng = self._rng("specialty", t["hcp_id"])
             if t["role"] != "HCP":
                 t["specialty"] = "Dermatology"
-            elif t["segment"] == "exp" and spec_rng.random() < 1 / 3:
-                t["specialty"] = "Rheumatology"
             elif t["segment"] == "conv" and spec_rng.random() < 1 / 9:
                 t["specialty"] = "General Surgery"
             else:
                 t["specialty"] = "Dermatology"
 
     # ---- POVO activity ---------------------------------------------------
-    def _month_days(self, m: int) -> list[dt.date]:
-        return [d for d in self.elapsed_days if d.month == m + 1]
+    def _month_days(self, k: int) -> list[dt.date]:
+        """Working days of the k-th window month, up to the as-of date."""
+        return [d for d in self.elapsed_days if (d.year, d.month) == self.months[k]]
 
     def _povo_events(self, cfg: dict, targets: list[dict], actual: list[int]) -> list[dict]:
         """NEW_PATIENT events that reproduce the monthly actuals, plus their PEF and NRX.
 
-        Every converted patient has a PEF (3-21 working days earlier) and an NRX on
-        the paid date. Pending patients (PEF only, some with an NRX) bring the
-        totals to PEF ~ 1.36x and NRx ~ 1.2x new patients.
+        Every converted patient has a PEF (3-21 working days earlier, never before
+        the data start) and an NRX on the paid date. Pending patients (PEF only,
+        some with an NRX) bring the totals to PEF ~ 1.36x and NRx ~ 1.2x new
+        patients; their PEFs go to writers and to called Super High and Medium
+        targets, so the PEFs of all targets add up to the territory's PEFs.
         """
         tid = cfg["id"]
         rng = self._rng("events", tid, self.as_of)
@@ -916,7 +967,7 @@ class SeedGenerator:
         n_new = len(patients)
         n_pending = round(n_new * (PEF_ACTUAL_FACTOR - 1))
         n_pending_nrx = round(n_new * (NRX_ACTUAL_FACTOR - 1))
-        in_plan_nonwriters = [t for t in targets if not t["writer"] and t["decile"] >= 5]
+        in_plan_nonwriters = [t for t in targets if not t["writer"] and t["tier"] in ("SH", "MED") and t["calls"]]
         for k in range(n_pending):
             pool = writers if (rng.random() < 0.7 or not in_plan_nonwriters) and writers else in_plan_nonwriters
             if not pool or not self.elapsed_days:
@@ -955,10 +1006,12 @@ class SeedGenerator:
 
     # ---- interactions ----------------------------------------------------
     def _rep_calls(self, cfg: dict, targets: list[dict], rep_id: str) -> None:
-        """Rep calls per tier = targets x calls/yr x elapsed year x attainment; reach by the tier reach factor.
+        """Rep calls per tier = targets x calls/yr x share of the year in the window x attainment.
 
-        A few Super High / Medium targets are left without a call for 22-50 days
-        (the "missed opportunities"), and the lowest-priority ones are never called.
+        Reach follows the tier reach factor; a new POVO writer has always been
+        called, so reach is never below the writers. A few Super High / Medium
+        targets are left without a call for 22-50 days (the "missed
+        opportunities"), and the lowest-priority ones are never called.
         """
         rng = self._rng("calls", cfg["id"], self.as_of)
         for t in targets:
@@ -968,9 +1021,13 @@ class SeedGenerator:
         plan: list[tuple[dict, int, str]] = []
         for code, _n, _lo, _hi, per_year, _goal, attain, reach in TIERS:
             # Never-called targets are mostly the lower-volume ones (noisy HS ordering, like the POC).
-            members = sorted([t for t in targets if t["tier"] == code], key=lambda t: -t["hs"] * rng.uniform(0.5, 1.5))
+            members = sorted([t for t in targets if t["tier"] == code],
+                             key=lambda t: (not t["writer"], -t["hs"] * rng.uniform(0.5, 1.5)))
+            n_writers = sum(1 for t in members if t["writer"])
             total = round(len(members) * per_year * self.elapsed_frac * attain * rng.uniform(0.96, 1.04))
-            reached = members[:min(round(len(members) * reach), total)]
+            n_reach = max(n_writers, min(round(len(members) * reach), total))
+            total = max(total, n_reach)
+            reached = members[:n_reach]
             extra = spread_lr(total - len(reached), [math.sqrt(t["hs"]) for t in reached])
             plan += [(t, 1 + e, code) for t, e in zip(reached, extra)]
         stale_ids = self._stale_targets(rng, [t for t, _n, code in plan])
@@ -1082,11 +1139,12 @@ class SeedGenerator:
                 CLAIMS_MAIN_FOCUS=focus, IS_CLAIMS_ONLY=a["claims_only"]))
 
     def _goals(self, tid: str, monthly_goal: list[int]) -> None:
-        for m, g in enumerate(monthly_goal, 1):
+        """Monthly goals from the data-start month to December; no goal before the data start."""
+        for (year, month), g in zip(self.goal_months, monthly_goal):
             for code, value in (("NEW_PATIENTS", g), ("PEF", round(g * PEF_GOAL_FACTOR)),
                                 ("NRX", round(g * NRX_GOAL_FACTOR))):
                 self.tables["FCT_TERRITORY_GOAL"].append(dict(
-                    TERRITORY_ID=tid, GOAL_YEAR=self.year, GOAL_MONTH=m, METRIC_CODE=code, GOAL_VALUE=value))
+                    TERRITORY_ID=tid, GOAL_YEAR=year, GOAL_MONTH=month, METRIC_CODE=code, GOAL_VALUE=value))
 
 
 # --------------------------------------------------------------------------
@@ -1156,7 +1214,7 @@ def generate(out: Path, as_of: dt.date, seed: int = DEFAULT_SEED,
     content = copy_content(content_dir, out)
     counts.update({t: n for t, n in content.items() if isinstance(n, int)})
     manifest = dict(
-        as_of=as_of.isoformat(), seed=seed, plan_year=as_of.year,
+        as_of=as_of.isoformat(), data_start=gen.data_start.isoformat(), seed=seed, plan_year=as_of.year,
         generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         row_counts=dict(sorted(counts.items())), content=content, territories=gen.summary)
     (out / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

@@ -19,9 +19,9 @@ from schema.response_schema import ok, paged
 
 router = APIRouter(prefix="/api/v1/targets", tags=["targets"])
 Guard = Depends(require_permission(GUIDANCE_VIEW))
-SORTS = ("name", "decile", "hs_patients", "last_call_date")
+SORTS = ("name", "decile", "hs_patients", "pef", "last_call_date")
 SORT_KEYS = {"name": lambda t: t["name"].lower(), "decile": lambda t: t["decile"],
-             "hs_patients": lambda t: t["hs_patients"],
+             "hs_patients": lambda t: t["hs_patients"], "pef": lambda t: t["pef"],
              "last_call_date": lambda t: t["last_call_date"] or date.min}
 
 

@@ -1,4 +1,4 @@
-import type { Category, ChannelCode, Reception, Reference, ReferenceSegment, ReferenceTier, RoleType, TierCode } from '../types/models';
+import type { AssessmentCategory, Category, ChannelCode, Reception, Reference, ReferenceSegment, ReferenceTier, RoleType, TierCode } from '../types/models';
 
 /** Neutral colour for a code the reference data does not know (never expected). */
 const UNKNOWN_COLOR = '#64748B';
@@ -17,14 +17,12 @@ export interface ReferenceLookup {
   categoryCodes: Category[];
   categoryLabel: (code: Category) => string;
   receptionLabels: string[];
-  nextCallSteps: (noteCount: number) => string[];
   prepSteps: (category: Category, name: string) => string[];
+  /** One-click example notes; "HCP" for a physician, else the role. */
+  exampleNotes: (category: AssessmentCategory, role: RoleType) => string[];
 }
 
 const possessive = (name: string): string => (name.endsWith('s') ? `${name}'` : `${name}'s`);
-
-const fillStep = (template: string, n: number): string =>
-  template.replace('{n}', String(n)).replace('{notes}', n === 1 ? 'note' : 'notes');
 
 /** Plain lookups over GET /api/v1/reference; the only source of business labels and colours. */
 export const buildReferenceLookup = (data: Reference): ReferenceLookup => {
@@ -48,8 +46,8 @@ export const buildReferenceLookup = (data: Reference): ReferenceLookup => {
     categoryCodes: data.categories.map((c) => c.code),
     categoryLabel: (code) => categories.get(code)?.label ?? code,
     receptionLabels: data.reception_scale.map((r) => r.label),
-    nextCallSteps: (n) => data.next_call_steps.map((s) => fillStep(s, n)),
     prepSteps: (category, name) => (data.prep_steps[category] ?? []).map((s) => s.replace('{possessive}', possessive(name))),
+    exampleNotes: (category, role) => (data.example_notes?.[category] ?? []).map((s) => s.replaceAll('{who}', role)),
   };
 };
 

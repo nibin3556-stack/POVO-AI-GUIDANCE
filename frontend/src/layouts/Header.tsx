@@ -13,7 +13,7 @@ interface HeaderProps {
 
 /** 46px blue header: app name and today's date (from /me), the user on the right. */
 const Header = ({ me, canImpersonate, onImpersonate, onExit }: HeaderProps) => (
-  <header className="flex h-[46px] flex-none items-center gap-3.5 bg-blued px-5">
+  <header className="flex h-[46px] flex-none items-center gap-3.5 bg-header px-5">
     <div>
       <b className="block text-base font-semibold tracking-[-.2px] text-white">{LABELS.app.title}</b>
       <small className="block text-[11.5px] font-medium text-[#DCEAF7] max-bp760:hidden">{formatLongDate(me.today)}</small>

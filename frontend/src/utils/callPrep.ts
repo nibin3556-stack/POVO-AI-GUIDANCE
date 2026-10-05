@@ -1,24 +1,21 @@
-import type { Category, Participant, TalkingPoint } from '../types/models';
+import type { Category, DeliveredPoint, Participant, TalkingPoint } from '../types/models';
 
-export type TagTone = 'new' | 'upd' | 'open' | 'res' | 'mv' | 'nai' | 'rwk';
+export type TagTone = 'well' | 'mod' | 'new' | 'other';
 
-/** Maps a revision tag returned by the API to the POC tag colour. */
+/** Maps a next-call tag returned by the API to its colour: green, teal, soft green. */
 export const tagTone = (tag: string): TagTone => {
   const t = tag.trim();
-  if (t.startsWith('Retained') || t.startsWith('Resolved')) return 'res';
-  if (t.startsWith('Changed')) return 'upd';
-  if (t.startsWith('Still open')) return 'open';
-  if (t.startsWith('Reordered') || t.startsWith('▲') || t.startsWith('▼')) return 'mv';
-  if (t.startsWith('Removed')) return 'rwk';
+  if (t === 'Builds on well received') return 'well';
+  if (t === 'Builds on moderate') return 'mod';
   if (t === 'New') return 'new';
-  return 'nai';
+  return 'other';
 };
 
-export const replacesRemoved = (point: TalkingPoint): boolean => point.tags.some((t) => t.startsWith('New ·'));
+/** Orange = not well received or still open; green = moderately or well received, resolved or discussed. */
+export const deliveredTone = (p: DeliveredPoint): 'good' | 'bad' => (p.reception === 0 || p.is_open ? 'bad' : 'good');
 
-/** Old text is shown struck through for messaging and closings, never for objections. */
-export const showsPreviousText = (point: TalkingPoint, category: Category): boolean =>
-  category !== 'objection' && Boolean(point.previous_text);
+/** Redux key for the Reinforce choices and the post-call list of one participant × category. */
+export const reinforceScope = (participantId: string, category: Category): string => `${participantId}|${category}`;
 
 export const isChanged = (point: TalkingPoint): boolean => point.tags.length > 0;
 
@@ -29,7 +26,8 @@ export const revealKey = (participantId: string, category: Category, revision: n
 export const participantHasNewActivity = (p: Participant | undefined): boolean =>
   Boolean(p?.interactions.some((i) => i.is_new));
 
-export const isPostCallBullet = (bullet: string): boolean => bullet.startsWith('Post-call');
+/** The post-call history line and the last call's Additional Notes are highlighted as new. */
+export const isPostCallBullet = (bullet: string): boolean => bullet.startsWith('Post-call') || bullet.startsWith('Last call note');
 
 /** The call prep header name: "Dr. Winters, John, MD". */
 export const callPrepName = (p: Participant): string => (p.role_type === 'HCP' ? `Dr. ${p.name}, ${p.degree}` : `${p.display_name}, ${p.role_type}`);

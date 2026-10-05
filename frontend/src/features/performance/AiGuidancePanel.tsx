@@ -12,8 +12,11 @@ import { useReference } from '../../hooks/useReference';
 
 const P = LABELS.performance;
 
+/** Each box carries its meaning: amber missed, green strong, blue focus. */
+const BOX = { miss: 'border-[#EFC98A] bg-[#FFF5E3]', good: 'border-[#A9D9BA] bg-[#E9F6EE]', foc: 'border-[#AFCDEB] bg-[#EAF3FC]' };
+
 const Column = ({ title, tone, children }: { title: string; tone: 'miss' | 'good' | 'foc'; children: ReactNode }) => (
-  <div className="min-w-0 rounded-[9px] border border-line bg-card px-2 py-1">
+  <div className={cx('min-w-0 rounded-[9px] border px-2 py-1', BOX[tone])}>
     <div className={cx('mb-0.5 text-[10.6px] font-bold uppercase tracking-[.4px]', tone === 'miss' && 'text-warn', tone === 'good' && 'text-green', tone === 'foc' && 'text-blued')}>
       {title}
     </div>
@@ -32,7 +35,7 @@ const FocusButton = memo(({ target, onGo }: { target: GuidanceFocus; onGo: (id: 
     type="button"
     title={target.reason}
     onClick={() => onGo(target.hcp_id)}
-    className="mt-0.5 flex w-full items-center gap-[5px] rounded-[7px] border border-bluet2 bg-[#F6FAFE] px-1.5 py-px hover:border-blue hover:bg-bluet"
+    className="mt-0.5 flex w-full items-center gap-[5px] rounded-[7px] border border-[#9EC2E4] bg-white px-1.5 py-px hover:border-blue hover:bg-bluet"
   >
     <RoleChip role={target.role_type} size="sm" />
     <b className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-left text-xs font-bold text-ink">{target.display_name}</b>
@@ -40,6 +43,35 @@ const FocusButton = memo(({ target, onGo }: { target: GuidanceFocus; onGo: (id: 
   </button>
 ));
 FocusButton.displayName = 'FocusButton';
+
+type TopWriterData = NonNullable<Guidance['strong']['top_writer']>;
+
+/** The physician with the most POVO patients; every physician tied for it is named (POC Step 3_63). */
+const TopWriter = ({ writer }: { writer: TopWriterData }) => {
+  const ties = writer.ties.length ? writer.ties : [writer.display_name];
+  if (ties.length === 1) {
+    return (
+      <Item title={P.mostPovo}>
+        <b>{writer.display_name}</b>
+        {P.povoPatients(writer.povo_patients)}
+      </Item>
+    );
+  }
+  return (
+    <Item title={P.tiedPovo(ties.join(', '))}>
+      <b>{ties[0]}</b>
+      {ties.length === 2 ? (
+        <>
+          {P.and}
+          <b>{ties[1]}</b>
+        </>
+      ) : (
+        P.others(ties.length - 1)
+      )}
+      {P.povoPatientsEach(writer.povo_patients)}
+    </Item>
+  );
+};
 
 /** The guidance names the top tier by its reference name ("Super High"). */
 const TOP_TIER = 'SH';
@@ -72,12 +104,7 @@ const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => vo
           {P.trialAt}
           <b>{data.strong.best_segment.trial_pct}%</b>
         </Item>
-        {data.strong.top_writer && (
-          <Item title={P.mostPovo}>
-            <b>{data.strong.top_writer.display_name}</b>
-            {P.povoPatients(data.strong.top_writer.povo_patients)}
-          </Item>
-        )}
+        {data.strong.top_writer && <TopWriter writer={data.strong.top_writer} />}
         <Item title={P.reachTitle(top)}>
           {P.superHighReach(top)}
           <b>{data.strong.super_high_reach_pct}%</b>
@@ -98,9 +125,9 @@ const AiGuidancePanel = () => {
   const { data, error, isLoading, refetch } = useGetGuidanceQuery();
   const selectTarget = useSelectTarget();
   return (
-    <section className="flex min-w-0 animate-fade-up flex-col gap-1 rounded-xl border border-l-4 border-line border-l-purple bg-white px-3 pb-2 pt-1.5 shadow-e1">
+    <section className="flex min-w-0 animate-fade-up flex-col gap-1 rounded-xl border border-l-[6px] border-line border-l-purple bg-white px-3 pb-2 pt-1.5 shadow-e1">
       <div className="flex items-center gap-[7px]">
-        <span className="flex size-5 animate-ai-pulse items-center justify-center rounded-md bg-linear-135 from-purplel to-blue text-white">
+        <span className="flex size-5 animate-ai-glow-soft items-center justify-center rounded-md bg-purple text-white">
           <AiSparkle className="size-[13px]" />
         </span>
         <b className="text-[12.9px] font-bold uppercase tracking-[.7px] text-purple2">{P.guidanceTitle}</b>

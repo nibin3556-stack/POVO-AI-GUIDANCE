@@ -2,16 +2,17 @@
 export const COLORS = {
   bg: '#D9E2EC',
   ink: '#0F1F33',
-  ink2: '#1E3350',
-  ink3: '#334155',
+  ink2: '#1C2F48',
+  ink3: '#3A4A5E',
   blue: '#156CB4',
   blued: '#115088',
   navy: '#12406E',
+  navyd: '#0E3A63',
   sky: '#2388D4',
   bluet: '#EAF3FB',
   bluet2: '#C7DDF0',
-  line: '#C4CFDC',
-  line2: '#D5DEE8',
+  line: '#BCC8D6',
+  line2: '#D3DCE6',
   warn: '#B45309',
   warnb: '#F59E0B',
   warnbg: '#FEF3C7',
@@ -41,11 +42,30 @@ export const SHADOWS = {
 export const CHART_COLORS = {
   writing: '#2FA84F',
   yetToWrite: '#F2B45C',
-  jak: '#156CB4',
-  nonJak: '#7C6BD6',
   track: '#E6ECF3',
   grid: '#CBD5E1',
   axis: '#334155',
+} as const;
+
+/** KPI ring and the Total on POVO split (Paid, Bridge, Free Trial). */
+export const KPI_COLORS = {
+  ringTrack: '#E3EAF2',
+  good: '#2FA84F',
+  risk: '#F59E0B',
+  noGoal: '#94A3B8',
+  splitTrack: '#E3EAF2',
+  paid: '#2FA84F',
+  bridge: '#F2B45C',
+  freeTrial: '#7C6BD6',
+  pefEdge: '#1B6FBF',
+  patientsEdge: '#2E9E52',
+} as const;
+
+/** Delivered-point reception stripes: orange = not well received or still open, green = moderately or well. */
+export const DELIVERED_COLORS = {
+  good: { stripe: '#2E9E52', border: '#9FD3B1', tagBg: '#E9F5EE', tagFg: '#0F5A2C', tagBd: '#BFE0CB' },
+  bad: { stripe: '#EA580C', border: '#F4B183', tagBg: '#FFEDD5', tagFg: '#9A3412', tagBd: '#FDBA74' },
+  reinforced: { stripe: '#1B6FBF', border: '#9EC2E4' },
 } as const;
 
 export type TierCode = 'SH' | 'MED' | 'LOW';

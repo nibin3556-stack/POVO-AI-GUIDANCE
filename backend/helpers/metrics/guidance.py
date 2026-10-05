@@ -6,8 +6,9 @@ Ported from the POC's final aiGuide() / focusTargets():
     21 days, longest gap first (then HS volume), top 2
   * super_high_not_writing: Super High targets with no POVO patient
   * best_segment: highest trial % (ties keep the segment order)
-  * top_writer: the physician with the most POVO patients
-  * super_high_reach_pct: Super High targets called this year
+  * top_writer: the physician with the most POVO patients (HS volume breaks
+    the tie for who is named first); `ties` names every physician tied for it
+  * super_high_reach_pct: Super High targets called in the data window
   * focus: Super High / Medium PHYSICIANS scored
         hs x (povo > 0 ? 1 : 1.6) x (1 + days since last call / 30)
     where a target never called counts as 60 days; top 3
@@ -17,7 +18,7 @@ from __future__ import annotations
 from datetime import date
 
 from helpers.dates import pct
-from helpers.metrics.segmentation import called_this_year, segment_stats
+from helpers.metrics.segmentation import called_in_window, segment_stats
 
 
 def _days(t: dict, today: date):
@@ -49,8 +50,10 @@ def guidance(u, today: date) -> dict:
     sh = [t for t in u.list if t["tier_code"] == "SH"]
     stats = segment_stats(u, today)["segments"]
     best = max(stats, key=lambda s: s["trial_pct"]) if stats else None  # max keeps the first on ties
-    hcps = [t for t in u.list if t["role_type"] == "HCP"]
-    top = max(hcps, key=lambda t: t["povo_patients"]) if hcps else None
+    hcps = sorted((t for t in u.list if t["role_type"] == "HCP"),
+                  key=lambda t: (-t["povo_patients"], -t["hs_patients"]))
+    top = hcps[0] if hcps else None
+    ties = [t["display_name"] for t in hcps if top and t["povo_patients"] == top["povo_patients"]]
     focus = []
     for f in focus_targets(u, today)[:3]:
         t = f["t"]
@@ -65,8 +68,9 @@ def guidance(u, today: date) -> dict:
             "best_segment": {"segment_code": best["segment_code"], "short_name": best["short_name"],
                              "trial_pct": best["trial_pct"]} if best else None,
             "top_writer": {"hcp_id": top["hcp_id"], "display_name": top["display_name"],
-                           "povo_patients": top["povo_patients"]} if top and top["povo_patients"] > 0 else None,
-            "super_high_reach_pct": pct(sum(1 for t in sh if called_this_year(t, today)), len(sh)),
+                           "povo_patients": top["povo_patients"], "ties": ties}
+            if top and top["povo_patients"] > 0 else None,
+            "super_high_reach_pct": pct(sum(1 for t in sh if called_in_window(t, today)), len(sh)),
         },
         "focus": focus,
     }
