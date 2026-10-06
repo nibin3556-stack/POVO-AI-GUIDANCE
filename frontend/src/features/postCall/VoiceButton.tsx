@@ -1,6 +1,8 @@
 import { memo } from 'react';
 import Icon from '../../components/common/Icon';
+import { FEATURES } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
+import { useFeatures } from '../../hooks/useFeatures';
 import { cx } from '../../utils/cx';
 
 interface VoiceButtonProps {
@@ -17,6 +19,8 @@ const P = LABELS.postCall;
 
 /** Microphone for a voice note: calm light blue until it records, then a purple pulse ("Listening…"). */
 const VoiceButton = ({ recording, disabled = false, supported, onClick, variant = 'icon' }: VoiceButtonProps) => {
+  const features = useFeatures();
+  if (!features.has(FEATURES.VOICE_NOTES)) return null;
   const title = !supported ? P.voiceUnsupported : recording ? P.stopAria : P.recordAria;
   const tone = recording
     ? 'animate-mic-pulse border-purple2 bg-purple2 text-white'

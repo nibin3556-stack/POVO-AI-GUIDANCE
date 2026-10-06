@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useStore } from 'react-redux';
-import { TIMING } from '../constants/constant';
+import { FEATURES, TIMING } from '../constants/constant';
 import { LABELS } from '../constants/labels';
 import { useCheckComplianceMutation } from '../redux/api/callsApi';
 import {
@@ -13,6 +13,7 @@ import {
 import { useAppDispatch } from '../redux/hooks';
 import type { RootState } from '../redux/store';
 import type { AssessmentCategory } from '../types/models';
+import { useFeatures } from './useFeatures';
 import { delay } from '../utils/format';
 
 export interface CheckTarget {
@@ -44,9 +45,12 @@ export const useComplianceCheck = (callId: string | null) => {
   const dispatch = useAppDispatch();
   const store = useStore<RootState>();
   const [check] = useCheckComplianceMutation();
+  // Off for the brand: notes are not checked as they are typed (Submit still applies the rules).
+  const enabled = useFeatures().has(FEATURES.COMPLIANCE_CHECK);
 
   return useCallback(
     async (target: CheckTarget, options: CheckOptions = {}): Promise<CheckOutcome> => {
+      if (!enabled) return 'skipped';
       const note = target.note.trim();
       if (!note) {
         dispatch(complianceCleared(target.key));
@@ -81,6 +85,6 @@ export const useComplianceCheck = (callId: string | null) => {
         return 'failed';
       }
     },
-    [callId, check, dispatch, store],
+    [callId, check, dispatch, enabled, store],
   );
 };

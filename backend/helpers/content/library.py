@@ -7,7 +7,9 @@ databricks/seed/content/, and the seeder copies it unchanged; if the REF_
 tables are empty (the seeder has not run yet), the JSON files are read
 directly, so a fresh checkout and the pure-logic tests still work.
 
-Cached in-process like the bronze data: content changes only on a re-seed.
+Cached in-process per brand like the bronze data: content changes only on a re-seed.
+Every read filters on BRAND_CODE; JSON rows without BRAND_CODE belong to the
+default brand (the JSON files are the POVO content).
 """
 from __future__ import annotations
 
@@ -56,7 +58,7 @@ class Library:
 
 
 _lock = threading.Lock()
-_cache: tuple[float, Optional[Library]] = (0.0, None)
+_cache: dict[str, tuple[float, Library]] = {}
 
 
 def _is_active(row: dict) -> bool:
@@ -70,26 +72,27 @@ def _from_json(table: str) -> list[dict]:
         return json.load(fh)
 
 
-def _read(table: str) -> tuple[list[dict], str]:
+def _read(table: str, brand_code: str) -> tuple[list[dict], str]:
     try:
-        rows = get_warehouse().query(f"SELECT * FROM {bronze(table)}")
+        rows = get_warehouse().query(f"SELECT * FROM {bronze(table)} WHERE BRAND_CODE = :b", {"b": brand_code})
     except Exception:  # noqa: BLE001 - a missing table falls back to the JSON the backend owns
         logger.warning("Could not read %s from the warehouse; using the content JSON", table, exc_info=True)
         rows = []
     if rows:
         return rows, "warehouse"
-    return _from_json(table), "json"
+    default = get_settings().default_brand_code
+    return [r for r in _from_json(table) if (r.get("BRAND_CODE") or default) == brand_code], "json"
 
 
-def get_library() -> Library:
-    global _cache
-    loaded, lib = _cache
-    if lib is not None and time.time() - loaded < get_settings().bronze_cache_seconds:
-        return lib
-    tp, src1 = _read("REF_TALKING_POINT")
-    obj, _ = _read("REF_OBJECTION_RULE")
-    comp, _ = _read("REF_COMPLIANCE_RULE")
-    texts = sorted((r for r in _read("REF_COMPLIANCE_TEXT")[0] if _is_active(r)),
+def get_library(brand_code: Optional[str] = None) -> Library:
+    brand_code = brand_code or get_settings().default_brand_code
+    hit = _cache.get(brand_code)
+    if hit is not None and time.time() - hit[0] < get_settings().bronze_cache_seconds:
+        return hit[1]
+    tp, src1 = _read("REF_TALKING_POINT", brand_code)
+    obj, _ = _read("REF_OBJECTION_RULE", brand_code)
+    comp, _ = _read("REF_COMPLIANCE_RULE", brand_code)
+    texts = sorted((r for r in _read("REF_COMPLIANCE_TEXT", brand_code)[0] if _is_active(r)),
                    key=lambda r: int(r.get("SORT_ORDER") or 0))
     by_kind: dict[str, list[dict]] = {}
     for r in texts:
@@ -108,11 +111,10 @@ def get_library() -> Library:
                   compliance_texts=ctexts,
                   content_version=versions[-1] if versions else "2026.1", source=src1)
     with _lock:
-        _cache = (time.time(), lib)
+        _cache[brand_code] = (time.time(), lib)
     return lib
 
 
 def clear_library_cache() -> None:
-    global _cache
     with _lock:
-        _cache = (0.0, None)
+        _cache.clear()

@@ -1,3 +1,4 @@
+import { FEATURES } from '../constants/constant';
 import type {
   Reference,
   Call,
@@ -66,6 +67,10 @@ export const meRep: Me = {
   territory: { territory_id: 'NE-POR', territory_name: 'Portland, ME territory', city: 'Portland', state: 'ME', region: 'Northeast' },
   today: '2026-10-13',
   data_as_of: '2026-10-12',
+  brand: { code: 'POVO', name: 'POVO' },
+  brands: [{ code: 'POVO', name: 'POVO' }],
+  features: Object.values(FEATURES),
+  is_admin: false,
 };
 
 export const meManager: Me = { ...meRep, signed_in: barbara, effective: barbara, permissions: ['guidance.view', 'call.assess', 'user.impersonate'] };

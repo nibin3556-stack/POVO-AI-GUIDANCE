@@ -1,5 +1,10 @@
 {
   "request_id": "sample-next-call-0001",
+  "brand": {
+    "code": "POVO",
+    "name": "POVO",
+    "description": "Incyte's oral selective JAK1 inhibitor for moderate-to-severe hidradenitis suppurativa (HS)"
+  },
   "participant": {
     "role_type": "HCP",
     "display_name": "Dr. Sarah Whitfield, MD",
@@ -21,5 +26,25 @@
     { "category": "objection", "point_id": "OBJ-BIO-01", "text": "Selective JAK1 inhibition across multiple HS cytokines; no comparison with biologics", "reception": null, "note": "Addressed; comfortable with the mechanism explanation" },
     { "category": "closing", "point_id": "CLS-01", "text": "Identify one patient losing control on a biologic for a first POVO start", "reception": 2, "note": "Agreed to review two patients with recurring flares" },
     { "category": "additional", "point_id": "additional", "text": "", "reception": null, "note": "Office asked for HSTruths.com patient resources; next visit set for the week of October 26" }
-  ]
+  ],
+  "history": [
+    {
+      "call_date": "2026-09-02",
+      "points": [
+        { "category": "messaging", "text": "Mechanism: selective JAK1 inhibition across multiple HS cytokines", "reception": 0, "note": "Not interested in mechanism detail; wants outcomes" },
+        { "category": "messaging", "text": "Once-daily oral dosing with no injections", "reception": 2, "note": "Asked for the lesion and pain slides to share with the NP" },
+        { "category": "closing", "text": "Schedule a follow-up to review the Prescribing Information", "reception": 1, "note": "Open to a follow-up after the next clinic day" }
+      ]
+    }
+  ],
+  "interactions": [
+    { "date": "2026-09-18", "type_label": "MSL visit", "summary": "Discussed the STOP-HS program design" }
+  ],
+  "messaging_candidates": [
+    { "point_id": "MSG-EFF-01~F", "pillar": "Efficacy", "text": "Follow up on the Week 12 HiSCR50 data with the lesion and pain results", "tag": "Builds on well received" },
+    { "point_id": "MSG-LES-01", "pillar": "Lesions and pain", "text": "Show the reduction in draining tunnels and skin pain reported in STOP-HS1 and STOP-HS2", "tag": "" },
+    { "point_id": "MSG-SAF-01~F", "pillar": "Safety", "text": "Walk through the lab monitoring schedule in the Prescribing Information", "tag": "Builds on moderate" },
+    { "point_id": "MSG-DOS-01", "pillar": "Dosing", "text": "Once-daily oral dosing, taken with or without food", "tag": "New" }
+  ],
+  "max_messaging": 3
 }

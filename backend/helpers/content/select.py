@@ -51,12 +51,12 @@ def person(u: Universe, hcp_id: str) -> Optional[dict]:
             "degree": h.get("DEGREE"), "specialty": h.get("SPECIALTY"), "account_id": h.get("ACCOUNT_ID"),
             "account_name": acc.get("ACCOUNT_NAME"), "city": h.get("CITY"), "state": h.get("STATE"),
             "zip": h.get("ZIP"), "competitive_focus": None, "segment_code": "conv", "decile": 1,
-            "tier_code": None, "is_in_call_plan": False, "hs_patients": int(m.get("HS_PATIENTS_12M") or 0),
-            "jak_patients": int(m.get("JAK_PATIENTS") or 0), "povo_patients": int(m.get("POVO_PATIENTS") or 0),
+            "tier_code": None, "is_in_call_plan": False, "hs_patients": int(m.get("INDICATION_PATIENTS_12M") or 0),
+            "jak_patients": int(m.get("COMPETITOR_PATIENTS") or 0), "povo_patients": int(m.get("BRAND_PATIENTS") or 0),
             "last_call_date": dates[-1] if dates else None, "parent_hcp_id": h.get("PARENT_HCP_ID"),
-            "is_must_win": False, "_hs_rank": 0, "_visits": m.get("HS_VISITS_PER_MONTH"),
-            "pef": int(m.get("INCYTECARES_ENROLLED_PATIENTS") or 0),
-            "_incyte": int(m.get("INCYTECARES_ENROLLED_PATIENTS") or 0), "_rep_dates": dates,
+            "is_must_win": False, "_hs_rank": 0, "_visits": m.get("INDICATION_VISITS_PER_MONTH"),
+            "pef": int(m.get("PROGRAM_ENROLLED_PATIENTS") or 0),
+            "_incyte": int(m.get("PROGRAM_ENROLLED_PATIENTS") or 0), "_rep_dates": dates,
             "_discussions": u.discussions.get(hcp_id, 0)}
 
 

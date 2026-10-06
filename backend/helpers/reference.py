@@ -30,8 +30,8 @@ def next_call_steps(note_count: int) -> list[str]:
     return [s.format(n=note_count, notes=word) for s in NEXT_CALL_STEPS]
 
 
-def build_reference() -> dict:
-    refs, lib = get_refs(), get_library()
+def build_reference(brand_code: str) -> dict:
+    refs, lib = get_refs(brand_code), get_library(brand_code)
     return {
         "content_version": lib.content_version,
         "tiers": [{"code": t["TIER_CODE"], "name": t["TIER_NAME"], "decile_min": t["DECILE_MIN"],
@@ -48,7 +48,7 @@ def build_reference() -> dict:
                         for m in refs.kpi_metrics],
         "categories": [{"code": c, "label": LABELS[c]} for c in CATEGORIES],
         "reception_scale": [{"value": i, "label": label} for i, label in enumerate(RECEPTION_SCALE)],
-        "compliance": {"rule_count": len(lib.compliance_rules), "steps": compliance_steps(),
+        "compliance": {"rule_count": len(lib.compliance_rules), "steps": compliance_steps(brand_code),
                        "severity_labels": dict(LABEL_BY_SEVERITY)},
         "next_call_steps": list(NEXT_CALL_STEPS),
         "prep_steps": {cat: list(lines) for cat, lines in PREP_STEPS.items()},

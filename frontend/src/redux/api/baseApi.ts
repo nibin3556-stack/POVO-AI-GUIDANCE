@@ -8,6 +8,7 @@ export const TAGS = {
   PROFILE: 'Profile',
   CALL_PREP: 'CallPrep',
   CALL: 'Call',
+  ADMIN: 'Admin',
 } as const;
 
 /** One API slice; each module injects its endpoints (redux/api/*Api.ts). */

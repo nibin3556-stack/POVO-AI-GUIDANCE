@@ -10,7 +10,9 @@ import ImpersonateDialog from '../features/impersonation/ImpersonateDialog';
 import { useImpersonation } from '../features/impersonation/useImpersonation';
 import { useGetMeQuery, useGetReferenceQuery } from '../redux/api/sessionApi';
 import { selectSelectedHcpId } from '../redux/callSession/callSessionSelectors';
-import { useAppSelector } from '../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import { selectBrandCode } from '../redux/session/sessionSelectors';
+import { brandSelected } from '../redux/session/sessionSlice';
 import type { ApiError } from '../types/api';
 import Header from './Header';
 import ImpersonationBar from './ImpersonationBar';
@@ -30,6 +32,8 @@ const AppShell = () => {
   const error = meError ?? refError;
   const isLoading = meLoading || refLoading;
   const selectedHcpId = useAppSelector(selectSelectedHcpId);
+  const brandCode = useAppSelector(selectBrandCode);
+  const dispatch = useAppDispatch();
   const { start, exit, isStarting, isExiting } = useImpersonation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const location = useLocation();
@@ -47,6 +51,11 @@ const AppShell = () => {
   useEffect(() => {
     scrollRef.current?.scrollTo?.({ top: 0 });
   }, [location.pathname]);
+
+  // A remembered brand the user can no longer use (removed or deactivated): fall back to their default.
+  useEffect(() => {
+    if (brandCode && (meError as ApiError | undefined)?.status === 403) dispatch(brandSelected(null));
+  }, [brandCode, dispatch, meError]);
 
   const openDialog = useCallback(() => setDialogOpen(true), []);
   const closeDialog = useCallback(() => setDialogOpen(false), []);

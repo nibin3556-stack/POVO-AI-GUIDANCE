@@ -1,7 +1,9 @@
 import { Popover } from '@mui/material';
 import { memo, useState, type MouseEvent } from 'react';
+import { useNavigate } from 'react-router';
 import Avatar from '../components/common/Avatar';
 import Icon from '../components/common/Icon';
+import { ROUTES } from '../constants/constant';
 import { LABELS } from '../constants/labels';
 import type { Me } from '../types/models';
 import { cx } from '../utils/cx';
@@ -19,6 +21,7 @@ const MENU_BTN =
 /** Name, role and territory on the right of the header; the chevron opens the account menu. */
 const AccountMenu = ({ me, canImpersonate, onImpersonate, onExit }: AccountMenuProps) => {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const navigate = useNavigate();
   const eff = me.effective;
   const close = () => setAnchor(null);
   const run = (action: () => void) => () => {
@@ -74,6 +77,12 @@ const AccountMenu = ({ me, canImpersonate, onImpersonate, onExit }: AccountMenuP
             <button type="button" role="menuitem" className={MENU_BTN} onClick={run(onExit)}>
               <Icon name="logout" className="text-xl text-blue" />
               {LABELS.header.exitImpersonation}
+            </button>
+          )}
+          {me.is_admin && (
+            <button type="button" role="menuitem" className={MENU_BTN} onClick={run(() => navigate(ROUTES.ADMIN))}>
+              <Icon name="tune" className="text-xl text-blue" />
+              {LABELS.header.configure}
             </button>
           )}
         </div>

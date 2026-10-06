@@ -1,8 +1,14 @@
 import { combineReducers, configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
-import { registerImpersonationGetter } from '../config/axiosConfig';
+import { registerBrandGetter, registerImpersonationGetter } from '../config/axiosConfig';
 import { baseApi } from './api/baseApi';
 import callSessionReducer, { callSessionReset } from './callSession/callSessionSlice';
-import sessionReducer, { impersonationEnded, impersonationStarted, persistImpersonation } from './session/sessionSlice';
+import sessionReducer, {
+  brandSelected,
+  impersonationEnded,
+  impersonationStarted,
+  persistBrand,
+  persistImpersonation,
+} from './session/sessionSlice';
 
 export const rootReducer = combineReducers({
   session: sessionReducer,
@@ -13,15 +19,18 @@ export const rootReducer = combineReducers({
 export type RootState = ReturnType<typeof rootReducer>;
 
 /**
- * Impersonation change: persist it, then drop every cached response and the
- * call session — every figure on screen belongs to the new effective user.
+ * Impersonation or brand change: persist it, then drop every cached response
+ * and the call session — every figure on screen belongs to the new effective
+ * user or brand.
  */
 const createImpersonationListener = () => {
   const listener = createListenerMiddleware();
   listener.startListening({
-    matcher: isAnyOf(impersonationStarted, impersonationEnded),
+    matcher: isAnyOf(impersonationStarted, impersonationEnded, brandSelected),
     effect: (_action, api) => {
-      persistImpersonation((api.getState() as RootState).session.impersonation);
+      const { session } = api.getState() as RootState;
+      persistImpersonation(session.impersonation);
+      persistBrand(session.brandCode);
       api.dispatch(callSessionReset());
       api.dispatch(baseApi.util.resetApiState());
     },
@@ -37,6 +46,7 @@ export const setupStore = (preloadedState?: Partial<RootState>) => {
     middleware: (getDefault) => getDefault().prepend(listener.middleware).concat(baseApi.middleware),
   });
   registerImpersonationGetter(() => store.getState().session.impersonation?.employeeId ?? null);
+  registerBrandGetter(() => store.getState().session.brandCode);
   return store;
 };
 

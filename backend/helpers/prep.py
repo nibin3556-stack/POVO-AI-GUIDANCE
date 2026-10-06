@@ -72,11 +72,12 @@ def resolve_participant(u: Universe, primary: dict, participant_id: str) -> dict
 
 
 # ---------------------------------------------------------------------------
-def latest_revision(tid: str, primary_id: str, participant_id: str, category: str) -> Optional[dict]:
+def latest_revision(brand: str, tid: str, primary_id: str, participant_id: str, category: str) -> Optional[dict]:
     rows = get_warehouse().query(
-        f"SELECT * FROM {app('APP_CALL_PREP_REVISION')} WHERE TERRITORY_ID = :tid AND HCP_ID = :hcp "
-        f"AND PARTICIPANT_ID = :pid AND CATEGORY = :cat ORDER BY REVISION_NO DESC, CREATED_AT DESC LIMIT 1",
-        {"tid": tid, "hcp": primary_id, "pid": participant_id, "cat": category})
+        f"SELECT * FROM {app('APP_CALL_PREP_REVISION')} WHERE BRAND_CODE = :brand AND TERRITORY_ID = :tid "
+        f"AND HCP_ID = :hcp AND PARTICIPANT_ID = :pid AND CATEGORY = :cat "
+        f"ORDER BY REVISION_NO DESC, CREATED_AT DESC LIMIT 1",
+        {"brand": brand, "tid": tid, "hcp": primary_id, "pid": participant_id, "cat": category})
     if not rows:
         return None
     r = rows[0]
@@ -89,22 +90,22 @@ def _cache_key(*parts) -> str:
     return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()
 
 
-def cache_get(key: str) -> Optional[dict]:
+def cache_get(brand: str, key: str) -> Optional[dict]:
     try:
         rows = get_warehouse().query(
-            f"SELECT PAYLOAD_JSON FROM {app('APP_AI_CACHE')} WHERE CACHE_KEY = :k AND EXPIRES_AT > :now",
-            {"k": key, "now": now_utc()})
+            f"SELECT PAYLOAD_JSON FROM {app('APP_AI_CACHE')} WHERE BRAND_CODE = :brand AND CACHE_KEY = :k "
+            f"AND EXPIRES_AT > :now", {"brand": brand, "k": key, "now": now_utc()})
         return json.loads(rows[0]["PAYLOAD_JSON"]) if rows else None
     except Exception:  # noqa: BLE001 - a cache miss is always safe
         logger.warning("AI cache read failed", exc_info=True)
         return None
 
 
-def cache_put(key: str, kind: str, payload: dict) -> None:
+def cache_put(brand: str, key: str, kind: str, payload: dict) -> None:
     try:
         now = now_utc()
         get_warehouse().merge("APP_AI_CACHE", ["CACHE_KEY"], [{
-            "CACHE_KEY": key, "KIND": kind, "PAYLOAD_JSON": json.dumps(payload), "CREATED_AT": now,
+            "BRAND_CODE": brand, "CACHE_KEY": key, "KIND": kind, "PAYLOAD_JSON": json.dumps(payload), "CREATED_AT": now,
             "EXPIRES_AT": now + timedelta(hours=get_settings().ai_cache_hours)}])
     except Exception:  # noqa: BLE001
         logger.warning("AI cache write failed", exc_info=True)
@@ -138,19 +139,20 @@ def participant_payload(u: Universe, p: dict) -> dict:
             "last_call_date": p["last_call_date"].isoformat() if p["last_call_date"] else None}
 
 
-def current_list(u: Universe, primary: dict, p: dict, category: str, request_id: str) -> dict:
+def current_list(u: Universe, primary: dict, p: dict, category: str, request_id: str,
+                 use_ai: bool = True) -> dict:
     """{points (full list), revision (row|None), source}."""
-    rev = latest_revision(u.td.territory_id, primary["hcp_id"], p["hcp_id"], category)
+    rev = latest_revision(u.brand, u.td.territory_id, primary["hcp_id"], p["hcp_id"], category)
     if rev is not None:
         return {"points": rev["POINTS"], "revision": rev, "source": "ai" if rev.get("ENGINE") == "ai" else "rules"}
-    lib = get_library()
+    lib = get_library(u.brand)
     ctx = participant_context(u, p, primary, today())
     points = initial_points(lib, category, ctx)
     source = "rules"
-    if get_settings().ai_active and points:
-        key = _cache_key("call_prep", u.td.territory_id, primary["hcp_id"], p["hcp_id"], category, 0,
+    if use_ai and get_settings().ai_active and points:
+        key = _cache_key("call_prep", u.brand, u.td.territory_id, primary["hcp_id"], p["hcp_id"], category, 0,
                          lib.content_version)
-        ai = cache_get(key)
+        ai = cache_get(u.brand, key)
         if ai is None:
             ints = sorted((i for i in u.td.interactions if i["HCP_ID"] == p["hcp_id"]),
                           key=lambda i: i["INTERACTION_DATE"] or today(), reverse=True)[:MAX_INTERACTIONS]
@@ -164,7 +166,7 @@ def current_list(u: Universe, primary: dict, p: dict, category: str, request_id:
             out = n8n_client.post(get_settings().n8n_call_prep_path, body)
             ai = _valid_call_prep(out, points, category) if out else None
             if ai:
-                cache_put(key, "call_prep", ai)
+                cache_put(u.brand, key, "call_prep", ai)
         if ai:
             by_id = {c["point_id"]: c for c in points}
             ordered = [by_id[i] for i in ai["ordered_point_ids"]]
@@ -215,10 +217,11 @@ def split_points(points: list[dict]) -> tuple[list[dict], list[dict]]:
     return [x for x in points if not x.get("delivered")], [x for x in points if x.get("delivered")]
 
 
-def call_prep(u: Universe, hcp_id: str, participant_id: str, category: str, request_id: str) -> dict:
+def call_prep(u: Universe, hcp_id: str, participant_id: str, category: str, request_id: str,
+              use_ai: bool = True) -> dict:
     primary = resolve_primary(u, hcp_id)
     p = resolve_participant(u, primary, participant_id)
-    cur = current_list(u, primary, p, category, request_id)
+    cur = current_list(u, primary, p, category, request_id, use_ai)
     rev = cur["revision"]
     revised_from = rev["CALL_DATE"] if rev else None
     banner = None
@@ -276,7 +279,7 @@ def _bullets(u: Universe, p: dict, primary: dict, history: Optional[tuple],
     return lines
 
 
-def last_call_notes(rows: list[dict]) -> dict[str, tuple]:
+def last_call_notes(brand: str, rows: list[dict]) -> dict[str, tuple]:
     """Per participant, the Additional Notes of the call behind their latest revision (passed notes only).
 
     The note is carried into the next pre-call plan (POC REV.note).
@@ -288,8 +291,8 @@ def last_call_notes(rows: list[dict]) -> dict[str, tuple]:
     notes: dict[str, str] = {}
     for cid in call_ids:
         found = get_warehouse().query(
-            f"SELECT NOTE FROM {app('APP_CALL_POINT_ASSESSMENT')} WHERE CALL_ID = :cid AND CATEGORY = 'additional' "
-            f"AND COMPLIANCE_STATUS = 'passed'", {"cid": cid})
+            f"SELECT NOTE FROM {app('APP_CALL_POINT_ASSESSMENT')} WHERE BRAND_CODE = :brand AND CALL_ID = :cid "
+            f"AND CATEGORY = 'additional' AND COMPLIANCE_STATUS = 'passed'", {"brand": brand, "cid": cid})
         text = next((f["NOTE"].strip() for f in found if (f.get("NOTE") or "").strip()), "")
         if text:
             notes[cid] = text
@@ -297,7 +300,7 @@ def last_call_notes(rows: list[dict]) -> dict[str, tuple]:
             for pid, r in latest.items() if r.get("CALL_ID") in notes}
 
 
-def assessed_notes(call_ids: list[str]) -> dict[tuple[str, str], list[str]]:
+def assessed_notes(brand: str, call_ids: list[str]) -> dict[tuple[str, str], list[str]]:
     """(call id, participant id) -> the compliance-passed notes of that participant on that call,
     in the order of the form (messaging, objections, closings, then Additional Notes)."""
     ids = sorted(set(call_ids))
@@ -306,7 +309,8 @@ def assessed_notes(call_ids: list[str]) -> dict[tuple[str, str], list[str]]:
     marks = ", ".join(f":c{i}" for i in range(len(ids)))
     rows = get_warehouse().query(
         f"SELECT CALL_ID, PARTICIPANT_ID, CATEGORY, POINT_RANK, NOTE FROM {app('APP_CALL_POINT_ASSESSMENT')} "
-        f"WHERE CALL_ID IN ({marks}) AND COMPLIANCE_STATUS = 'passed'", {f"c{i}": v for i, v in enumerate(ids)})
+        f"WHERE BRAND_CODE = :brand AND CALL_ID IN ({marks}) AND COMPLIANCE_STATUS = 'passed'",
+        {"brand": brand, **{f"c{i}": v for i, v in enumerate(ids)}})
     order = {"messaging": 0, "objection": 1, "closing": 2, "additional": 3}
     out: dict[tuple[str, str], list[str]] = {}
     for r in sorted(rows, key=lambda r: (order.get(r["CATEGORY"], 9), r.get("POINT_RANK") or 0)):
@@ -314,6 +318,56 @@ def assessed_notes(call_ids: list[str]) -> dict[tuple[str, str], list[str]]:
         if note:
             out.setdefault((r["CALL_ID"], r["PARTICIPANT_ID"]), []).append(note)
     return out
+
+
+#: Earlier calls the next-call AI reads (newest first).
+HISTORY_CALLS = 5
+
+
+def call_history(u: Universe, primary_id: str, participant_id: str, exclude_call_id: str,
+                 limit: int = HISTORY_CALLS) -> list[dict]:
+    """The participant's earlier assessed calls, newest first, for the next-call AI.
+
+    Each call lists the points raised with their reception and the rep's note.
+    Only compliance-passed notes travel (an unchecked or flagged note may hold
+    PHI or an adverse event); the point itself still counts without its note.
+    """
+    wh = get_warehouse()
+    calls = wh.query(
+        f"SELECT CALL_ID, CALL_DATE FROM {app('APP_CALL')} WHERE BRAND_CODE = :brand AND TERRITORY_ID = :tid "
+        f"AND HCP_ID = :hcp AND STATUS = 'assessed' AND CALL_ID <> :cid ORDER BY CALL_DATE DESC, UPDATED_AT DESC",
+        {"brand": u.brand, "tid": u.td.territory_id, "hcp": primary_id, "cid": exclude_call_id})[:limit]
+    if not calls:
+        return []
+    rows = wh.query(
+        f"SELECT CALL_ID, CATEGORY, POINT_RANK, POINT_TEXT, WAS_RAISED, RECEPTION, NOTE, COMPLIANCE_STATUS "
+        f"FROM {app('APP_CALL_POINT_ASSESSMENT')} WHERE BRAND_CODE = :brand AND PARTICIPANT_ID = :pid "
+        f"AND CALL_ID IN (:ids)", {"brand": u.brand, "pid": participant_id, "ids": [c["CALL_ID"] for c in calls]})
+    order = {"messaging": 0, "objection": 1, "closing": 2, "additional": 3}
+    out = []
+    for c in calls:
+        points = []
+        for r in sorted((r for r in rows if r["CALL_ID"] == c["CALL_ID"]),
+                        key=lambda r: (order.get(r["CATEGORY"], 9), r.get("POINT_RANK") or 0)):
+            note = (r.get("NOTE") or "").strip() if r.get("COMPLIANCE_STATUS") == "passed" else ""
+            if r["CATEGORY"] == "additional" and not note:
+                continue
+            if r["CATEGORY"] != "additional" and not r.get("WAS_RAISED"):
+                continue
+            points.append({"category": r["CATEGORY"], "text": r.get("POINT_TEXT") or "",
+                           "reception": r.get("RECEPTION"), "note": note})
+        if points:
+            out.append({"call_date": to_date(c["CALL_DATE"]).isoformat(), "points": points})
+    return out
+
+
+def recent_interactions(u: Universe, hcp_id: str, limit: int = 8) -> list[dict]:
+    """The participant's latest interactions across teams, for the AI prompts."""
+    ints = sorted((i for i in u.td.interactions if i["HCP_ID"] == hcp_id),
+                  key=lambda i: i["INTERACTION_DATE"] or today(), reverse=True)[:limit]
+    return [{"date": i["INTERACTION_DATE"].isoformat() if i["INTERACTION_DATE"] else None,
+             "type_label": i.get("INTERACTION_TYPE") or u.refs.channel(i["CHANNEL_CODE"])["TYPE_LABEL"],
+             "summary": i.get("SUMMARY") or ""} for i in ints]
 
 
 def profile(u: Universe, hcp_id: str) -> dict:
@@ -325,14 +379,14 @@ def profile(u: Universe, hcp_id: str) -> dict:
     # Latest post-call history line per participant (bullet 5).
     hist_rows = get_warehouse().query(
         f"SELECT PARTICIPANT_ID, CALL_ID, CALL_DATE, HISTORY_LINE, REVISION_NO, CREATED_AT "
-        f"FROM {app('APP_CALL_PREP_REVISION')} WHERE TERRITORY_ID = :tid AND HCP_ID = :hcp",
-        {"tid": u.td.territory_id, "hcp": primary["hcp_id"]})
-    notes = last_call_notes(hist_rows)
+        f"FROM {app('APP_CALL_PREP_REVISION')} WHERE BRAND_CODE = :brand AND TERRITORY_ID = :tid AND HCP_ID = :hcp",
+        {"brand": u.brand, "tid": u.td.territory_id, "hcp": primary["hcp_id"]})
+    notes = last_call_notes(u.brand, hist_rows)
     latest: dict[str, tuple] = {}
     for r in sorted(hist_rows, key=lambda r: (r["REVISION_NO"], str(r["CREATED_AT"]))):
         latest[r["PARTICIPANT_ID"]] = (to_date(r["CALL_DATE"]), r["HISTORY_LINE"])
     people = participants_of(u, primary)
-    call_notes = assessed_notes([c["CALL_ID"] for p in people for c in u.app_calls_by_hcp.get(p["hcp_id"], [])])
+    call_notes = assessed_notes(u.brand, [c["CALL_ID"] for p in people for c in u.app_calls_by_hcp.get(p["hcp_id"], [])])
     out = []
     for p in people:
         ints = [{"interaction_id": i["INTERACTION_ID"], "date": i["INTERACTION_DATE"],

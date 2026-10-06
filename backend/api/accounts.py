@@ -12,11 +12,12 @@ from typing import Optional
 from helpers.dependency import RequestContext, require_permission
 from helpers.listing import MAX_LIMIT, page_slice, parse_sort, sort_rows
 from helpers.targets import public, universe
+from registry.features import PRE_CALL_TAB
 from registry.permissions_seed import GUIDANCE_VIEW
 from schema.response_schema import ok, paged
 
 router = APIRouter(prefix="/api/v1/accounts", tags=["accounts"])
-Guard = Depends(require_permission(GUIDANCE_VIEW))
+Guard = Depends(require_permission(GUIDANCE_VIEW, PRE_CALL_TAB))
 SORTS = ("account_name", "hs_patients", "povo_patients", "target_count", "in_plan_count")
 
 
@@ -30,7 +31,7 @@ def account_rows(u) -> list[dict]:
         ts = [t for t in u.list if t["account_id"] == a["ACCOUNT_ID"]]
         claims = _truthy(a.get("IS_CLAIMS_ONLY")) or not ts
         if claims:
-            hs, povo, focus = int(a.get("CLAIMS_HS_PATIENTS") or 0), int(a.get("CLAIMS_POVO_PATIENTS") or 0), \
+            hs, povo, focus = int(a.get("CLAIMS_INDICATION_PATIENTS") or 0), int(a.get("CLAIMS_BRAND_PATIENTS") or 0), \
                 a.get("CLAIMS_MAIN_FOCUS")
         else:
             hs = sum(t["hs_patients"] for t in ts if t["role_type"] == "HCP")
@@ -50,7 +51,7 @@ def account_rows(u) -> list[dict]:
 def list_accounts(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=MAX_LIMIT),
                   sort: Optional[str] = None, ctx: RequestContext = Guard) -> dict:
     field, desc = parse_sort(sort, SORTS, "hs_patients:desc")
-    rows = account_rows(universe(ctx.territory_id))
+    rows = account_rows(universe(ctx.brand_code, ctx.territory_id))
     key = (lambda r: (r["account_name"] or "").lower()) if field == "account_name" else (lambda r: r[field])
     rows = sort_rows(rows, key, desc, lambda r: (r["account_name"] or ""))
     return paged(page_slice(rows, page, limit), page, limit, len(rows))
@@ -58,7 +59,7 @@ def list_accounts(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=MA
 
 @router.get("/{account_id}/targets")
 def account_targets(account_id: str, ctx: RequestContext = Guard) -> dict:
-    u = universe(ctx.territory_id)
+    u = universe(ctx.brand_code, ctx.territory_id)
     if account_id not in u.td.accounts:
         raise HTTPException(status_code=404, detail="Account not found")
     rows = [t for t in u.list if t["account_id"] == account_id and t["is_in_call_plan"]]

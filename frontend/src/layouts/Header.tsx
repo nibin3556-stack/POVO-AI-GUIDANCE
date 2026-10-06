@@ -3,6 +3,7 @@ import { LABELS } from '../constants/labels';
 import type { Me } from '../types/models';
 import { formatLongDate } from '../utils/format';
 import AccountMenu from './AccountMenu';
+import BrandSwitcher from './BrandSwitcher';
 
 interface HeaderProps {
   me: Me;
@@ -11,14 +12,15 @@ interface HeaderProps {
   onExit: () => void;
 }
 
-/** 46px blue header: app name and today's date (from /me), the user on the right. */
+/** 46px blue header: brand app name and today's date (from /me), the brand selector and the user on the right. */
 const Header = ({ me, canImpersonate, onImpersonate, onExit }: HeaderProps) => (
   <header className="flex h-[46px] flex-none items-center gap-3.5 bg-header px-5">
     <div>
-      <b className="block text-base font-semibold tracking-[-.2px] text-white">{LABELS.app.title}</b>
+      <b className="block text-base font-semibold tracking-[-.2px] text-white">{LABELS.app.titleFor(me.brand.name)}</b>
       <small className="block text-[11.5px] font-medium text-[#DCEAF7] max-bp760:hidden">{formatLongDate(me.today)}</small>
     </div>
     <span className="flex-1" />
+    <BrandSwitcher me={me} />
     <AccountMenu me={me} canImpersonate={canImpersonate} onImpersonate={onImpersonate} onExit={onExit} />
   </header>
 );

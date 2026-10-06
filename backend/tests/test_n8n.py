@@ -230,3 +230,77 @@ def test_example_notes_without_ai_are_empty_not_made_up(client, ai_on):
 def test_example_notes_with_ai_off(client):
     d = client.post("/api/v1/example-notes", json={"participant_id": _physician(9), "category": "additional"}).json()
     assert d["data"] == {"notes": [], "source": "none"}
+
+
+def _assess_and_submit(client, phys, notes):
+    cid = client.post("/api/v1/calls", json={"hcp_id": phys, "participant_ids": []}).json()["data"]["call_id"]
+    m = _prep(client, phys)["points"]
+    items = [{"participant_id": phys, "category": "messaging", "point_id": m[i]["point_id"], "point_rank": i + 1,
+              "point_text": m[i]["text"], "was_raised": True, "reception": rc, "note": note}
+             for i, (rc, note) in enumerate(notes)]
+    assert client.put(f"/api/v1/calls/{cid}/assessments", json={"items": items}).status_code == 200
+    r = client.post(f"/api/v1/calls/{cid}/next-call")
+    assert r.status_code == 200, r.text
+    return cid, m, r.json()["data"]
+
+
+def test_next_call_messaging_reads_history_and_is_picked_by_ai(client, ai_on):
+    """Submit sends the earlier calls (passed notes only) and the approved candidates; the AI's pick
+    leads the next call prep, with its insights, and the approved text is untouched."""
+    phys = _physician(10)
+    sent = []
+    pick = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if request.url.path.endswith("compliance-check"):
+            return httpx.Response(200, json={"ok": True, "issues": []})
+        if request.url.path.endswith("next-call"):
+            sent.append(body)
+            ids = [c["point_id"] for c in body["messaging_candidates"]]
+            pick.update(ids=[ids[2], ids[0]])
+            return httpx.Response(200, json={
+                "ok": True, "objection_states": {}, "summary": "Engaged with the efficacy data.",
+                "next_best_action": "Lead with the message asked for on the last call.",
+                "next_messaging": {"ordered_point_ids": pick["ids"],
+                                   "insights": {ids[2]: "Asked for this on the last two calls.", "BOGUS": "x"}}})
+        return httpx.Response(200, json={"ok": False, "reason": "not under test"})
+
+    _mock(handler)
+    _clear_cache()
+    _assess_and_submit(client, phys, [(2, "HCP liked the Week 12 data and asked for the lesion slides"),
+                                      (0, "")])
+    first = sent[-1]
+    assert first["history"] == [] and first["brand"]["code"] == "POVO"
+    assert len(first["messaging_candidates"]) > 3 and first["max_messaging"] == 3
+    assert {"history", "interactions", "messaging_candidates", "assessments", "participant"} <= set(first)
+
+    cid2, _m, out = _assess_and_submit(client, phys, [(1, "HCP wants the lab monitoring schedule again")])
+    second = sent[-1]
+    assert out["source"] == "ai"
+    assert len(second["history"]) == 1
+    hist = second["history"][0]["points"]
+    assert hist[0]["note"] == "HCP liked the Week 12 data and asked for the lesion slides" and hist[0]["reception"] == 2
+    assert all(p["category"] != "additional" for p in hist)
+
+    prep = _prep(client, phys)
+    by_id = {c["point_id"]: c for c in second["messaging_candidates"]}
+    assert [p["point_id"] for p in prep["points"][:2]] == pick["ids"]
+    assert prep["points"][0]["text"] == by_id[pick["ids"][0]]["text"]  # approved text, word for word
+    assert prep["points"][0]["detail"] == "Asked for this on the last two calls."
+    assert "AI suggested" in prep["points"][0]["tags"] and len(prep["points"]) == 3
+    assert prep["source"] == "ai"
+
+
+def test_next_call_ai_off_for_the_brand_uses_rules(client, ai_on):
+    from helpers import brands
+
+    calls = []
+    _mock(lambda r: (calls.append(r.url.path), httpx.Response(200, json={"ok": True, "issues": []}))[1])
+    brands.save_features("POVO", {"AI_NEXT_CALL": False}, "test")
+    try:
+        _clear_cache()
+        _cid, _m, out = _assess_and_submit(client, _physician(11), [(2, "HCP liked the Week 12 data")])
+        assert out["source"] == "rules" and not any(p.endswith("next-call") for p in calls)
+    finally:
+        brands.save_features("POVO", {"AI_NEXT_CALL": True}, "test")

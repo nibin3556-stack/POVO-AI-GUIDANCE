@@ -36,12 +36,12 @@ RECEPTION_WORDS = {0: "not well received", 1: "moderately received", 2: "well re
 ADDITIONAL_LABEL = "Additional notes (anything discussed outside the points)"
 
 
-def valid_notes(out: Optional[dict], ctx_text: str, limit: int) -> list[str]:
+def valid_notes(out: Optional[dict], ctx_text: str, limit: int, brand_code: Optional[str] = None) -> list[str]:
     """Re-check the Guard's promise and the compliance rules; keep at most MAX_NOTES distinct notes."""
     raw = (out or {}).get("notes")
     if not isinstance(raw, list):
         return []
-    rules = get_library().compliance_rules
+    rules = get_library(brand_code).compliance_rules
     keep: list[str] = []
     seen: set[str] = set()
     for n in raw:
@@ -63,12 +63,12 @@ def suggest_notes(u: Universe, p: dict, category: str, point_text: str, receptio
     """{notes: [...], source: "ai" | "none"}."""
     if not get_settings().ai_active:
         return {"notes": [], "source": "none"}
-    lib = get_library()
+    lib = get_library(u.brand)
     limit = note_limit(category)
     ctx_text = point_text if category != "additional" else " ".join(other_points)
-    key = _cache_key("example_notes", u.td.territory_id, p["hcp_id"], category, point_text, reception,
+    key = _cache_key("example_notes", u.brand, u.td.territory_id, p["hcp_id"], category, point_text, reception,
                      "||".join(other_points), lib.content_version)
-    cached = cache_get(key)
+    cached = cache_get(u.brand, key)
     if cached is not None:
         return {"notes": list(cached.get("notes") or []), "source": "ai"}
     ints = sorted((i for i in u.td.interactions if i["HCP_ID"] == p["hcp_id"]),
@@ -81,8 +81,8 @@ def suggest_notes(u: Universe, p: dict, category: str, point_text: str, receptio
                               "type_label": i.get("INTERACTION_TYPE") or u.refs.channel(i["CHANNEL_CODE"])["TYPE_LABEL"],
                               "summary": i.get("SUMMARY") or ""} for i in ints],
             "count": MAX_NOTES, "max_chars": limit}
-    notes = valid_notes(n8n_client.post(get_settings().n8n_example_notes_path, body), ctx_text, limit)
+    notes = valid_notes(n8n_client.post(get_settings().n8n_example_notes_path, body), ctx_text, limit, u.brand)
     if not notes:
         return {"notes": [], "source": "none"}
-    cache_put(key, "example_notes", {"notes": notes})
+    cache_put(u.brand, key, "example_notes", {"notes": notes})
     return {"notes": notes, "source": "ai"}

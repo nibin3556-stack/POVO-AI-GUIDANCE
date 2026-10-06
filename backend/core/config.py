@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     #: The POC offers "Impersonate user" to the signed-in rep, so reps and
     #: managers both have it by default; set e.g. MANAGER to restrict it.
     impersonation_roles: Annotated[list[str], NoDecode] = ["REP", "MANAGER"]
+    #: Brand used when a request names none and the user works on it. At start
+    #: it is registered in CFG_BRAND with every feature on (it was the only brand).
+    default_brand_code: str = "POVO"
+    #: JSON file listing the usernames allowed to configure brand features.
+    admin_users_file: str = path.join(BACKEND_DIR, "config", "admin_users.json")
     app_timezone: str = "America/New_York"
     dev_fallback_username: str = "vturano"
     posit_identity_header: str = "RStudio-Connect-Credentials"

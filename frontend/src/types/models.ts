@@ -1,4 +1,5 @@
 import type { RoleType, TierCode } from '../constants/colors';
+import type { FeatureCode } from '../constants/constant';
 
 export type { RoleType, TierCode };
 
@@ -46,6 +47,53 @@ export interface Me {
   territory: Territory;
   today: string;
   data_as_of: string | null;
+  /** The brand this response is for, and every brand the user can switch to. */
+  brand: Brand;
+  brands: Brand[];
+  /** Features switched on for the brand, in catalog order. */
+  features: FeatureCode[];
+  /** Listed in the admin users file: may open the feature configuration. */
+  is_admin: boolean;
+}
+
+export interface Brand {
+  code: string;
+  name: string;
+}
+
+/* ---------------------------------------------------------------- admin */
+
+export interface AdminBrand extends Brand {
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+  enabled_features: number;
+  feature_count: number;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export interface AdminFeature {
+  code: FeatureCode;
+  name: string;
+  description: string;
+  group: string;
+  requires: FeatureCode | null;
+  is_enabled: boolean;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export interface BrandFeatures {
+  brand: AdminBrand;
+  features: AdminFeature[];
+}
+
+export interface BrandSaveBody {
+  brand_code: string;
+  brand_name: string;
+  description?: string | null;
+  is_active: boolean;
 }
 
 /* ---------------------------------------------------------------- performance */

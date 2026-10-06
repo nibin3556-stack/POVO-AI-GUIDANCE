@@ -18,6 +18,8 @@ fully qualified `catalog.schema.TABLE` names (database/tables.py):
     `:name` natively). Table names are bare there (database/tables.py). All
     data, bronze included, lives in the file; bronze is loaded from the CSVs
     only while a table is empty, so a copied or shared database is used as is.
+    Every table has its PRIMARY KEY and the FOREIGN KEY BRAND_CODE ->
+    CFG_BRAND, enforced (PRAGMA foreign_keys), and MERGE is a real upsert.
 
 A list/tuple parameter is expanded (`IN (:ids)` -> `IN (:ids_0, :ids_1)`) so
 both engines see scalars only. No ORM: the tables are Delta, keys are logical,
@@ -339,8 +341,28 @@ def sqlite_value(raw: Optional[str], typ: str) -> Any:
 
 
 def sqlite_create_sql(table: str) -> str:
-    cols = ", ".join(f"{c} {SQLITE_TYPES[t]}" for c, t in tables.ALL_COLUMNS[table])
-    return f"CREATE TABLE IF NOT EXISTS {table} ({cols})"
+    """CREATE TABLE with the single primary key and the brand foreign key (tables.py)."""
+    pk = tables.PRIMARY_KEYS[table]
+    defs = []
+    for c, t in tables.ALL_COLUMNS[table]:
+        if c == pk:
+            defs.append(f"{c} {SQLITE_TYPES[t]} NOT NULL PRIMARY KEY")
+        elif c == "BRAND_CODE" and table not in tables.NULLABLE_BRAND:
+            defs.append(f"{c} {SQLITE_TYPES[t]} NOT NULL")
+        else:
+            defs.append(f"{c} {SQLITE_TYPES[t]}")
+    if table != "CFG_BRAND":
+        defs.append("FOREIGN KEY (BRAND_CODE) REFERENCES CFG_BRAND (BRAND_CODE)")
+    return f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(defs)})"
+
+
+def register_brands(con: sqlite3.Connection, codes) -> None:
+    """Make sure CFG_BRAND has a row for each brand code (the foreign key needs it first)."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for code in sorted({c for c in codes if c}):
+        con.execute("INSERT OR IGNORE INTO CFG_BRAND (BRAND_CODE, BRAND_NAME, IS_ACTIVE, SORT_ORDER, UPDATED_AT, "
+                    "UPDATED_BY) VALUES (:b, :b, 1, (SELECT COUNT(*) + 1 FROM CFG_BRAND), :now, 'system')",
+                    {"b": code, "now": now})
 
 
 def sqlite_connect(db_path: str) -> sqlite3.Connection:
@@ -351,6 +373,7 @@ def sqlite_connect(db_path: str) -> sqlite3.Connection:
                           check_same_thread=False, isolation_level=None)
     con.execute("PRAGMA journal_mode=DELETE")
     con.execute("PRAGMA busy_timeout=5000")
+    con.execute("PRAGMA foreign_keys=ON")
     for table in tables.ALL_COLUMNS:
         con.execute(sqlite_create_sql(table))
     return con
@@ -369,6 +392,7 @@ def load_csv_into_sqlite(con: sqlite3.Connection, table: str, folder: str) -> bo
     names = [c for c, _ in cols]
     con.execute("BEGIN")
     try:
+        register_brands(con, {r.get("BRAND_CODE") for r in rows})
         con.execute(f"DELETE FROM {table}")
         con.executemany(f"INSERT INTO {table} ({', '.join(names)}) VALUES ({', '.join(':' + n for n in names)})",
                         rows)
@@ -431,17 +455,19 @@ class SqliteWarehouse(Warehouse):
             self._con.executemany(sql, [{c: r.get(c) for c in cols} for r in rows])
 
     def merge(self, table: str, keys: list[str], rows: Iterable[dict]) -> None:
-        """Delete-then-insert in one transaction, like the DuckDB mode."""
+        """INSERT ... ON CONFLICT DO UPDATE on the primary key: never deletes, so a brand
+        row that other tables reference can be updated under the foreign key."""
         rows = list(rows)
         if not rows:
             return
+        cols = [c for c in tables.column_types(table) if c in rows[0]]
+        update = ", ".join(f"{c} = excluded.{c}" for c in cols if c not in keys)
+        sql = (f"INSERT INTO {tables.app(table)} ({', '.join(cols)}) VALUES ({', '.join(':' + c for c in cols)}) "
+               f"ON CONFLICT ({', '.join(keys)}) DO " + (f"UPDATE SET {update}" if update else "NOTHING"))
         with self._lock:
             self._con.execute("BEGIN")
             try:
-                where = " AND ".join(f"{k} = :{k}" for k in keys)
-                for row in rows:
-                    self._con.execute(f"DELETE FROM {tables.app(table)} WHERE {where}", {k: row[k] for k in keys})
-                self.insert(table, rows)
+                self._con.executemany(sql, [{c: r.get(c) for c in cols} for r in rows])
                 self._con.execute("COMMIT")
             except Exception:
                 self._con.execute("ROLLBACK")

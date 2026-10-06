@@ -27,6 +27,12 @@ Each list is "fresh points first, then delivered points":
 A follow-up's text is the point's NEXT_CALL_TEMPLATE (closings: the
 well-received or the other variant); its POINT_ID is the original id plus
 "~F" (closings "~F2" / "~F1"), so it never collides with an assessed point.
+
+AI next-call messaging: with `messaging_keep` above 3 the messaging list keeps
+that many ranked candidates; the AI (n8n Next Call) then picks and orders
+the top 3 from them, from the call history and notes, and `apply_ai_messaging`
+puts its pick first and trims the list back to 3. The candidates are approved
+content, so the AI only chooses and explains, it never writes the claim.
 """
 from __future__ import annotations
 
@@ -98,8 +104,8 @@ def _group(x: dict) -> int:
 
 
 def rank_next(lib: Library, ctx: dict, category: str, delivered: list[dict], fresh: list[dict],
-              current: list[dict], day_mdy: str) -> list[dict]:
-    """The top 3 points for the next call (POC rankNext)."""
+              current: list[dict], day_mdy: str, keep: int = TP_SHOW) -> list[dict]:
+    """The top `keep` (3) points for the next call (POC rankNext)."""
     msg = category == "messaging"
     seen_text = {x["text"] for x in current}
     seen_ids = {x["point_id"] for x in current}
@@ -161,12 +167,16 @@ def rank_next(lib: Library, ctx: dict, category: str, delivered: list[dict], fre
     for x in pool:
         add(x, theme_score(x), TAG_NEW)
     cands.sort(key=lambda c: (c[0], c[1]))
-    return [{**_fresh(x), "tags": [tag] if tag else []} for _s, _n, x, tag in cands[:TP_SHOW]]
+    return [{**_fresh(x), "tags": [tag] if tag else []} for _s, _n, x, tag in cands[:keep]]
 
 
 def revise(lib: Library, ctx: dict, lists: dict[str, list[dict]], answers: dict[str, dict[str, dict]],
-           call_date: date, call_date_mdy: str, llm_states: Optional[dict[str, str]] = None) -> dict:
-    """answers[category][point_id] = {"reception": 0|1|2|None, "note": str} for RAISED points only."""
+           call_date: date, call_date_mdy: str, llm_states: Optional[dict[str, str]] = None,
+           messaging_keep: int = TP_SHOW) -> dict:
+    """answers[category][point_id] = {"reception": 0|1|2|None, "note": str} for RAISED points only.
+
+    messaging_keep > 3 keeps that many ranked messaging candidates for the AI to choose from;
+    call apply_ai_messaging (or trim) afterwards."""
     llm_states = llm_states or {}
     stats = {c: {"dl": 0, "well": 0, "open": 0, "res": 0} for c in lists}
     agreed = ""
@@ -192,7 +202,8 @@ def revise(lib: Library, ctx: dict, lists: dict[str, list[dict]], answers: dict[
                 agreed = (a.get("note") or "").strip()
             delivered.append(_delivered(x, cat, call_date, label, rc, is_open))
         if cat != "objection":
-            fresh = rank_next(lib, ctx, cat, delivered, fresh, current, call_date_mdy)
+            fresh = rank_next(lib, ctx, cat, delivered, fresh, current, call_date_mdy,
+                              messaging_keep if cat == "messaging" else TP_SHOW)
         again = []
         for x in old:
             a = answers.get(cat, {}).get(x["point_id"])
@@ -241,3 +252,38 @@ def revise(lib: Library, ctx: dict, lists: dict[str, list[dict]], answers: dict[
     return {"lists": out, "summaries": {cat: banner(cat) for cat in lists}, "next_best_action": nba,
             "history_line": hist,
             "counts": {"m_well": m["well"], "o_open": o["open"], "o_res": o.get("res", 0), "c_well": c["well"]}}
+
+
+TAG_AI = "AI suggested"
+
+
+def messaging_candidates(lists: dict[str, list[dict]]) -> list[dict]:
+    """The ranked, not yet delivered messaging points the AI may choose from."""
+    return [x for x in lists.get("messaging", []) if not x.get("delivered")]
+
+
+def apply_ai_messaging(lists: dict[str, list[dict]], pick: Optional[dict], keep: int = TP_SHOW) -> bool:
+    """Put the AI's pick first (with its insights), keep `keep` fresh points; True when the pick was used.
+
+    pick = {"ordered_point_ids": [...], "insights": {point_id: text}}, already validated against the
+    candidates. Without a pick the rule order stands, trimmed to `keep`.
+    """
+    msgs = lists.get("messaging")
+    if msgs is None:
+        return False
+    fresh = [x for x in msgs if not x.get("delivered")]
+    delivered = [x for x in msgs if x.get("delivered")]
+    by_id = {x["point_id"]: x for x in fresh}
+    ids = [i for i in (pick or {}).get("ordered_point_ids") or [] if i in by_id][:keep]
+    if ids:
+        insights = (pick or {}).get("insights") or {}
+        chosen = []
+        for i in ids:
+            x = dict(by_id[i])
+            if insights.get(i):
+                x["detail"] = insights[i]
+            x["tags"] = list(dict.fromkeys([*(x.get("tags") or []), TAG_AI]))
+            chosen.append(x)
+        fresh = chosen + [x for x in fresh if x["point_id"] not in ids]
+    lists["messaging"] = fresh[:keep] + delivered
+    return bool(ids)

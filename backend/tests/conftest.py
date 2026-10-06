@@ -66,7 +66,10 @@ def client():
 
 @pytest.fixture(scope="session")
 def employees():
-    return {e["USERNAME"]: e for e in seed_rows("DIM_EMPLOYEE")}
+    """Employees as the app sees them: the person plus their POVO sales assignment (HOME_TERRITORY_ID)."""
+    sales = {a["EMPLOYEE_ID"]: a for a in seed_rows("DIM_SALES_ASSIGNMENT")}
+    return {e["USERNAME"]: {**e, "HOME_TERRITORY_ID": sales[e["EMPLOYEE_ID"]]["TERRITORY_ID"]}
+            for e in seed_rows("DIM_EMPLOYEE")}
 
 
 @pytest.fixture(scope="session")

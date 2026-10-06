@@ -1,8 +1,9 @@
 import { memo } from 'react';
 import AiSparkle from '../../components/common/AiSparkle';
-import { TIMING } from '../../constants/constant';
+import { FEATURES, TIMING } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useFeatures } from '../../hooks/useFeatures';
 import { useGetExampleNotesQuery } from '../../redux/api/callsApi';
 import type { ExampleNotesArgs } from '../../types/models';
 import { cx } from '../../utils/cx';
@@ -21,7 +22,7 @@ const P = LABELS.postCall;
  * note in the field (the rep edits it) and runs the compliance check. When the
  * AI is not available nothing is shown: there is no fixed fallback text.
  */
-const ExampleNotes = ({ args, disabled = false, onPick }: ExampleNotesProps) => {
+const ExampleNotesList = ({ args, disabled = false, onPick }: ExampleNotesProps) => {
   // Dragging the reception slider would otherwise ask for a prediction at every step.
   const reception = useDebouncedValue(args.reception, TIMING.EXAMPLE_NOTES_DEBOUNCE_MS);
   // RTK Query keys the request by its serialized args, so a fresh object per render is fine.
@@ -53,5 +54,8 @@ const ExampleNotes = ({ args, disabled = false, onPick }: ExampleNotesProps) => 
     </div>
   );
 };
+
+/** Nothing at all (not even a request) when the brand has example notes off. */
+const ExampleNotes = (props: ExampleNotesProps) => (useFeatures().has(FEATURES.EXAMPLE_NOTES) ? <ExampleNotesList {...props} /> : null);
 
 export default memo(ExampleNotes);

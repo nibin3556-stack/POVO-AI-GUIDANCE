@@ -13,5 +13,5 @@ router = APIRouter(prefix="/api/v1/reference", tags=["reference"])
 
 
 @router.get("")
-def reference(_ctx: RequestContext = Depends(get_request_context)) -> dict:
-    return ok(build_reference())
+def reference(ctx: RequestContext = Depends(get_request_context)) -> dict:
+    return ok(build_reference(ctx.brand_code))

@@ -1,6 +1,8 @@
 import { memo } from 'react';
 import AiSparkle from '../../components/common/AiSparkle';
+import { FEATURES } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
+import { useFeatures } from '../../hooks/useFeatures';
 import { cx } from '../../utils/cx';
 import { useAssessment } from './AssessmentContext';
 import { useCheckAllNotes } from './useCheckAllNotes';
@@ -11,7 +13,9 @@ const P = LABELS.postCall;
 const CheckAllNotesButton = () => {
   const { voice } = useAssessment();
   const { run, running } = useCheckAllNotes();
+  const features = useFeatures();
   const busy = running > 0;
+  if (!features.has(FEATURES.COMPLIANCE_CHECK)) return null;
   return (
     <button
       type="button"

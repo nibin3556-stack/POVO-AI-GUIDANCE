@@ -6,3 +6,5 @@ export const selectImpersonation = (state: RootState) => state.session.impersona
 export const selectImpersonatedEmployeeId = createSelector(selectImpersonation, (imp) => imp?.employeeId ?? null);
 
 export const selectIsImpersonating = createSelector(selectImpersonation, (imp) => imp !== null);
+
+export const selectBrandCode = (state: RootState) => state.session.brandCode;

@@ -40,10 +40,11 @@ def display_name(h: dict) -> str:
     return f"{h.get('FIRST_NAME') or ''} {h.get('LAST_NAME') or ''}".strip()
 
 
-def assessed_calls(territory_id: str) -> list[dict]:
+def assessed_calls(brand_code: str, territory_id: str) -> list[dict]:
     rows = get_warehouse().query(
         f"SELECT CALL_ID, HCP_ID, CALL_DATE, PARTICIPANT_IDS FROM {app('APP_CALL')} "
-        f"WHERE TERRITORY_ID = :tid AND STATUS = 'assessed'", {"tid": territory_id})
+        f"WHERE BRAND_CODE = :brand AND TERRITORY_ID = :tid AND STATUS = 'assessed'",
+        {"brand": brand_code, "tid": territory_id})
     for r in rows:
         r["CALL_DATE"] = to_date(r["CALL_DATE"])
         try:
@@ -60,7 +61,8 @@ class Universe:
 
     def __init__(self, td: TerritoryData, calls: list[dict]) -> None:
         self.td = td
-        self.refs = get_refs()
+        self.brand = td.brand_code
+        self.refs = get_refs(td.brand_code)
         self.calls = calls
         self.app_calls_by_hcp: dict[str, list[dict]] = defaultdict(list)
         for c in calls:
@@ -71,7 +73,7 @@ class Universe:
         for i in td.interactions:
             if i.get("CHANNEL_CODE") == "rep" and i.get("INTERACTION_DATE"):
                 self.rep_dates[i["HCP_ID"]].append(i["INTERACTION_DATE"])
-                if i.get("POVO_DISCUSSED"):
+                if i.get("BRAND_DISCUSSED"):
                     self.discussions[i["HCP_ID"]] += 1
         for pid, cs in self.app_calls_by_hcp.items():
             for c in cs:
@@ -116,17 +118,19 @@ class Universe:
             "tier_code": tier_code,
             "is_in_call_plan": bool(p.get("IS_IN_CALL_PLAN")) if p.get("IS_IN_CALL_PLAN") is not None
             else tier_code is not None,
-            "hs_patients": as_int(m.get("HS_PATIENTS_12M")),
-            "jak_patients": as_int(m.get("JAK_PATIENTS")),
-            "povo_patients": as_int(m.get("POVO_PATIENTS")),
-            # PEFs received through IncyteCARES; every POVO patient has one, so pef >= povo_patients.
-            "pef": as_int(m.get("INCYTECARES_ENROLLED_PATIENTS")),
+            # API field names stay as the screens know them; the columns are brand-neutral.
+            "hs_patients": as_int(m.get("INDICATION_PATIENTS_12M")),
+            "jak_patients": as_int(m.get("COMPETITOR_PATIENTS")),
+            "povo_patients": as_int(m.get("BRAND_PATIENTS")),
+            # Enrollment forms received through the patient program; every brand patient has one,
+            # so pef >= povo_patients.
+            "pef": as_int(m.get("PROGRAM_ENROLLED_PATIENTS")),
             "last_call_date": dates[-1] if dates else None,
             "parent_hcp_id": h.get("PARENT_HCP_ID") or None,
             "is_must_win": False,
-            "_hs_rank": as_int(p.get("HS_RANK")),
-            "_visits": m.get("HS_VISITS_PER_MONTH"),
-            "_incyte": as_int(m.get("INCYTECARES_ENROLLED_PATIENTS")),
+            "_hs_rank": as_int(p.get("VOLUME_RANK")),
+            "_visits": m.get("INDICATION_VISITS_PER_MONTH"),
+            "_incyte": as_int(m.get("PROGRAM_ENROLLED_PATIENTS")),
             "_rep_dates": dates,
             "_discussions": self.discussions.get(h["HCP_ID"], 0),
         }
@@ -148,5 +152,5 @@ def public(t: dict) -> dict:
     return {k: t[k] for k in TARGET_FIELDS}
 
 
-def universe(territory_id: str) -> Universe:
-    return Universe(get_territory(territory_id), assessed_calls(territory_id))
+def universe(brand_code: str, territory_id: str) -> Universe:
+    return Universe(get_territory(brand_code, territory_id), assessed_calls(brand_code, territory_id))

@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { IMPERSONATION_STORAGE_KEY } from '../../constants/constant';
+import { BRAND_STORAGE_KEY, IMPERSONATION_STORAGE_KEY } from '../../constants/constant';
 
 export interface ImpersonationTarget {
   employeeId: string;
@@ -8,6 +8,8 @@ export interface ImpersonationTarget {
 
 export interface SessionState {
   impersonation: ImpersonationTarget | null;
+  /** The selected brand; null until the user picks one (the server uses their default). */
+  brandCode: string | null;
 }
 
 const isTarget = (value: unknown): value is ImpersonationTarget =>
@@ -38,7 +40,26 @@ export const persistImpersonation = (value: ImpersonationTarget | null): void =>
   }
 };
 
-export const createSessionState = (): SessionState => ({ impersonation: loadImpersonation() });
+/** The remembered brand (localStorage: it outlives the tab, unlike impersonation). */
+export const loadBrand = (): string | null => {
+  try {
+    const raw = localStorage.getItem(BRAND_STORAGE_KEY);
+    return raw && raw.trim() ? raw.trim() : null;
+  } catch {
+    return null;
+  }
+};
+
+export const persistBrand = (value: string | null): void => {
+  try {
+    if (value) localStorage.setItem(BRAND_STORAGE_KEY, value);
+    else localStorage.removeItem(BRAND_STORAGE_KEY);
+  } catch {
+    /* localStorage unavailable: the brand lasts until reload. */
+  }
+};
+
+export const createSessionState = (): SessionState => ({ impersonation: loadImpersonation(), brandCode: loadBrand() });
 
 const sessionSlice = createSlice({
   name: 'session',
@@ -50,8 +71,13 @@ const sessionSlice = createSlice({
     impersonationEnded: (state) => {
       state.impersonation = null;
     },
+    /** Impersonation is per brand (the employee may not exist in the other one), so it ends here. */
+    brandSelected: (state, action: PayloadAction<string | null>) => {
+      state.brandCode = action.payload;
+      state.impersonation = null;
+    },
   },
 });
 
-export const { impersonationStarted, impersonationEnded } = sessionSlice.actions;
+export const { impersonationStarted, impersonationEnded, brandSelected } = sessionSlice.actions;
 export default sessionSlice.reducer;

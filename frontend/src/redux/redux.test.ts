@@ -35,7 +35,7 @@ import { setupStore, type RootState } from './store';
 
 describe('session slice', () => {
   it('starts and ends impersonation', () => {
-    const started = sessionReducer({ impersonation: null }, impersonationStarted({ employeeId: 'p250611', name: 'Dana Whitaker' }));
+    const started = sessionReducer({ impersonation: null, brandCode: null }, impersonationStarted({ employeeId: 'p250611', name: 'Dana Whitaker' }));
     expect(started.impersonation?.employeeId).toBe('p250611');
     expect(sessionReducer(started, impersonationEnded()).impersonation).toBeNull();
   });

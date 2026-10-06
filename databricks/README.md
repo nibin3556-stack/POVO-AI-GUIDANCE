@@ -21,53 +21,57 @@ The app only reads these tables. The seeder regenerates them.
 
 | Table | What it holds | Rows (seed) |
 |---|---|---|
-| `DIM_TERRITORY` | The 8 Northeast territories (`NE-POR`, `NE-BOS`, `NE-HFD`, `NE-PVD`, `NE-MAN`, `NE-BTV`, `NE-WOR`, `NE-SPR`) | 8 |
-| `DIM_EMPLOYEE` | One rep per territory plus 2 managers. `HOME_TERRITORY_ID` scopes every query. | 10 |
+| `DIM_EMPLOYEE` | One rep per territory plus 2 managers, one row per person | 10 |
+| `DIM_SALES_ASSIGNMENT` | Sales: the territory each employee covers for the brand (8 Northeast territories, `NE-POR` … `NE-SPR`, with name, city, state, region, time zone). It scopes every query; there is no territory table. | 10 |
 | `DIM_ACCOUNT` | 6–7 practices per territory, plus 2 claims-only sites with no affiliated HCP | 66 |
-| `DIM_HCP` | 142 targets per territory: about 52 physicians (MD/DO), each with 0–2 NP/PA (`PARENT_HCP_ID`) | 1,136 |
+| `DIM_HCP` | Targets with the territory they belong to (`TERRITORY_ID`, `TERRITORY_NAME`, `REGION`): about 52 physicians (MD/DO) per territory, each with 0–2 NP/PA (`PARENT_HCP_ID`) | 657 |
 | `FCT_HCP_METRICS` | HS volume, visits, JAK, POVO and IncyteCARES patients per HCP, one snapshot at the as-of date | 1,136 |
 | `DIM_CALL_PLAN_TARGET` | Decile, tier, segment, competitive focus, in-plan flag and HS rank per target | 1,136 |
-| `REF_TIER` / `REF_SEGMENT` / `REF_COMPETITIVE_FOCUS` | Lookups with labels and colours from the POC | 3 / 3 / 5 |
+| `REF_INTERACTION_CHANNEL` | The master reference list, `REF_TYPE` = `CHANNEL` (6), `TIER` (3), `SEGMENT` (3), `KPI_METRIC` (2) or `KPI_PARAMETER` (3: the rates behind the Total on POVO split, dummy values until the client supplies real ones) | 17 |
+| `REF_COMPETITIVE_FOCUS` | Competitive focus labels and colours from the POC | 5 |
 | `FCT_INTERACTION` | Rep calls (`rep`) and other teams' touches (`adfa`, `opz`, `msl`, `spkr`, `pr`) | ~11k |
-| `FCT_POVO_ACTIVITY` | Patient funnel events: `PEF` → `NRX` → `NEW_PATIENT` (the first paid script), keyed by an opaque `PATIENT_KEY` | ~3k |
+| `FCT_BRAND_ACTIVITY` | Patient funnel events: `PEF` → `NRX` → `NEW_PATIENT` (the first paid script), keyed by an opaque `PATIENT_KEY` | ~3k |
 | `FCT_TERRITORY_GOAL` | Monthly goals for `NEW_PATIENTS`, `PEF` (×1.4) and `NRX` (×1.25), full year | 288 |
-| `REF_US_HOLIDAY` | The POC company holidays for the as-of year and the next | 16 |
-| `REF_KPI_PARAMETER` | Rates behind the Total on POVO split (`PAID_PERSISTENCE`, `PENDING_ON_THERAPY`, `BRIDGE_SHARE`); dummy values until the client supplies real ones | 3 |
+| `REF_HOLIDAY` | The POC company holidays for the as-of year and the next | 16 |
 | `REF_TALKING_POINT` / `REF_OBJECTION_RULE` / `REF_COMPLIANCE_RULE` | MLR-approved content, copied unchanged from `seed/content/*.json` | per content |
 | `REF_COMPLIANCE_TEXT` | The compliance rewrite wording, copied unchanged from `seed/content/compliance_texts.json` | 12 |
 
 ### `app`: tables the app writes
 
-`APP_CALL`, `APP_CALL_POINT_ASSESSMENT`, `APP_COMPLIANCE_CHECK`, `APP_CALL_PREP_REVISION`, `APP_TERRITORY_GUIDANCE_SNAPSHOT`, `APP_AI_CACHE`, `APP_AUDIT_LOG` and `APP_JOB_RUN`.
-Their logical keys are in the table comments, and the backend upserts with `MERGE`. The seed loader never touches them.
+`CFG_BRAND` (the brand master, created in `00_catalog_schemas.sql`), `CFG_BRAND_FEATURE`, `APP_CALL`, `APP_CALL_POINT_ASSESSMENT`, `APP_COMPLIANCE_CHECK`, `APP_CALL_PREP_REVISION`, `APP_TERRITORY_GUIDANCE_SNAPSHOT`, `APP_AI_CACHE`, `APP_AUDIT_LOG` and `APP_JOB_RUN`.
+The backend upserts with `MERGE` on each table's primary key. The seed loader never touches them.
+
+### Keys
+
+Every table has one primary-key column (its first column), never `BRAND_CODE`; keys built from several columns are the values joined with `|` (e.g. `POVO|NE-POR|2026-10|PEF`). Every table's `BRAND_CODE` is a foreign key to `CFG_BRAND`. The DDL declares them as Unity Catalog constraints, which Databricks does not enforce; SQLite enforces the same keys.
 
 ### Relationships
 
-Delta does not enforce keys, so these relationships are logical. The tests check them on the generated data.
+Only `BRAND_CODE` → `CFG_BRAND` is a declared foreign key. The other relationships are logical; the tests check them on the generated data.
 
 ```mermaid
 erDiagram
-    DIM_TERRITORY ||--o{ DIM_EMPLOYEE : "HOME_TERRITORY_ID"
-    DIM_TERRITORY ||--o{ DIM_ACCOUNT : "TERRITORY_ID"
-    DIM_TERRITORY ||--o{ DIM_HCP : "TERRITORY_ID"
+    CFG_BRAND ||--o{ DIM_SALES_ASSIGNMENT : "BRAND_CODE (every table)"
+    DIM_EMPLOYEE ||--o{ DIM_SALES_ASSIGNMENT : "EMPLOYEE_ID"
+    DIM_SALES_ASSIGNMENT }o--o{ DIM_HCP : "TERRITORY_ID"
     DIM_ACCOUNT ||--o{ DIM_HCP : "ACCOUNT_ID"
     DIM_HCP ||--o{ DIM_HCP : "PARENT_HCP_ID (NP/PA to physician)"
     DIM_HCP ||--o{ FCT_HCP_METRICS : "HCP_ID"
     DIM_HCP ||--|| DIM_CALL_PLAN_TARGET : "HCP_ID + PLAN_YEAR"
-    REF_TIER ||--o{ DIM_CALL_PLAN_TARGET : "TIER_CODE"
-    REF_SEGMENT ||--o{ DIM_CALL_PLAN_TARGET : "SEGMENT_CODE"
+    REF_INTERACTION_CHANNEL ||--o{ DIM_CALL_PLAN_TARGET : "TIER_CODE, SEGMENT_CODE (REF_TYPE TIER, SEGMENT)"
+    REF_INTERACTION_CHANNEL ||--o{ FCT_INTERACTION : "CHANNEL_CODE (REF_TYPE CHANNEL)"
     REF_COMPETITIVE_FOCUS ||--o{ DIM_CALL_PLAN_TARGET : "COMPETITIVE_FOCUS"
     DIM_HCP ||--o{ FCT_INTERACTION : "HCP_ID"
     DIM_EMPLOYEE ||--o{ FCT_INTERACTION : "EMPLOYEE_ID (rep calls)"
-    DIM_HCP ||--o{ FCT_POVO_ACTIVITY : "HCP_ID"
-    DIM_TERRITORY ||--o{ FCT_TERRITORY_GOAL : "TERRITORY_ID"
+    DIM_HCP ||--o{ FCT_BRAND_ACTIVITY : "HCP_ID"
+    DIM_SALES_ASSIGNMENT }o--o{ FCT_TERRITORY_GOAL : "TERRITORY_ID"
     DIM_HCP ||--o{ APP_CALL : "HCP_ID"
     DIM_EMPLOYEE ||--o{ APP_CALL : "REP_EMPLOYEE_ID / ACTED_BY_EMPLOYEE_ID"
     APP_CALL ||--o{ APP_CALL_POINT_ASSESSMENT : "CALL_ID"
     APP_CALL ||--o{ APP_COMPLIANCE_CHECK : "CALL_ID"
     APP_CALL ||--o{ APP_CALL_PREP_REVISION : "CALL_ID"
     REF_TALKING_POINT ||--o{ APP_CALL_POINT_ASSESSMENT : "POINT_ID"
-    DIM_TERRITORY ||--o{ APP_TERRITORY_GUIDANCE_SNAPSHOT : "TERRITORY_ID"
+    DIM_SALES_ASSIGNMENT }o--o{ APP_TERRITORY_GUIDANCE_SNAPSHOT : "TERRITORY_ID"
 ```
 
 ## How the dummy data is modelled
@@ -76,7 +80,7 @@ The numbers come from the POC (`POVO_AI_Guidance_Step3_37.html`) and [spec §8](
 
 - **Targets.** Each territory has 142 targets, split by decile like the POC (1/2/4/5/8/10/13/19/21/59, each within ±15%). Portland uses exactly the POC split.
   - HS volumes follow the POC averages per decile.
-  - `HS_RANK` ranks targets by HS volume within the territory. Deciles are assigned top-down in the same order.
+  - `VOLUME_RANK` ranks targets by HS volume within the territory. Deciles are assigned top-down in the same order.
 - **Names.** Portland reuses the POC names: Winters (D10, rank 1), Sprague, Berg and the others, with their NPs and PAs.
   - Boston, Hartford and Providence reuse the POC impersonation datasets.
   - Every other name comes from a pool. Last names are unique within a territory.

@@ -4,7 +4,7 @@
 default), not the server's clock zone: a Posit VM in UTC would otherwise flip
 to tomorrow at 8 pm Eastern. POVO_TODAY_OVERRIDE pins it for tests and demos.
 
-Working days are weekdays minus US holidays (REF_US_HOLIDAY). If that table is
+Working days are weekdays minus US holidays (REF_HOLIDAY). If that table is
 empty, the POC's own holiday set is computed (the 8 federal holidays the POC
 lists, with weekend observance), so KPI math never silently counts a holiday.
 """

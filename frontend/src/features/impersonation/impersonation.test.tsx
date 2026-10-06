@@ -89,7 +89,7 @@ describe('shell and impersonation', () => {
   it('the impersonation bar exits', async () => {
     const viewing = { ...meManager, effective: dana, is_impersonating: true };
     const spy = mockApi([{ url: '/me', respond: viewing }, ...managerRoutes.slice(1)]);
-    const { store } = renderWithProviders(<AppShell />, { preloadedState: { session: { impersonation: { employeeId: 'p250611', name: 'Dana Whitaker' } } } });
+    const { store } = renderWithProviders(<AppShell />, { preloadedState: { session: { impersonation: { employeeId: 'p250611', name: 'Dana Whitaker' }, brandCode: null } } });
     expect(await screen.findByText(/Every figure on this page is theirs/)).toBeInTheDocument();
     await userEvent.click(screen.getAllByRole('button', { name: /Exit impersonation/ })[0]!);
     await waitFor(() => expect(store.getState().session.impersonation).toBeNull());

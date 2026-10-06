@@ -28,7 +28,7 @@ def search(q: str = Query(min_length=2, max_length=80), limit: int = Query(8, ge
            ctx: RequestContext = Depends(require_permission(USER_IMPERSONATE))) -> dict:
     """Matches employee ID, network ID, username exactly; name or territory by substring."""
     v = q.strip().lower()
-    refs = get_refs()
+    refs = get_refs(ctx.brand_code)
     hits = []
     for e in refs.employees:
         if not _active(e):
@@ -44,7 +44,7 @@ def search(q: str = Query(min_length=2, max_length=80), limit: int = Query(8, ge
 
 @router.post("")
 def start(body: ImpersonationStart, ctx: RequestContext = Depends(require_permission(USER_IMPERSONATE))) -> dict:
-    target = employee_by_id(body.employee_id)
+    target = employee_by_id(body.employee_id, ctx.brand_code)
     if target is None or not _active(target):
         raise HTTPException(status_code=404,
                             detail=f'No employee found for "{body.employee_id}". Check the name, Employee ID or '

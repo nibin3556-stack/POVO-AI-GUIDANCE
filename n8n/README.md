@@ -15,15 +15,14 @@ The browser never calls n8n. Only the backend does.
 
 ## What each workflow does
 
-All three webhook workflows have the same shape:
+All four webhook workflows have the same shape:
 
 ```
 Webhook (POST, responseMode: responseNode)
   → Build Prompt (Code: validates the request, builds the system prompt and data block)
   → Request Valid? (IF)
       ├─ true  → <X> Writer (LLM) (Basic LLM Chain)
-      │            ├─ Azure OpenAI Chat Model   (credential "Azure OpenAI account", gpt-4.1, temperature 0, json_object)
-      │            └─ Structured Output Parser
+      │            └─ Azure OpenAI Chat Model   (credential "Azure OpenAI account", gpt-4.1, temperature 0, json_object)
       │          ├─ success → Guard (Code) ─────────┐
       │          └─ error output → Model Failed ─────┤
       └─ false → Reject Request ─────────────────────┴→ Respond to Webhook
@@ -32,9 +31,10 @@ Webhook (POST, responseMode: responseNode)
 Every response is exactly `{"ok": true, ...payload}` or `{"ok": false, "reason": "..."}`. There is no other shape.
 
 - **Contract break** (missing `request_id`, unknown category, no candidates, and so on) goes to *Reject Request* and returns `{ok:false, reason:"invalid_request: ..."}`.
-- **Model failure** covers an Azure timeout, a content filter hit, or output the parser cannot read. The chain's **error output** (`onError: continueErrorOutput`) goes to *Model Failed* and returns `{ok:false, reason:"model_error: ..."}`.
+- **Model failure** covers a model timeout or a content filter hit. The chain's **error output** (`onError: continueErrorOutput`) goes to *Model Failed* and returns `{ok:false, reason:"model_error: ..."}`.
   - The model node has a 25 s timeout with 1 retry, and the workflow's `executionTimeout` is 55 s. A failure is therefore answered inside the backend's `N8N_TIMEOUT_SECONDS` (60).
 - **Guard failure** returns `{ok:false, reason}`. On success the Guard returns `{ok:true, ...payload}`.
+- **No Structured Output Parser.** The Guard reads the model text itself: it strips code fences, unwraps `output` / `text` wrappers and, when the text is not valid JSON as a whole, parses the first complete `{...}` in it. A strict parser rejected otherwise-correct answers with a stray brace (seen with Claude: 19 of 98 Compliance Check runs), and every rejection silently dropped the AI to the rules-only fallback. An answer with no JSON object at all is still a Guard failure.
 
 The system prompts live in each **Build Prompt** Code node as readable line arrays. They are deliberately free of `{ }`, because the chain treats the system message as a template. Every prompt:
 
@@ -102,16 +102,20 @@ The Guard drops, without failing the call:
 
 ### Next Call v1: `povo-next-call`
 
-- Request: `{request_id, participant:{…}, call_date, assessments:[{category, point_id, text, reception, note}]}`
-- Response: `{ok:true, objection_states:{point_id: "open"|"resolved"}, summary (≤240), next_best_action (≤200)}`
+- Request: `{request_id, brand:{code, name, description}, participant:{…}, call_date, assessments:[{category, point_id, text, reception, note}], history:[{call_date, points:[{category, text, reception, note}]}], interactions:[{date, type_label, summary}], messaging_candidates:[{point_id, pillar, text, tag}], max_messaging}`
+- Response: `{ok:true, objection_states:{point_id: "open"|"resolved"}, summary (≤240), next_best_action (≤200), next_messaging?:{ordered_point_ids, insights:{point_id: ≤220}}}`
 
-`reception` may be `0/1/2` (as stored) or a label. The backend applies the deterministic revision rules (§7) itself.
+`reception` may be `0/1/2` (as stored) or a label. The backend applies the deterministic revision rules (§7) itself. `history` (the participant's last assessed calls, compliance-passed notes only), `interactions`, `messaging_candidates` and `brand` are optional, so older callers still work.
+
+**Next-call messaging.** With candidates, the model picks the `max_messaging` (3) the rep should lead the next call with, in order, weighing this call, the earlier calls' reception and notes and the participant data, and writes an insight per pick ("Asked for the lesion and pain slides on 09/30"). The candidates are approved content ranked by the rules; the model never writes claim text. The prompt names the brand from `brand` (POVO when absent).
 
 The Guard fails the call (`ok:false`) when:
 - `objection_states` does not cover **exactly** the objection point_ids given (those with `category: "objection"`);
 - a state is not `open` or `resolved`;
 - a text field is empty, or over its limit and cannot be cut back to a whole sentence or clause of at least 40 characters (a summary or next best action that runs slightly over is trimmed, not rejected);
 - the summary or next best action contains a claim-like number (%, mg, weeks, fold, p-value) that is not in the assessments.
+
+`next_messaging` is checked separately and is never fatal: when an id is not a candidate or repeats, the whole pick is dropped (the backend keeps the rule order); more than `max_messaging` ids are cut to `max_messaging`; an insight is fitted to 220 characters and dropped if it has a claim-like number that is not in the input. `node tools/test-next-call.js` runs the exact Build Prompt and Guard code on `samples/next-call.json` and these cases.
 
 ### Nightly Guidance Refresh v1: schedule
 
@@ -178,6 +182,7 @@ On the VM, either set `POVO_BACKEND_URL` (with env access allowed) or edit the S
 | `node tools/validate-workflows.js` | Checks every file: JSON parses, `active:false`, name ends in `vN`, file name matches the name, unique node names and UUID ids, every connection source and target exists, no dangling nodes, the error output is wired, Code nodes compile, the webhook uses POST + responseNode + Respond node, webhook paths are unique across files, the Azure credential placeholder and temperature 0 are set, and there are no hardcoded secrets or IPs. Exit code 1 on failure. **Run it before every commit.** |
 | `node tools/deploy-to-n8n.js [--dry-run] [--activate] [files…]` | Uses the n8n public API (`X-N8N-API-KEY`) with env `N8N_URL` (default `http://localhost:5680`) and `N8N_API_KEY`. It creates or updates workflows **by name**. It binds the model credential in this order: the one already on the live node, then `N8N_AZURE_CREDENTIAL_ID`, then one borrowed from another workflow. It sends only the settings keys the API accepts, including `timezone`. `--activate` activates the workflow and deactivates any other active workflow on the same webhook path. `--dry-run` sends nothing and also works offline without a key. |
 | `tools/test-webhooks.ps1` / `tools/test-webhooks.sh` | POST each `samples/*.json` to the running n8n and print the response. Options: `-N8nUrl` / `N8N_URL`, and `-Test` / `--test` for `/webhook-test/`. |
+| `node tools/test-next-call.js` | Runs the Next Call workflow's Build Prompt and Guard code (no n8n, no model) on `samples/next-call.json`: history and candidates reach the prompt, a good pick is kept, a pick outside the candidates or with a repeated id is dropped, an insight with an invented figure is dropped. Exit code 1 on failure. |
 | `samples/*.json` | Request bodies that match the §6 contracts exactly: `call-prep`, `compliance-check`, `compliance-check-additional` (600-character limit) and `next-call`. |
 
 ```powershell

@@ -1,14 +1,16 @@
 import { useCallback, useEffect } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import EmptyState from '../components/common/EmptyState';
-import { preCallPath } from '../constants/constant';
+import { FEATURES, preCallPath } from '../constants/constant';
 import { LABELS } from '../constants/labels';
 import CallPlanSection from '../features/preCall/CallPlanSection';
 import CallPrepSection from '../features/preCall/CallPrep/CallPrepSection';
 import MustWins from '../features/preCall/MustWins';
 import { selectSelectedHcpId } from '../redux/callSession/callSessionSelectors';
 import { submittedFlashDone, targetSelected } from '../redux/callSession/callSessionSlice';
+import { useFeatures } from '../hooks/useFeatures';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
+import { cx } from '../utils/cx';
 
 /** How long the submitted row flashes (3 pulses), and the wait before scrolling to it. */
 const FLASH_MS = 4200;
@@ -21,6 +23,7 @@ const PreCallPage = () => {
   const navigate = useNavigate();
   const selectedHcpId = useAppSelector(selectSelectedHcpId);
   const flashId = useAppSelector((s) => s.callSession.justSubmittedHcpId);
+  const mustWins = useFeatures().has(FEATURES.MUST_WINS);
 
   // Sync: the URL is the source of truth for the selected target (deep links, back/forward).
   useEffect(() => {
@@ -54,8 +57,13 @@ const PreCallPage = () => {
 
   return (
     <div className="flex flex-col gap-4" data-testid="pre-call-page">
-      <div className="grid grid-cols-[minmax(0,.8fr)_minmax(0,1.6fr)] items-stretch gap-4 max-bp1700:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] max-bp1180:grid-cols-1">
-        <MustWins selectedId={current} onSelect={handleSelect} flashId={flashId} />
+      <div
+        className={cx(
+          'grid items-stretch gap-4 max-bp1180:grid-cols-1',
+          mustWins ? 'grid-cols-[minmax(0,.8fr)_minmax(0,1.6fr)] max-bp1700:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]' : 'grid-cols-1',
+        )}
+      >
+        {mustWins && <MustWins selectedId={current} onSelect={handleSelect} flashId={flashId} />}
         <CallPlanSection selectedId={current} onSelect={handleSelect} flashId={flashId} />
       </div>
       {current ? <CallPrepSection hcpId={current} /> : <EmptyState message={LABELS.preCall.selectHint} variant="hint" />}

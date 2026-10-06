@@ -10,6 +10,10 @@ export const API_PREFIX = '/api/v1';
 export const REQUEST_ID_HEADER = 'X-Request-ID';
 export const IMPERSONATE_HEADER = 'X-Impersonate-Employee-Id';
 export const IMPERSONATION_STORAGE_KEY = 'povo.impersonation';
+/** The selected brand travels on every request; the server checks the user may use it. */
+export const BRAND_HEADER = 'X-Brand-Code';
+/** localStorage: the brand is remembered across tabs and visits (a per-viewer convenience). */
+export const BRAND_STORAGE_KEY = 'povo.brand';
 
 /** Window events raised by the axios interceptor for the shell. */
 export const FORBIDDEN_EVENT = 'povo:forbidden';
@@ -19,6 +23,27 @@ export const PERMISSIONS = {
   ASSESS: 'call.assess',
   IMPERSONATE: 'user.impersonate',
 } as const;
+
+/** Brand features (backend registry/features.py). /me lists the ones on for the selected brand. */
+export const FEATURES = {
+  PERFORMANCE_TAB: 'PERFORMANCE_TAB',
+  PERFORMANCE_KPIS: 'PERFORMANCE_KPIS',
+  AI_GUIDANCE: 'AI_GUIDANCE',
+  SEGMENTATION: 'SEGMENTATION',
+  DECILES: 'DECILES',
+  NEW_WRITERS: 'NEW_WRITERS',
+  PRE_CALL_TAB: 'PRE_CALL_TAB',
+  MUST_WINS: 'MUST_WINS',
+  AI_CALL_PREP: 'AI_CALL_PREP',
+  POST_CALL_TAB: 'POST_CALL_TAB',
+  COMPLIANCE_CHECK: 'COMPLIANCE_CHECK',
+  EXAMPLE_NOTES: 'EXAMPLE_NOTES',
+  VOICE_NOTES: 'VOICE_NOTES',
+  AI_NEXT_CALL: 'AI_NEXT_CALL',
+  IMPERSONATION: 'IMPERSONATION',
+} as const;
+
+export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];
 
 export const TARGETS_PAGE_SIZE = 10;
 export const DEFAULT_TARGET_SORT = 'hs_patients:desc';
@@ -49,6 +74,7 @@ export const ROUTES = {
   PERFORMANCE: '/performance',
   PRE_CALL: '/pre-call',
   POST_CALL: '/post-call',
+  ADMIN: '/admin',
 } as const;
 
 export const preCallPath = (hcpId?: string | null): string =>

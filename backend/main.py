@@ -13,16 +13,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from api import (accounts, call_prep, calls, compliance, example_notes, health, impersonation, jobs, me, performance,
-                 reference, targets)
+from api import (accounts, admin, call_prep, calls, compliance, example_notes, health, impersonation, jobs, me,
+                 performance, reference, targets)
 from core.config import get_settings
 from core.exception_handler import register_exception_handlers
 from core.logging import configure_logging
 from core.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 from core.security_headers import SecurityHeadersMiddleware
 from database.warehouse import get_warehouse, reset_warehouse
-from helpers import n8n_client
-from helpers.dependency import IMPERSONATE_HEADER
+from helpers import brands, n8n_client
+from helpers.dependency import BRAND_HEADER, IMPERSONATE_HEADER
 
 logger = logging.getLogger("povo")
 
@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
             logger.info("Dev identity fallback active -> %s", settings.dev_fallback_username)
         try:
             get_warehouse()
+            brands.sync_brands()  # register the default brand and any brand the data feed added
         except Exception:  # noqa: BLE001 - /health reports it; requests retry the connection
             logger.exception("Warehouse could not be opened at startup")
         yield
@@ -56,7 +57,7 @@ def create_app() -> FastAPI:
         # Posit content items share an origin and no CORS is needed.
         app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=True,
                            allow_methods=["GET", "POST", "PUT", "DELETE"],
-                           allow_headers=["Content-Type", REQUEST_ID_HEADER, IMPERSONATE_HEADER,
+                           allow_headers=["Content-Type", REQUEST_ID_HEADER, IMPERSONATE_HEADER, BRAND_HEADER,
                                           settings.posit_identity_header],
                            expose_headers=[REQUEST_ID_HEADER])
     app.add_middleware(RequestIdMiddleware)
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     app.include_router(compliance.router)
     app.include_router(example_notes.router)
     app.include_router(jobs.router)
+    app.include_router(admin.router)
     return app
 
 

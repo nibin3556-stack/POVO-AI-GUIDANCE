@@ -32,9 +32,9 @@ NOTE_LIMIT = {"additional": 600}
 DEFAULT_NOTE_LIMIT = 200
 
 
-def compliance_steps() -> list[str]:
+def compliance_steps(brand_code: Optional[str] = None) -> list[str]:
     """The modal's three steps. The rule count follows the active rulebook, not a fixed 14."""
-    return ["Reading your note", f"Checking against {len(get_library().compliance_rules)} compliance rules",
+    return ["Reading your note", f"Checking against {len(get_library(brand_code).compliance_rules)} compliance rules",
             "Drafting a rewrite"]
 
 
@@ -43,9 +43,10 @@ def note_limit(category: str) -> int:
 
 
 def evaluate(note: str, category: str, point_text: str, who: str, ctx_text: str,
-             participant_role: str = "HCP", request_id: Optional[str] = None, use_ai: bool = True) -> dict:
+             participant_role: str = "HCP", request_id: Optional[str] = None, use_ai: bool = True,
+             brand_code: Optional[str] = None) -> dict:
     """The check result (not persisted). ctx_text is what relevance is judged against."""
-    lib = get_library()
+    lib = get_library(brand_code)
     rules, texts = lib.compliance_rules, lib.compliance_texts
     txt = (note or "").strip()
     rel_ctx = ctx_text if category == "additional" else (point_text or ctx_text or "")
@@ -88,10 +89,11 @@ def evaluate(note: str, category: str, point_text: str, who: str, ctx_text: str,
     return {"status": "flagged" if issues else "passed", "result_label": result_label(issues),
             "max_severity": max_severity(issues), "score": score(issues),
             "issues": [issue_out(x) for x in issues], "suggested_text": suggested or None,
-            "steps": compliance_steps(), "engine": engine}
+            "steps": compliance_steps(brand_code), "engine": engine}
 
 
-def latest_ai_check(call_id: str, participant_id: str, category: str, point_id: str, note: str) -> Optional[dict]:
+def latest_ai_check(call_id: str, participant_id: str, category: str, point_id: str, note: str,
+                    brand_code: Optional[str] = None) -> Optional[dict]:
     """The newest AI-assisted check of exactly this note on this call slot, as a full result, or None.
 
     Submit reuses it instead of calling the LLM again, and a check whose AI pass
@@ -102,23 +104,24 @@ def latest_ai_check(call_id: str, participant_id: str, category: str, point_id: 
     rows = get_warehouse().query(
         f"SELECT CHECK_ID, RESULT_LABEL, MAX_SEVERITY, SCORE, ISSUES_JSON, SUGGESTED_TEXT, ENGINE "
         f"FROM {app('APP_COMPLIANCE_CHECK')} "
-        f"WHERE CALL_ID = :cid AND PARTICIPANT_ID = :pid AND CATEGORY = :cat AND POINT_ID = :point "
-        f"AND NOTE_TEXT = :note AND ENGINE = 'rules+llm' ORDER BY CREATED_AT DESC LIMIT 1",
-        {"cid": call_id, "pid": participant_id, "cat": category, "point": point_id, "note": note})
+        f"WHERE BRAND_CODE = :brand AND CALL_ID = :cid AND PARTICIPANT_ID = :pid AND CATEGORY = :cat "
+        f"AND POINT_ID = :point AND NOTE_TEXT = :note AND ENGINE = 'rules+llm' ORDER BY CREATED_AT DESC LIMIT 1",
+        {"brand": brand_code or get_settings().default_brand_code, "cid": call_id, "pid": participant_id,
+         "cat": category, "point": point_id, "note": note})
     if not rows:
         return None
     r = rows[0]
     issues = json.loads(r.get("ISSUES_JSON") or "[]")
     return {"check_id": r["CHECK_ID"], "status": "flagged" if issues else "passed", "result_label": r["RESULT_LABEL"],
             "max_severity": r.get("MAX_SEVERITY"), "score": int(r.get("SCORE") or 0), "issues": issues,
-            "suggested_text": r.get("SUGGESTED_TEXT"), "steps": compliance_steps(), "engine": r["ENGINE"]}
+            "suggested_text": r.get("SUGGESTED_TEXT"), "steps": compliance_steps(brand_code), "engine": r["ENGINE"]}
 
 
 def persist(result: dict, call_id: Optional[str], participant_id: str, category: str, point_id: str,
-            note: str, rep_id: str, acted_by: str) -> str:
+            note: str, rep_id: str, acted_by: str, brand_code: Optional[str] = None) -> str:
     check_id = str(uuid.uuid4())
     get_warehouse().insert("APP_COMPLIANCE_CHECK", [{
-        "CHECK_ID": check_id, "CALL_ID": call_id, "PARTICIPANT_ID": participant_id, "CATEGORY": category,
+        "BRAND_CODE": brand_code or get_settings().default_brand_code, "CHECK_ID": check_id, "CALL_ID": call_id, "PARTICIPANT_ID": participant_id, "CATEGORY": category,
         "POINT_ID": point_id, "NOTE_TEXT": note, "RESULT_LABEL": result["result_label"],
         "MAX_SEVERITY": result["max_severity"], "SCORE": result["score"],
         "ISSUES_JSON": json.dumps(result["issues"]), "SUGGESTED_TEXT": result["suggested_text"],

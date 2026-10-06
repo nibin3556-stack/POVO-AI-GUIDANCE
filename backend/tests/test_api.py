@@ -123,7 +123,7 @@ def test_kpis_shape_and_consistency(client):
 
 def test_ytd_counts_the_data_window_only(client):
     d = _data(client.get("/api/v1/performance/kpis?period=ytd"))
-    rows = [a for a in seed_rows("FCT_POVO_ACTIVITY") if a["TERRITORY_ID"] == "NE-POR"]
+    rows = [a for a in seed_rows("FCT_BRAND_ACTIVITY") if a["TERRITORY_ID"] == "NE-POR"]
     assert all(a["EVENT_DATE"] >= "2026-07-01" for a in rows)
     n = sum(1 for a in rows if a["EVENT_TYPE"] == "NEW_PATIENT" and a["EVENT_DATE"] <= "2026-10-13")
     pefs = sum(1 for a in rows if a["EVENT_TYPE"] == "PEF" and a["EVENT_DATE"] <= "2026-10-13")
@@ -431,15 +431,16 @@ def test_kpi_rates_are_read_from_the_table(client):
     from helpers.territory_data import clear_cache
 
     wh = get_warehouse()
-    params = wh.query(f"SELECT * FROM {bronze('REF_KPI_PARAMETER')}")
+    where = "WHERE REF_TYPE = 'KPI_PARAMETER'"
+    params = wh.query(f"SELECT * FROM {bronze('REF_INTERACTION_CHANNEL')} {where}")
     try:
-        wh.execute(f"DELETE FROM {bronze('REF_KPI_PARAMETER')}")
+        wh.execute(f"DELETE FROM {bronze('REF_INTERACTION_CHANNEL')} {where}")
         clear_cache()
         assert "split" not in _data(client.get("/api/v1/performance/kpis?period=month"))["cards"][1]
     finally:
         for row in params:
-            wh.execute(f"INSERT INTO {bronze('REF_KPI_PARAMETER')} (PARAM_CODE, PARAM_VALUE, DESCRIPTION, SORT_ORDER) "
-                       f"VALUES (:c, :v, :d, :s)", {"c": row["PARAM_CODE"], "v": row["PARAM_VALUE"],
-                                                   "d": row["DESCRIPTION"], "s": row["SORT_ORDER"]})
+            cols = list(row)
+            wh.execute(f"INSERT INTO {bronze('REF_INTERACTION_CHANNEL')} ({', '.join(cols)}) "
+                       f"VALUES ({', '.join(':' + c for c in cols)})", row)
         clear_cache()
     assert "split" in _data(client.get("/api/v1/performance/kpis?period=month"))["cards"][1]

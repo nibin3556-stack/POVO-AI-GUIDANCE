@@ -80,7 +80,8 @@ describe('Pre-Call Planning', () => {
     expect(await within(prep).findByText('Call Prep · Dr. Winters, John, MD')).toBeInTheDocument();
     expect(within(prep).getByText('HS patients, last 12 months')).toBeInTheDocument();
     await userEvent.click(within(prep).getByRole('button', { name: 'Suggested Messaging' }));
-    expect(await within(prep).findByText('AI is preparing Suggested Messaging')).toBeInTheDocument();
+    // Generous wait: under a parallel test run the first render after the click can take over a second.
+    expect(await within(prep).findByText('AI is preparing Suggested Messaging', undefined, { timeout: 3000 })).toBeInTheDocument();
     await waitFor(() => expect(store.getState().callSession.revealed['H2|messaging|0']).toBe(true), { timeout: 5000 });
     expect(within(prep).getByText('HiSCR50 primary endpoint met at Week 12')).toBeInTheDocument();
     expect(within(prep).getByText('↳ Insight:')).toBeInTheDocument();

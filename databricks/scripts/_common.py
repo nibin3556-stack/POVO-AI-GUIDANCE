@@ -167,7 +167,8 @@ def bronze_tables() -> dict[str, list[tuple[str, str]]]:
 
 
 def app_tables() -> dict[str, list[tuple[str, str]]]:
-    return parse_tables("02_app_tables.sql")
+    """App-schema tables: CFG_BRAND (created first, in 00, as every table references it) and 02."""
+    return {**parse_tables("00_catalog_schemas.sql"), **parse_tables("02_app_tables.sql")}
 
 
 # --------------------------------------------------------------------------

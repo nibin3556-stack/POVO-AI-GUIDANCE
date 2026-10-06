@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { API_URL, FORBIDDEN_EVENT, IMPERSONATE_HEADER, REQUEST_ID_HEADER } from '../constants/constant';
+import { API_URL, BRAND_HEADER, FORBIDDEN_EVENT, IMPERSONATE_HEADER, REQUEST_ID_HEADER } from '../constants/constant';
 import { LABELS } from '../constants/labels';
 import type { ApiError, Pagination, UnwrappedResponse } from '../types/api';
 
@@ -12,10 +12,16 @@ import type { ApiError, Pagination, UnwrappedResponse } from '../types/api';
  */
 
 let impersonationGetter: () => string | null = () => null;
+let brandGetter: () => string | null = () => null;
 
 /** Wired by the store so the interceptor always reads the live Redux value. */
 export const registerImpersonationGetter = (getter: () => string | null): void => {
   impersonationGetter = getter;
+};
+
+/** Wired by the store: the selected brand (null = the server picks the user's default). */
+export const registerBrandGetter = (getter: () => string | null): void => {
+  brandGetter = getter;
 };
 
 export const generateRequestId = (): string => crypto.randomUUID();
@@ -25,6 +31,9 @@ export const attachRequestHeaders = (config: InternalAxiosRequestConfig): Intern
   const impersonated = impersonationGetter();
   if (impersonated) config.headers.set(IMPERSONATE_HEADER, impersonated);
   else config.headers.delete(IMPERSONATE_HEADER);
+  const brand = brandGetter();
+  if (brand) config.headers.set(BRAND_HEADER, brand);
+  else config.headers.delete(BRAND_HEADER);
   return config;
 };
 

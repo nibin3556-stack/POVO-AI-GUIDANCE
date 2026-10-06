@@ -65,6 +65,7 @@ DuckDB. Text columns are declared `TEXT`, so ZIP and NPI keep their leading zero
 |---|---|
 | `.venv\Scripts\python scripts\duckdb_to_sqlite.py [--replace]` | Copies every bronze and app table, with rows, from the DuckDB file into the SQLite file. Refuses to overwrite a SQLite file that has data unless `--replace` is given. |
 | `.venv\Scripts\python scripts\load_sqlite_bronze.py [--tables A,B]` | Replaces the SQLite bronze tables from the seed CSVs (run `databricks/seed/generate_seed_data.py` first for fresh data). App tables are untouched. |
+| `.venv\Scripts\python scripts\migrate_db.py` | Brings an SQLite file on the previous multi-brand layout to the current schema in place, every row kept: one primary key per table and `BRAND_CODE` as a foreign key to `CFG_BRAND`, `DIM_TERRITORY` replaced by `DIM_SALES_ASSIGNMENT`, territory name and region on `DIM_HCP`, tiers / segments / KPI metrics / KPI parameters merged into `REF_INTERACTION_CHANNEL`. Writes `<file>.pre-keys.bak` first; leaves a current database alone. |
 
 All SQL is portable (SELECT / INSERT / UPDATE / DELETE / MERGE) and filters by territory. Metrics are
 computed in Python from per-territory data cached for `BRONZE_CACHE_SECONDS`.

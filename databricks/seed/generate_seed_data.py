@@ -6,7 +6,12 @@ One ``<TABLE>.csv`` per bronze table (ARCHITECTURE.md section 4.1), plus a
 contract too:
 
 * header = the exact column names, in DDL order, UTF-8;
-* dates ISO ``YYYY-MM-DD``, booleans ``true``/``false``, NULL = empty field.
+* dates ISO ``YYYY-MM-DD``, booleans ``true``/``false``, NULL = empty field;
+* every table's first column is its single primary key and its second is
+  ``BRAND_CODE`` (``--brand``, default POVO; a foreign key to CFG_BRAND);
+  column names are brand-neutral (``BRAND_PATIENTS``, ``FCT_BRAND_ACTIVITY``).
+  Keys built from several columns are joined with "|" (``key_id``), exactly as
+  backend/database/tables.py does.
 
 Why a hand-rolled generator (no pandas, no faker): pandas is blocked on the
 managed machines, and a fixed-seed standard-library generator gives the same
@@ -49,46 +54,68 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_OUT = HERE / "output"
 DEFAULT_CONTENT = HERE / "content"
 DEFAULT_SEED = 20260930
+DEFAULT_BRAND = "POVO"
 TARGETS_PER_TERRITORY = 142
 
 # --------------------------------------------------------------------------
 # Table columns (must match ddl/01_bronze_tables.sql; a test checks it)
 # --------------------------------------------------------------------------
-COLUMNS: dict[str, list[str]] = {
-    "DIM_TERRITORY": ["TERRITORY_ID", "TERRITORY_NAME", "CITY", "STATE", "REGION", "TIME_ZONE"],
+_COLUMNS: dict[str, list[str]] = {
     "DIM_EMPLOYEE": ["EMPLOYEE_ID", "NETWORK_ID", "USERNAME", "EMAIL", "FIRST_NAME", "LAST_NAME",
                      "FULL_NAME", "INITIALS", "BUSINESS_UNIT", "ROLE_CODE", "ROLE_TITLE",
-                     "ACCESS_LEVEL", "ACCESS_REGIONS", "HOME_TERRITORY_ID", "IS_ACTIVE"],
+                     "ACCESS_LEVEL", "ACCESS_REGIONS", "IS_ACTIVE"],
+    "DIM_SALES_ASSIGNMENT": ["ASSIGNMENT_ID", "EMPLOYEE_ID", "TERRITORY_ID", "TERRITORY_NAME", "CITY", "STATE",
+                             "REGION", "TIME_ZONE", "IS_ACTIVE"],
     "DIM_ACCOUNT": ["ACCOUNT_ID", "TERRITORY_ID", "ACCOUNT_NAME", "CITY", "STATE", "ZIP",
-                    "CLAIMS_HS_PATIENTS", "CLAIMS_POVO_PATIENTS", "CLAIMS_MAIN_FOCUS", "IS_CLAIMS_ONLY"],
+                    "CLAIMS_INDICATION_PATIENTS", "CLAIMS_BRAND_PATIENTS", "CLAIMS_MAIN_FOCUS", "IS_CLAIMS_ONLY"],
     "DIM_HCP": ["HCP_ID", "NPI", "FIRST_NAME", "LAST_NAME", "DEGREE", "ROLE_TYPE", "SPECIALTY",
-                "ACCOUNT_ID", "PARENT_HCP_ID", "TERRITORY_ID", "CITY", "STATE", "ZIP"],
-    "FCT_HCP_METRICS": ["HCP_ID", "AS_OF_DATE", "HS_PATIENTS_12M", "HS_VISITS_PER_MONTH",
-                        "JAK_PATIENTS", "POVO_PATIENTS", "INCYTECARES_ENROLLED_PATIENTS"],
-    "DIM_CALL_PLAN_TARGET": ["PLAN_YEAR", "TERRITORY_ID", "HCP_ID", "DECILE", "TIER_CODE",
-                             "SEGMENT_CODE", "COMPETITIVE_FOCUS", "IS_IN_CALL_PLAN", "HS_RANK"],
-    "REF_TIER": ["TIER_CODE", "TIER_NAME", "DECILE_MIN", "DECILE_MAX", "CALLS_PER_YEAR",
-                 "REACH_GOAL_PCT", "SORT_ORDER"],
-    "REF_SEGMENT": ["SEGMENT_CODE", "SHORT_NAME", "FULL_NAME", "DESCRIPTION", "COLOR_HEX",
-                    "ARCHETYPE_NAME", "ARCHETYPE_DESC", "SORT_ORDER"],
-    "REF_KPI_METRIC": ["METRIC_CODE", "EVENT_TYPE", "TITLE", "UNIT", "SORT_ORDER"],
-    "REF_INTERACTION_CHANNEL": ["CHANNEL_CODE", "TYPE_LABEL", "TEAM_LABEL", "SORT_ORDER"],
-    "REF_COMPETITIVE_FOCUS": ["FOCUS_CODE", "LABEL", "COLOR_HEX", "SORT_ORDER"],
+                "ACCOUNT_ID", "PARENT_HCP_ID", "TERRITORY_ID", "TERRITORY_NAME", "REGION", "CITY", "STATE", "ZIP"],
+    "FCT_HCP_METRICS": ["HCP_METRIC_ID", "HCP_ID", "TERRITORY_ID", "AS_OF_DATE", "INDICATION_PATIENTS_12M",
+                        "INDICATION_VISITS_PER_MONTH", "COMPETITOR_PATIENTS", "BRAND_PATIENTS",
+                        "PROGRAM_ENROLLED_PATIENTS"],
+    "DIM_CALL_PLAN_TARGET": ["PLAN_TARGET_ID", "PLAN_YEAR", "TERRITORY_ID", "HCP_ID", "DECILE", "TIER_CODE",
+                             "SEGMENT_CODE", "COMPETITIVE_FOCUS", "IS_IN_CALL_PLAN", "VOLUME_RANK"],
+    # Master reference list: channels, tiers, segments, KPI metrics and KPI parameters (REF_TYPE).
+    "REF_INTERACTION_CHANNEL": ["REF_ID", "REF_TYPE", "CODE", "NAME", "SHORT_NAME", "DESCRIPTION", "TEAM_LABEL",
+                                "COLOR_HEX", "ARCHETYPE_NAME", "ARCHETYPE_DESC", "DECILE_MIN", "DECILE_MAX",
+                                "CALLS_PER_YEAR", "REACH_GOAL_PCT", "EVENT_TYPE", "UNIT", "PARAM_VALUE",
+                                "SORT_ORDER"],
+    "REF_COMPETITIVE_FOCUS": ["FOCUS_ID", "FOCUS_CODE", "LABEL", "COLOR_HEX", "SORT_ORDER"],
     "FCT_INTERACTION": ["INTERACTION_ID", "HCP_ID", "TERRITORY_ID", "EMPLOYEE_ID", "INTERACTION_DATE",
-                        "CHANNEL_CODE", "INTERACTION_TYPE", "POVO_DISCUSSED", "SUMMARY"],
-    "FCT_POVO_ACTIVITY": ["ACTIVITY_ID", "TERRITORY_ID", "HCP_ID", "PATIENT_KEY", "EVENT_DATE", "EVENT_TYPE"],
-    "FCT_TERRITORY_GOAL": ["TERRITORY_ID", "GOAL_YEAR", "GOAL_MONTH", "METRIC_CODE", "GOAL_VALUE"],
-    "REF_US_HOLIDAY": ["HOLIDAY_DATE", "HOLIDAY_NAME"],
+                        "CHANNEL_CODE", "INTERACTION_TYPE", "BRAND_DISCUSSED", "SUMMARY"],
+    "FCT_BRAND_ACTIVITY": ["ACTIVITY_ID", "TERRITORY_ID", "HCP_ID", "PATIENT_KEY", "EVENT_DATE", "EVENT_TYPE"],
+    "FCT_TERRITORY_GOAL": ["GOAL_ID", "TERRITORY_ID", "GOAL_YEAR", "GOAL_MONTH", "METRIC_CODE", "GOAL_VALUE"],
+    "REF_HOLIDAY": ["HOLIDAY_ID", "HOLIDAY_DATE", "HOLIDAY_NAME"],
     "REF_TALKING_POINT": ["POINT_ID", "CONTENT_VERSION", "CATEGORY", "VARIANT", "PILLAR", "AUDIENCE",
                           "SEGMENT_CODE", "WRITER_STATE", "TEXT_TEMPLATE", "DETAIL_TEMPLATE",
                           "NEXT_CALL_TEMPLATE", "SORT_ORDER", "MLR_CODE", "IS_ACTIVE"],
     "REF_OBJECTION_RULE": ["RULE_ID", "AUDIENCE", "SEGMENT_CODE", "MIN_DECILE", "MAX_DECILE",
                            "WRITER_STATE", "OBJECTION_POINT_IDS", "PRIORITY"],
-    "REF_COMPLIANCE_RULE": ["RULE_ID", "CHIP_LABEL", "TITLE", "SEVERITY", "DEDUCTION", "PATTERN",
+    "REF_COMPLIANCE_RULE": ["COMPLIANCE_RULE_ID", "RULE_ID", "CHIP_LABEL", "TITLE", "SEVERITY", "DEDUCTION", "PATTERN",
                             "SUPPRESS_PATTERN", "WHY_TEXT", "FIX_TEXT", "SORT_ORDER", "IS_ACTIVE"],
     "REF_COMPLIANCE_TEXT": ["TEXT_ID", "CONTENT_VERSION", "KIND", "TEXT_KEY", "PATTERN", "TEXT_TEMPLATE",
                             "SORT_ORDER", "IS_ACTIVE"],
-    "REF_KPI_PARAMETER": ["PARAM_CODE", "PARAM_VALUE", "DESCRIPTION", "SORT_ORDER"],
+}
+#: Primary key first, then BRAND_CODE (the foreign key to CFG_BRAND), then the rest.
+COLUMNS: dict[str, list[str]] = {t: [cols[0], "BRAND_CODE", *cols[1:]] for t, cols in _COLUMNS.items()}
+
+
+def key_id(*parts: Any) -> str:
+    """Same as backend database.tables.key_id: the natural key parts joined with "|"."""
+    return "|".join("" if p is None else (p.isoformat() if isinstance(p, dt.date) else str(p)) for p in parts)
+
+
+#: Primary keys built from several columns, filled when a row is written (the brand is known then).
+KEY_BUILDERS: dict[str, Any] = {
+    "DIM_SALES_ASSIGNMENT": lambda r: key_id(r["BRAND_CODE"], r["EMPLOYEE_ID"]),
+    "FCT_HCP_METRICS": lambda r: key_id(r["BRAND_CODE"], r["HCP_ID"], r["AS_OF_DATE"]),
+    "DIM_CALL_PLAN_TARGET": lambda r: key_id(r["BRAND_CODE"], r["PLAN_YEAR"], r["TERRITORY_ID"], r["HCP_ID"]),
+    "REF_INTERACTION_CHANNEL": lambda r: key_id(r["BRAND_CODE"], r["REF_TYPE"], r["CODE"]),
+    "REF_COMPETITIVE_FOCUS": lambda r: key_id(r["BRAND_CODE"], r["FOCUS_CODE"]),
+    "FCT_TERRITORY_GOAL": lambda r: key_id(r["BRAND_CODE"], r["TERRITORY_ID"],
+                                           f"{int(r['GOAL_YEAR'])}-{int(r['GOAL_MONTH']):02d}", r["METRIC_CODE"]),
+    "REF_HOLIDAY": lambda r: key_id(r["BRAND_CODE"], r["HOLIDAY_DATE"]),
+    "REF_COMPLIANCE_RULE": lambda r: key_id(r["BRAND_CODE"], r["RULE_ID"]),
 }
 
 #: Content tables are owned by the backend as JSON; the seeder copies them.
@@ -429,6 +456,14 @@ Rhea Sanjay Tomas Ursula Wes Yara Amir Bettina Cyrus Daria Emil Farid Gwen Hiro 
 # --------------------------------------------------------------------------
 # Dates: holidays and working days
 # --------------------------------------------------------------------------
+REGION = "Northeast"
+TIME_ZONE = "America/New_York"
+
+
+def territory_name(cfg: dict) -> str:
+    return f"{cfg['city']}, {cfg['state']} territory"
+
+
 def _nth_weekday(year: int, month: int, weekday: int, n: int) -> dt.date:
     """n-th weekday (0=Mon) of a month; n=-1 means the last one."""
     if n > 0:
@@ -607,32 +642,28 @@ class SeedGenerator:
         return self.tables
 
     def _reference_tables(self) -> None:
-        for i, (code, name, dmin, dmax, calls, reach, _a, _r) in enumerate(TIERS, 1):
-            self.tables["REF_TIER"].append(dict(TIER_CODE=code, TIER_NAME=name, DECILE_MIN=dmin, DECILE_MAX=dmax,
-                                                CALLS_PER_YEAR=calls, REACH_GOAL_PCT=reach, SORT_ORDER=i))
-        for i, (code, short, full, desc, color, arch, arch_desc) in enumerate(SEGMENTS, 1):
-            self.tables["REF_SEGMENT"].append(dict(SEGMENT_CODE=code, SHORT_NAME=short, FULL_NAME=full,
-                                                   DESCRIPTION=desc, COLOR_HEX=color, ARCHETYPE_NAME=arch,
-                                                   ARCHETYPE_DESC=arch_desc, SORT_ORDER=i))
-        for i, (code, event, title, unit) in enumerate(KPI_METRICS, 1):
-            self.tables["REF_KPI_METRIC"].append(dict(METRIC_CODE=code, EVENT_TYPE=event, TITLE=title, UNIT=unit,
-                                                      SORT_ORDER=i))
-        for i, (code, value, desc) in enumerate(KPI_PARAMETERS, 1):
-            self.tables["REF_KPI_PARAMETER"].append(dict(PARAM_CODE=code, PARAM_VALUE=value, DESCRIPTION=desc,
-                                                         SORT_ORDER=i))
+        master = self.tables["REF_INTERACTION_CHANNEL"]
         for i, (code, type_label, team) in enumerate(INTERACTION_CHANNELS, 1):
-            self.tables["REF_INTERACTION_CHANNEL"].append(dict(CHANNEL_CODE=code, TYPE_LABEL=type_label,
-                                                               TEAM_LABEL=team, SORT_ORDER=i))
+            master.append(dict(REF_TYPE="CHANNEL", CODE=code, NAME=type_label, TEAM_LABEL=team, SORT_ORDER=i))
+        for i, (code, name, dmin, dmax, calls, reach, _a, _r) in enumerate(TIERS, 1):
+            master.append(dict(REF_TYPE="TIER", CODE=code, NAME=name, DECILE_MIN=dmin, DECILE_MAX=dmax,
+                               CALLS_PER_YEAR=calls, REACH_GOAL_PCT=reach, SORT_ORDER=i))
+        for i, (code, short, full, desc, color, arch, arch_desc) in enumerate(SEGMENTS, 1):
+            master.append(dict(REF_TYPE="SEGMENT", CODE=code, SHORT_NAME=short, NAME=full, DESCRIPTION=desc,
+                               COLOR_HEX=color, ARCHETYPE_NAME=arch, ARCHETYPE_DESC=arch_desc, SORT_ORDER=i))
+        for i, (code, event, title, unit) in enumerate(KPI_METRICS, 1):
+            master.append(dict(REF_TYPE="KPI_METRIC", CODE=code, EVENT_TYPE=event, NAME=title, UNIT=unit,
+                               SORT_ORDER=i))
+        for i, (code, value, desc) in enumerate(KPI_PARAMETERS, 1):
+            master.append(dict(REF_TYPE="KPI_PARAMETER", CODE=code, PARAM_VALUE=value, DESCRIPTION=desc,
+                               SORT_ORDER=i))
         for i, (code, label, color) in enumerate(FOCUS, 1):
             self.tables["REF_COMPETITIVE_FOCUS"].append(dict(FOCUS_CODE=code, LABEL=label, COLOR_HEX=color,
                                                              SORT_ORDER=i))
         for year in sorted({self.data_start.year, self.year, self.year + 1}):
             for d, name in us_holidays(year):
-                self.tables["REF_US_HOLIDAY"].append(dict(HOLIDAY_DATE=d, HOLIDAY_NAME=name))
-        for cfg in TERRITORIES:
-            self.tables["DIM_TERRITORY"].append(dict(
-                TERRITORY_ID=cfg["id"], TERRITORY_NAME=f"{cfg['city']}, {cfg['state']} territory",
-                CITY=cfg["city"], STATE=cfg["state"], REGION="Northeast", TIME_ZONE="America/New_York"))
+                self.tables["REF_HOLIDAY"].append(dict(HOLIDAY_DATE=d, HOLIDAY_NAME=name))
+        by_id = {cfg["id"]: cfg for cfg in TERRITORIES}
         for emp_id, net_id, user, first, last, role, home in EMPLOYEES:
             is_rep = role == "REP"
             self.tables["DIM_EMPLOYEE"].append(dict(
@@ -642,7 +673,12 @@ class SeedGenerator:
                 ROLE_TITLE="POVO Sales Representative" if is_rep else "Manager, Field Sales Enablement",
                 ACCESS_LEVEL="Rep level, 1 territory" if is_rep else
                 f"Team level, POVO team, {len(TERRITORIES)} territories",
-                ACCESS_REGIONS="Northeast", HOME_TERRITORY_ID=home, IS_ACTIVE=True))
+                ACCESS_REGIONS="Northeast", IS_ACTIVE=True))
+            cfg = by_id[home]
+            # Sales: the territory this employee covers (the territory master is gone).
+            self.tables["DIM_SALES_ASSIGNMENT"].append(dict(
+                EMPLOYEE_ID=emp_id, TERRITORY_ID=home, TERRITORY_NAME=territory_name(cfg), CITY=cfg["city"],
+                STATE=cfg["state"], REGION=REGION, TIME_ZONE=TIME_ZONE, IS_ACTIVE=True))
 
     # ---- one territory ---------------------------------------------------
     def _territory(self, cfg: dict, rep_id: str) -> None:
@@ -998,7 +1034,7 @@ class SeedGenerator:
         for e in events:
             self._act_seq += 1
             e["ACTIVITY_ID"] = f"E{self._act_seq:07d}"
-        self.tables["FCT_POVO_ACTIVITY"] += events
+        self.tables["FCT_BRAND_ACTIVITY"] += events
         return events
 
     @staticmethod
@@ -1104,7 +1140,7 @@ class SeedGenerator:
         self.tables["FCT_INTERACTION"].append(dict(
             INTERACTION_ID=f"I{self._ix_seq:07d}", HCP_ID=t["hcp_id"], TERRITORY_ID=tid, EMPLOYEE_ID=emp_id,
             INTERACTION_DATE=day, CHANNEL_CODE=channel, INTERACTION_TYPE=INTERACTION_TYPES[channel],
-            POVO_DISCUSSED=discussed, SUMMARY=summary))
+            BRAND_DISCUSSED=discussed, SUMMARY=summary))
 
     # ---- final rows ------------------------------------------------------
     def _finish_targets(self, cfg: dict, targets: list[dict], accounts: list[dict], events: list[dict]) -> None:
@@ -1121,17 +1157,18 @@ class SeedGenerator:
             self.tables["DIM_HCP"].append(dict(
                 HCP_ID=t["hcp_id"], NPI=t["npi"], FIRST_NAME=t["first"], LAST_NAME=t["last"],
                 DEGREE=t["degree"], ROLE_TYPE=t["role"], SPECIALTY=t["specialty"], ACCOUNT_ID=acc["id"],
-                PARENT_HCP_ID=t.get("parent_id"), TERRITORY_ID=tid, CITY=acc["city"], STATE=acc["state"],
+                PARENT_HCP_ID=t.get("parent_id"), TERRITORY_ID=tid, TERRITORY_NAME=territory_name(cfg),
+                REGION=REGION, CITY=acc["city"], STATE=acc["state"],
                 ZIP=acc["zip"]))
             self.tables["FCT_HCP_METRICS"].append(dict(
-                HCP_ID=t["hcp_id"], AS_OF_DATE=self.as_of, HS_PATIENTS_12M=t["hs"],
-                HS_VISITS_PER_MONTH=t["visits"], JAK_PATIENTS=t["jak"],
-                POVO_PATIENTS=new_patients.get(t["hcp_id"], 0),
-                INCYTECARES_ENROLLED_PATIENTS=len(pef_patients.get(t["hcp_id"], ()))))
+                HCP_ID=t["hcp_id"], TERRITORY_ID=tid, AS_OF_DATE=self.as_of, INDICATION_PATIENTS_12M=t["hs"],
+                INDICATION_VISITS_PER_MONTH=t["visits"], COMPETITOR_PATIENTS=t["jak"],
+                BRAND_PATIENTS=new_patients.get(t["hcp_id"], 0),
+                PROGRAM_ENROLLED_PATIENTS=len(pef_patients.get(t["hcp_id"], ()))))
             self.tables["DIM_CALL_PLAN_TARGET"].append(dict(
                 PLAN_YEAR=self.year, TERRITORY_ID=tid, HCP_ID=t["hcp_id"], DECILE=t["decile"],
                 TIER_CODE=t["tier"], SEGMENT_CODE=t["segment"], COMPETITIVE_FOCUS=t["focus"],
-                IS_IN_CALL_PLAN=t["decile"] >= 2, HS_RANK=t["hs_rank"]))
+                IS_IN_CALL_PLAN=t["decile"] >= 2, VOLUME_RANK=t["hs_rank"]))
         self._account_rows(cfg, targets, accounts, new_patients)
 
     def _account_rows(self, cfg, targets, accounts, new_patients) -> None:
@@ -1150,7 +1187,7 @@ class SeedGenerator:
                 focus = max(sorted(by_focus), key=lambda f: by_focus[f]) if by_focus else "conventional"
             self.tables["DIM_ACCOUNT"].append(dict(
                 ACCOUNT_ID=a["id"], TERRITORY_ID=cfg["id"], ACCOUNT_NAME=a["name"], CITY=a["city"],
-                STATE=a["state"], ZIP=a["zip"], CLAIMS_HS_PATIENTS=hs, CLAIMS_POVO_PATIENTS=povo,
+                STATE=a["state"], ZIP=a["zip"], CLAIMS_INDICATION_PATIENTS=hs, CLAIMS_BRAND_PATIENTS=povo,
                 CLAIMS_MAIN_FOCUS=focus, IS_CLAIMS_ONLY=a["claims_only"]))
 
     def _goals(self, tid: str, monthly_goal: list[int]) -> None:
@@ -1180,18 +1217,24 @@ def csv_value(v: Any) -> str:
     return str(v)
 
 
-def write_csv(path: Path, columns: list[str], rows: Iterable[dict]) -> int:
+def write_csv(path: Path, columns: list[str], rows: Iterable[dict], brand: str = DEFAULT_BRAND) -> int:
+    """One CSV; BRAND_CODE is filled from `brand` unless the row carries its own, and a primary key
+    built from several columns (KEY_BUILDERS) is filled in."""
     n = 0
+    build = KEY_BUILDERS.get(path.stem)
     with path.open("w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(columns)
         for row in rows:
+            row = {"BRAND_CODE": brand, **row}
+            if build and not row.get(columns[0]):
+                row[columns[0]] = build(row)
             w.writerow([csv_value(row.get(c)) for c in columns])
             n += 1
     return n
 
 
-def copy_content(content_dir: Path, out: Path) -> dict[str, Any]:
+def copy_content(content_dir: Path, out: Path, brand: str = DEFAULT_BRAND) -> dict[str, Any]:
     """Copy the backend-owned content JSON into CSVs unchanged; warn and skip missing files."""
     result: dict[str, Any] = {}
     for table, filename in CONTENT_FILES.items():
@@ -1204,19 +1247,20 @@ def copy_content(content_dir: Path, out: Path) -> dict[str, Any]:
         if not isinstance(rows, list):
             raise ValueError(f"{src} must hold a JSON array of objects")
         cols = COLUMNS[table]
-        missing = sorted({c for r in rows for c in cols if c not in r})
+        missing = sorted({c for r in rows for c in cols
+                          if c not in r and c != "BRAND_CODE" and not (c == cols[0] and table in KEY_BUILDERS)})
         extra = sorted({k for r in rows for k in r if k not in cols})
         if missing:
             print(f"WARN  {filename}: columns missing in some rows (written as NULL): {', '.join(missing)}",
                   file=sys.stderr)
         if extra:
             print(f"WARN  {filename}: keys not in {table} ignored: {', '.join(extra)}", file=sys.stderr)
-        result[table] = write_csv(out / f"{table}.csv", cols, rows)
+        result[table] = write_csv(out / f"{table}.csv", cols, rows, brand)
     return result
 
 
 def generate(out: Path, as_of: dt.date, seed: int = DEFAULT_SEED,
-             content_dir: Path = DEFAULT_CONTENT) -> dict[str, Any]:
+             content_dir: Path = DEFAULT_CONTENT, brand: str = DEFAULT_BRAND) -> dict[str, Any]:
     """Generate every CSV and the manifest; returns the manifest."""
     out.mkdir(parents=True, exist_ok=True)
     gen = SeedGenerator(as_of, seed)
@@ -1225,11 +1269,12 @@ def generate(out: Path, as_of: dt.date, seed: int = DEFAULT_SEED,
     for table, rows in tables.items():
         if table in CONTENT_FILES:
             continue
-        counts[table] = write_csv(out / f"{table}.csv", COLUMNS[table], rows)
-    content = copy_content(content_dir, out)
+        counts[table] = write_csv(out / f"{table}.csv", COLUMNS[table], rows, brand)
+    content = copy_content(content_dir, out, brand)
     counts.update({t: n for t, n in content.items() if isinstance(n, int)})
     manifest = dict(
-        as_of=as_of.isoformat(), data_start=gen.data_start.isoformat(), seed=seed, plan_year=as_of.year,
+        brand_code=brand, as_of=as_of.isoformat(), data_start=gen.data_start.isoformat(), seed=seed,
+        plan_year=as_of.year,
         generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         row_counts=dict(sorted(counts.items())), content=content, territories=gen.summary)
     (out / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -1243,14 +1288,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="data as-of date YYYY-MM-DD (default today in America/New_York)")
     p.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed (default {DEFAULT_SEED})")
     p.add_argument("--content-dir", type=Path, default=DEFAULT_CONTENT, help="folder with the content JSON files")
+    p.add_argument("--brand", default=DEFAULT_BRAND, help=f"BRAND_CODE written on every row (default {DEFAULT_BRAND})")
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     as_of = args.as_of or today_new_york()
-    manifest = generate(args.out, as_of, args.seed, args.content_dir)
-    print(f"as_of {manifest['as_of']}  seed {manifest['seed']}  ->  {args.out}")
+    manifest = generate(args.out, as_of, args.seed, args.content_dir, args.brand.strip().upper())
+    print(f"brand {manifest['brand_code']}  as_of {manifest['as_of']}  seed {manifest['seed']}  ->  {args.out}")
     for table, n in manifest["row_counts"].items():
         print(f"  {table:<24} {n:>7,}")
     return 0

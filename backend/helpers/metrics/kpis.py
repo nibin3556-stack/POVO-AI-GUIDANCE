@@ -1,6 +1,6 @@
 """KPI cards: goal, achieved, on-track status and the patient split (POC kpiCards / metric / period).
 
-Two cards, in REF_KPI_METRIC order: Patient Enrollment Forms and Total Patients
+Two cards, in KPI_METRIC order (REF_INTERACTION_CHANNEL): Patient Enrollment Forms and Total Patients
 Receiving POVO. The math, from the POC's final `metric()`:
 
   * goal     = sum of the monthly goals in the period. Month and quarter are the
@@ -30,7 +30,7 @@ The patients card also carries the "Total on POVO" split:
   * Total on POVO = Paid + Bridge + Free Trial; the three shares are rounded
                  with largest remainder so they add up to 100%
 
-The three rates come from REF_KPI_PARAMETER. If any is missing the card has no
+The three rates are the KPI_PARAMETER rows of REF_INTERACTION_CHANNEL. If any is missing the card has no
 split (the View more panel is hidden) rather than showing made-up numbers.
 
 Pure functions over monthly series so the tests can check them against
@@ -46,7 +46,7 @@ from helpers.dates import (MONS, MONTHS, WorkCalendar, data_start, js_round, mon
 PERIODS = ("month", "quarter", "ytd")
 YM = tuple[int, int]
 
-#: REF_KPI_PARAMETER codes the patient split needs.
+#: KPI_PARAMETER codes (REF_INTERACTION_CHANNEL) the patient split needs.
 SPLIT_PARAMETERS = ("PAID_PERSISTENCE", "PENDING_ON_THERAPY", "BRIDGE_SHARE")
 PATIENTS_CODE = "NEW_PATIENTS"
 
@@ -98,8 +98,8 @@ def metric(goals: dict[YM, int], actuals: dict[YM, int], months: list[YM], today
 def monthly_series(td, today: date, metrics: list[dict]) -> tuple[dict[str, dict[YM, int]], dict[str, dict[YM, int]]]:
     """(goals, actuals) per metric code, keyed by (year, month).
 
-    `metrics` are REF_KPI_METRIC rows: METRIC_CODE keys the goals, EVENT_TYPE says
-    which FCT_POVO_ACTIVITY events count as the actual. Only activity from the
+    `metrics` are the KPI_METRIC rows (REF_INTERACTION_CHANNEL): METRIC_CODE keys the goals, EVENT_TYPE says
+    which FCT_BRAND_ACTIVITY events count as the actual. Only activity from the
     data start to today is counted.
     """
     start = data_start(today)
@@ -145,7 +145,7 @@ def patient_split(td, win: dict, today: date, params: dict[str, float]) -> dict:
 
 def kpis(td, period: str, today: date, cal: WorkCalendar, metrics: list[dict],
          params: dict[str, float]) -> dict:
-    """KPI cards in REF_KPI_METRIC order; titles and units come from that table."""
+    """KPI cards in KPI_METRIC order; titles and units come from REF_INTERACTION_CHANNEL."""
     win = period_window(period, today)
     goals, actuals = monthly_series(td, today, metrics)
     cards = []

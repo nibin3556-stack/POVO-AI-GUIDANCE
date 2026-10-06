@@ -14,11 +14,12 @@ from fastapi import APIRouter, Depends, Query
 from helpers.dependency import RequestContext, require_permission
 from helpers.listing import MAX_LIMIT, csv_set, page_slice, parse_sort, sort_rows
 from helpers.targets import public, universe
+from registry.features import MUST_WINS, PRE_CALL_TAB
 from registry.permissions_seed import GUIDANCE_VIEW
 from schema.response_schema import ok, paged
 
 router = APIRouter(prefix="/api/v1/targets", tags=["targets"])
-Guard = Depends(require_permission(GUIDANCE_VIEW))
+Guard = Depends(require_permission(GUIDANCE_VIEW, PRE_CALL_TAB))
 SORTS = ("name", "decile", "hs_patients", "pef", "last_call_date")
 SORT_KEYS = {"name": lambda t: t["name"].lower(), "decile": lambda t: t["decile"],
              "hs_patients": lambda t: t["hs_patients"], "pef": lambda t: t["pef"],
@@ -26,15 +27,15 @@ SORT_KEYS = {"name": lambda t: t["name"].lower(), "decile": lambda t: t["decile"
 
 
 @router.get("/must-wins")
-def must_wins(ctx: RequestContext = Guard) -> dict:
-    u = universe(ctx.territory_id)
+def must_wins(ctx: RequestContext = Depends(require_permission(GUIDANCE_VIEW, MUST_WINS))) -> dict:
+    u = universe(ctx.brand_code, ctx.territory_id)
     return ok({"territory_name": u.td.territory.get("TERRITORY_NAME"),
                "hs_volume": [public(t) for t in u.must_hs], "hs_jak": [public(t) for t in u.must_jak]})
 
 
 @router.get("/facets")
 def facets(ctx: RequestContext = Guard) -> dict:
-    u = universe(ctx.territory_id)
+    u = universe(ctx.brand_code, ctx.territory_id)
     plan = u.plan_targets()
 
     def count(key, code):
@@ -59,7 +60,7 @@ def list_targets(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=MAX
                  tier: Optional[str] = None, account_id: Optional[str] = None, role: Optional[str] = None,
                  ctx: RequestContext = Guard) -> dict:
     field, desc = parse_sort(sort, SORTS, "hs_patients:desc")
-    u = universe(ctx.territory_id)
+    u = universe(ctx.brand_code, ctx.territory_id)
     rows = u.plan_targets()
     for key, value in (("competitive_focus", focus), ("segment_code", segment), ("tier_code", tier),
                        ("account_id", account_id), ("role_type", role)):
