@@ -79,7 +79,8 @@ def rep(employees):
 
 @pytest.fixture(scope="session")
 def manager(employees):
-    return next(e for e in employees.values() if e["ROLE_CODE"] == "MANAGER")
+    """bdrake: a manager in the admin users file, so allowed to impersonate."""
+    return employees["bdrake"]
 
 
 @pytest.fixture(scope="session")

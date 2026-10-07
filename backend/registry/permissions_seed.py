@@ -4,11 +4,10 @@ The standalone app has no Admin Control Center, so roles map to permissions
 here, in code, where a change is reviewed like any other. DIM_EMPLOYEE.ROLE_CODE
 selects the row; an unknown role gets no permissions (and therefore 403s).
 
-user.impersonate is granted per role by IMPERSONATION_ROLES (default REP and
-MANAGER, as the POC offers it to the signed-in rep), so it can be narrowed
-per environment without a code change.
+user.impersonate is not a role permission: it goes to the admin users
+(ADMIN_USERS_FILE, the same list that configures brands), whatever their role,
+so who can impersonate is changed by editing that file.
 """
-from core.config import get_settings
 
 GUIDANCE_VIEW = "guidance.view"
 CALL_ASSESS = "call.assess"
@@ -20,9 +19,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
 }
 
 
-def permissions_for(role_code: str | None) -> list[str]:
-    role = (role_code or "").upper()
-    perms = list(ROLE_PERMISSIONS.get(role, []))
-    if perms and role in get_settings().impersonation_roles:
+def permissions_for(role_code: str | None, is_admin: bool = False) -> list[str]:
+    perms = list(ROLE_PERMISSIONS.get((role_code or "").upper(), []))
+    if perms and is_admin:
         perms.append(USER_IMPERSONATE)
     return perms

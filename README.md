@@ -43,7 +43,7 @@ docker compose up -d     # http://localhost:5680, then import the n8n/ workflows
 **Dev users:**
 
 - `vturano` is the Portland rep.
-- `bdrake` is a manager and can impersonate other users.
+- `bdrake` is a manager and can impersonate other users (impersonation is for the admin users in `backend/config/admin_users.json` only).
 
 To switch user, change `VITE_DEV_USER` and restart `npm run dev`.
 

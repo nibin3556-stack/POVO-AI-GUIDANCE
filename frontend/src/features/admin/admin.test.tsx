@@ -58,7 +58,69 @@ describe('admin page', () => {
     expect(await screen.findByText(/Only admin users can configure brands and features/)).toBeInTheDocument();
   });
 
-  it('saves only the switches that changed', async () => {
+  it('opens the add brand form and creates a brand', async () => {
+    const sent: unknown[] = [];
+    mockApi([
+      { url: '/admin/me', respond: { username: 'vturano', is_admin: true } },
+      { url: '/admin/brands', respond: [brand('POVO', 'POVO', 2)] },
+      { url: /\/admin\/brands\/\w+\/features$/, respond: { brand: brand('POVO', 'POVO', 2), features: [] } },
+      {
+        method: 'post',
+        url: '/admin/brands',
+        respond: (c: InternalAxiosRequestConfig) => {
+          sent.push(c.data);
+          return brand('OPZ', 'Opzelura', 0);
+        },
+      },
+    ]);
+    renderWithProviders(<AdminPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Add brand' }));
+    const form = screen.getByRole('form', { name: 'New brand' });
+    await userEvent.type(within(form).getByRole('textbox', { name: 'Brand code' }), 'OPZ');
+    await userEvent.type(within(form).getByRole('textbox', { name: 'Brand name' }), 'Opzelura');
+    await userEvent.click(within(form).getByRole('button', { name: 'Create brand' }));
+    await waitFor(() => expect(sent).toEqual([{ brand_code: 'OPZ', brand_name: 'Opzelura', is_active: true }]));
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'New brand' })).toBeNull());
+  });
+
+  it('undoes changes one step at a time', async () => {
+    const sent: unknown[] = [];
+    mockApi([
+      { url: '/admin/me', respond: { username: 'vturano', is_admin: true } },
+      { url: '/admin/brands', respond: [brand('OPZ', 'Opzelura', 1)] },
+      {
+        url: /\/admin\/brands\/OPZ\/features$/,
+        respond: {
+          brand: brand('OPZ', 'Opzelura', 1),
+          features: [feature('PERFORMANCE_TAB', 'Territory Performance', true), feature('AI_GUIDANCE', 'AI guidance', false, 'PERFORMANCE_TAB')],
+        },
+      },
+      { method: 'put', url: /\/admin\/brands\/OPZ\/features$/, respond: (c: InternalAxiosRequestConfig) => sent.push(c.data) },
+    ]);
+    renderWithProviders(<AdminPage />);
+    const editor = await screen.findByTestId('feature-editor');
+    const undo = within(editor).getByRole('button', { name: 'Undo' });
+    expect(undo).toBeDisabled();
+    const perf = within(editor).getByRole('switch', { name: 'Territory Performance' });
+    const ai = within(editor).getByRole('switch', { name: 'AI guidance' });
+    await userEvent.click(perf);
+    await userEvent.click(within(editor).getByRole('button', { name: 'Turn all on' }));
+    expect(within(editor).getByText('Last change: Turn all on')).toBeInTheDocument();
+    expect(perf).toHaveAttribute('aria-checked', 'true');
+    expect(ai).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(undo);
+    expect(within(editor).getByText('Last change: Turned off Territory Performance')).toBeInTheDocument();
+    expect(perf).toHaveAttribute('aria-checked', 'false');
+    expect(ai).toHaveAttribute('aria-checked', 'false');
+    await userEvent.keyboard('{Control>}z{/Control}');
+    expect(perf).toHaveAttribute('aria-checked', 'true');
+    expect(undo).toBeDisabled();
+    // Back to what the server has: nothing to save.
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(sent).toEqual([]);
+  });
+
+  it('autosaves only the switches that changed', async () => {
     const sent: unknown[] = [];
     mockApi([
       { url: '/admin/me', respond: { username: 'vturano', is_admin: true } },
@@ -88,8 +150,9 @@ describe('admin page', () => {
     const editor = await screen.findByTestId('feature-editor');
     expect(within(editor).getByText('Needs Territory Performance')).toBeInTheDocument();
     await userEvent.click(within(editor).getByRole('switch', { name: 'AI guidance' }));
-    expect(within(editor).getByText('1 unsaved change')).toBeInTheDocument();
-    await userEvent.click(within(editor).getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(sent).toEqual([{ features: { AI_GUIDANCE: true } }]));
+    expect(within(editor).getByRole('switch', { name: 'AI guidance' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(editor).getByText('Saving…')).toBeInTheDocument();
+    expect(within(editor).queryByRole('button', { name: 'Save' })).toBeNull();
+    await waitFor(() => expect(sent).toEqual([{ features: { AI_GUIDANCE: true } }]), { timeout: 3000 });
   });
 });

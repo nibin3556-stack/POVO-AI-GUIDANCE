@@ -1,9 +1,11 @@
-import { Button, Switch } from '@mui/material';
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import AppButton from '../../components/common/AppButton';
 import AppCard from '../../components/common/AppCard';
 import AsyncContent from '../../components/common/AsyncContent';
-import type { FeatureCode } from '../../constants/constant';
+import Icon from '../../components/common/Icon';
+import ToggleSwitch from '../../components/common/ToggleSwitch';
+import { TIMING, type FeatureCode } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
 import { useGetBrandFeaturesQuery, useSaveBrandFeaturesMutation, useSaveBrandMutation } from '../../redux/api/adminApi';
 import type { AdminFeature, BrandFeatures } from '../../types/models';
@@ -19,9 +21,21 @@ interface EditorProps {
 
 type Draft = Record<FeatureCode, boolean>;
 
-const toDraft = (features: AdminFeature[]): Draft => Object.fromEntries(features.map((f) => [f.code, f.is_enabled])) as Draft;
+/** The state before one change, and what that change was ("Turn all on"), for undo. */
+interface Snapshot {
+  label: string;
+  draft: Draft;
+  active: boolean;
+}
 
-/** The switches for one brand. Edits are a draft until Save; a child shows when its parent is off. */
+const UNDO_LIMIT = 30;
+
+const toDraft =(features: AdminFeature[]): Draft => Object.fromEntries(features.map((f) => [f.code, f.is_enabled])) as Draft;
+
+/**
+ * The switches for one brand, autosaved: 800ms after the last change, PUT only
+ * the switches that differ from the server. A child shows when its parent is off.
+ */
 const Editor = ({ data }: EditorProps) => {
   const { brand, features } = data;
   const [draft, setDraft] = useState<Draft>(() => toDraft(features));
@@ -38,49 +52,100 @@ const Editor = ({ data }: EditorProps) => {
     }
     return out;
   }, [features]);
-  const changed = features.filter((f) => draft[f.code] !== f.is_enabled);
-  const dirty = changed.length + (active !== brand.is_active ? 1 : 0);
+  const changed = useMemo(() => features.filter((f) => draft[f.code] !== f.is_enabled), [features, draft]);
+  const brandChanged = active !== brand.is_active;
+  const pending = changed.length > 0 || brandChanged;
   const saving = savingFeatures || savingBrand;
-  const setAll = (on: boolean) => setDraft(Object.fromEntries(features.map((f) => [f.code, on])) as Draft);
-  const reset = () => {
-    setDraft(toDraft(features));
-    setActive(brand.is_active);
-  };
+  const [history, setHistory] = useState<Snapshot[]>([]);
+  const prev = history[history.length - 1];
 
-  const save = async () => {
-    try {
-      if (active !== brand.is_active) {
-        await saveBrand({ brand_code: brand.code, brand_name: brand.name, description: brand.description, is_active: active }).unwrap();
-      }
-      if (changed.length) {
-        await saveFeatures({ code: brand.code, features: Object.fromEntries(changed.map((f) => [f.code, draft[f.code]])) }).unwrap();
-      }
-      toast.success(A.saved);
-    } catch (e) {
-      toast.error((e as ApiError).message || LABELS.app.genericError);
-    }
+  /** Every change goes through here so it can be undone; a click that changes nothing is not recorded. */
+  const apply = (label: string, next: Partial<Omit<Snapshot, 'label'>>) => {
+    const nextDraft = next.draft ?? draft;
+    const nextActive = next.active ?? active;
+    if (nextActive === active && features.every((f) => nextDraft[f.code] === draft[f.code])) return;
+    setHistory((h) => [...h.slice(-(UNDO_LIMIT - 1)), { label, draft, active }]);
+    setDraft(nextDraft);
+    setActive(nextActive);
   };
+  const undo = useCallback(() => {
+    if (!prev) return;
+    setDraft(prev.draft);
+    setActive(prev.active);
+    setHistory((h) => h.slice(0, -1));
+  }, [prev]);
+  const setAll = (on: boolean) => apply(on ? A.allOn : A.allOff, { draft: Object.fromEntries(features.map((f) => [f.code, on])) as Draft });
+
+  // Ctrl+Z / Cmd+Z undoes too, unless the cursor is in a text field (the add brand form has its own undo).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+      if ((e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]')) return;
+      e.preventDefault();
+      undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo]);
+
+  useEffect(() => {
+    if (!pending) return undefined;
+    const timer = setTimeout(async () => {
+      try {
+        if (brandChanged) {
+          await saveBrand({ brand_code: brand.code, brand_name: brand.name, description: brand.description, is_active: active }).unwrap();
+        }
+        if (changed.length) {
+          await saveFeatures({ code: brand.code, features: Object.fromEntries(changed.map((f) => [f.code, draft[f.code]])) }).unwrap();
+        }
+      } catch (e) {
+        // Back to what the server has, so the switches never show a state that was not saved.
+        setDraft(toDraft(features));
+        setActive(brand.is_active);
+        setHistory([]);
+        toast.error((e as ApiError).message || A.saveFailed, { id: 'admin-autosave-failed' });
+      }
+    }, TIMING.AUTOSAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [pending, brandChanged, changed, draft, active, brand, features, saveBrand, saveFeatures]);
+
+  const status = pending || saving ? A.saving : A.allSaved;
 
   return (
     <AppCard
       title={`${A.features} · ${brand.name}`}
       subtitle={A.enabled(features.filter((f) => draft[f.code]).length, features.length)}
       actions={
-        <label className="flex items-center gap-1 text-[12.6px] font-semibold text-ink2" title={A.activeHint}>
-          <Switch size="small" checked={active} onChange={(e) => setActive(e.target.checked)} slotProps={{ input: { 'aria-label': A.active } }} />
-          {active ? A.active : A.inactive}
-        </label>
+        <>
+          <span className="flex items-center gap-1 text-[12.4px] font-semibold text-ink3" aria-live="polite">
+            <Icon name={pending || saving ? 'sync' : 'cloud_done'} className="text-[16px]" />
+            {status}
+          </span>
+          <label className="flex cursor-pointer items-center gap-2 text-[12.6px] font-semibold text-ink2" title={A.activeHint}>
+            <ToggleSwitch checked={active} onChange={(on) => apply(on ? A.brandOn : A.brandOff, { active: on })} label={A.active} />
+            {active ? A.active : A.inactive}
+          </label>
+        </>
       }
       bodyClassName="flex flex-col"
       testId="feature-editor"
     >
-      <div className="flex gap-2 border-b border-line2 px-4 py-2">
-        <Button size="small" onClick={() => setAll(true)}>
+      <div className="flex gap-2 border-b border-line2 px-4 py-2.5">
+        <AppButton size="sm" icon="toggle_on" onClick={() => setAll(true)}>
           {A.allOn}
-        </Button>
-        <Button size="small" onClick={() => setAll(false)}>
+        </AppButton>
+        <AppButton size="sm" icon="toggle_off" onClick={() => setAll(false)}>
           {A.allOff}
-        </Button>
+        </AppButton>
+        <span className="flex-1" />
+        {prev && (
+          <span className="flex min-w-0 items-center truncate text-[12.2px] font-medium text-ink3" aria-live="polite">
+            {A.lastAction(prev.label)}
+          </span>
+        )}
+        <AppButton size="sm" icon="undo" onClick={undo} disabled={!prev} title={prev ? A.undoHint(prev.label) : undefined}>
+          {A.undo}
+        </AppButton>
       </div>
       <div className="flex flex-col gap-4 px-4 py-3">
         {groups.map(([group, items]) => (
@@ -91,13 +156,10 @@ const Editor = ({ data }: EditorProps) => {
                 const parent = f.requires ? byCode[f.requires] : undefined;
                 const blocked = parent !== undefined && !draft[parent.code];
                 return (
-                  <li key={f.code} className={cx('flex items-start gap-2.5 rounded-lg px-2 py-1.5', draft[f.code] !== f.is_enabled && 'bg-warnbg')}>
-                    <Switch
-                      size="small"
-                      checked={draft[f.code]}
-                      onChange={(e) => setDraft((d) => ({ ...d, [f.code]: e.target.checked }))}
-                      slotProps={{ input: { 'aria-label': f.name } }}
-                    />
+                  <li key={f.code} className="flex items-start gap-3 rounded-lg px-2 py-1.5 hover:bg-soft">
+                    <span className="pt-0.5">
+                      <ToggleSwitch checked={draft[f.code]} onChange={(on) => apply(on ? A.turnedOn(f.name) : A.turnedOff(f.name), { draft: { ...draft, [f.code]: on } })} label={f.name} />
+                    </span>
                     <span className="min-w-0 flex-1">
                       <b className={cx('block text-[13.6px] font-semibold', blocked ? 'text-ink3' : 'text-ink')}>
                         {f.name}
@@ -117,17 +179,6 @@ const Editor = ({ data }: EditorProps) => {
           </section>
         ))}
       </div>
-      <footer className="sticky bottom-0 flex items-center gap-2.5 border-t border-line2 bg-white px-4 py-2.5">
-        <span className="flex-1 text-[12.6px] font-semibold text-warndk" aria-live="polite">
-          {dirty ? A.unsaved(dirty) : ''}
-        </span>
-        <Button onClick={reset} disabled={!dirty || saving}>
-          {A.reset}
-        </Button>
-        <Button variant="contained" onClick={() => void save()} disabled={!dirty || saving}>
-          {saving ? A.saving : A.save}
-        </Button>
-      </footer>
     </AppCard>
   );
 };
@@ -137,14 +188,15 @@ interface FeatureEditorProps {
 }
 
 /**
- * Loads one brand's features; the editor remounts with fresh state after every save.
+ * Loads one brand's features. The editor keeps its switches across the refetch
+ * that follows each autosave, so a change made while a save is in flight is kept.
  * currentData, not data: while another brand loads, the previous brand's switches must not show.
  */
 const FeatureEditor = ({ brandCode }: FeatureEditorProps) => {
-  const { currentData: data, error, isFetching, refetch, fulfilledTimeStamp } = useGetBrandFeaturesQuery(brandCode);
+  const { currentData: data, error, isFetching, refetch } = useGetBrandFeaturesQuery(brandCode);
   return (
     <AsyncContent isLoading={isFetching && !data} error={error} onRetry={() => void refetch()} isEmpty={!data}>
-      {data && <Editor key={`${brandCode}|${fulfilledTimeStamp}`} data={data} />}
+      {data && <Editor key={brandCode} data={data} />}
     </AsyncContent>
   );
 };

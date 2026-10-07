@@ -10,8 +10,8 @@ Every data endpoint depends on `require_permission(...)`, which resolves:
                  EMAIL), in that brand. Unknown or inactive -> 403 "Your
                  account is not set up".
   * effective  - the employee in X-Impersonate-Employee-Id (same brand),
-                 honoured ONLY when the real user holds user.impersonate (else
-                 403); otherwise the real user.
+                 honoured ONLY when the real user holds user.impersonate (an
+                 admin user, ADMIN_USERS_FILE; else 403); otherwise the real user.
   * territory  - ALWAYS the effective employee's sales-assignment territory in the
                  brand. No endpoint takes a territory from the request.
   * features   - the brand's enabled features (CFG_BRAND_FEATURE). A guarded
@@ -32,7 +32,6 @@ from core.identity import resolve_upstream_identity
 from core.request_id import get_request_id
 from helpers import brands
 from helpers.territory_data import all_assignments, all_employees, get_refs, in_brand
-from registry.features import IMPERSONATION
 from registry.permissions_seed import USER_IMPERSONATE, permissions_for
 
 IMPERSONATE_HEADER = "X-Impersonate-Employee-Id"
@@ -127,8 +126,8 @@ def get_request_context(request: Request) -> RequestContext:
     if real is None or not _active(real):
         raise HTTPException(status_code=403, detail=NOT_SET_UP)
     features = brands.enabled_features(brand)
-    perms = [p for p in permissions_for(real.get("ROLE_CODE"))
-             if p != USER_IMPERSONATE or IMPERSONATION in features]
+    admin = brands.is_admin(ident)
+    perms = permissions_for(real.get("ROLE_CODE"), admin)
     effective = real
     imp = (request.headers.get(IMPERSONATE_HEADER) or "").strip()
     if imp and imp.lower() != real["EMPLOYEE_ID"].lower():
@@ -138,8 +137,7 @@ def get_request_context(request: Request) -> RequestContext:
         if target is None or not _active(target):
             raise HTTPException(status_code=403, detail="The employee you are viewing as is not available")
         effective = target
-    return RequestContext(real, effective, perms, get_request_id(request), brand, available, features,
-                          brands.is_admin(ident))
+    return RequestContext(real, effective, perms, get_request_id(request), brand, available, features, admin)
 
 
 def require_permission(permission: Optional[str] = None,

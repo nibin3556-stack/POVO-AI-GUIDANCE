@@ -40,7 +40,6 @@ export const FEATURES = {
   EXAMPLE_NOTES: 'EXAMPLE_NOTES',
   VOICE_NOTES: 'VOICE_NOTES',
   AI_NEXT_CALL: 'AI_NEXT_CALL',
-  IMPERSONATION: 'IMPERSONATION',
 } as const;
 
 export type FeatureCode = (typeof FEATURES)[keyof typeof FEATURES];

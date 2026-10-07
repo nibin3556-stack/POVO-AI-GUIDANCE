@@ -1,4 +1,4 @@
-"""Impersonation: employee search, start and exit (managers only).
+"""Impersonation: employee search, start and exit (admin users only).
 
 Impersonation itself is stateless on the server: the frontend sends
 X-Impersonate-Employee-Id on every request and helpers/dependency.py honours

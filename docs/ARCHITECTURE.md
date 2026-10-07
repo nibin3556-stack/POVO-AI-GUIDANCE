@@ -60,7 +60,7 @@ POVO-AI-GUIDANCE/
 - **Unknown or inactive users** get 403 with the message "Your account is not set up for POVO AI Guidance".
 - **Permissions** are role-based and declared in `backend/registry/permissions_seed.py`:
   - `REP` and `MANAGER` get `guidance.view` and `call.assess`.
-  - `user.impersonate` goes to the roles in `IMPERSONATION_ROLES` (default `REP,MANAGER`, as in the POC, where the signed-in rep has **Impersonate user**). Set it to `MANAGER` to restrict it.
+  - `user.impersonate` goes only to the admin users in `ADMIN_USERS_FILE` (`backend/config/admin_users.json`), whatever their role or brand. It is not a brand feature. Add or remove a username in that file to change who can impersonate.
   - Every endpoint is guarded server-side.
 - **Impersonation**
   - The frontend sends `X-Impersonate-Employee-Id: <employee_id>` on every request while impersonating. The value is kept in Redux and persisted to `sessionStorage`.
@@ -73,11 +73,11 @@ POVO-AI-GUIDANCE/
   - The brands a user can pick are the **active** `CFG_BRAND` rows they have an **active** `DIM_EMPLOYEE` row in (one employee row per brand, each with its own role and home territory). Any other brand returns 403.
   - Every query filters on `BRAND_CODE`, and the in-process caches are keyed by brand, so two brands never share a row. Impersonation stays inside the brand and ends when the brand changes.
 - **Brand features**
-  - The feature catalog is code (`backend/registry/features.py`, 15 features: the three tabs, each Territory Performance card, Must-Wins, AI call prep, AI compliance check, example notes, voice notes, AI next-call messaging, impersonation). A child feature needs its parent on.
+  - The feature catalog is code (`backend/registry/features.py`, 14 features: the three tabs, each Territory Performance card, Must-Wins, AI call prep, AI compliance check, example notes, voice notes, AI next-call messaging). A child feature needs its parent on.
   - `CFG_BRAND_FEATURE` says which are on per brand. A brand without a row for a feature does not have it, so a new brand starts with nothing. The default brand is registered with every feature on.
   - `/me` lists the brand's enabled features; the frontend hides what is off, and every guarded endpoint answers 403 "This feature is not enabled for the selected brand".
 - **Admin users**
-  - `ADMIN_USERS_FILE` (default `backend/config/admin_users.json`, `{"admins": ["username", ...]}`) lists who may configure brands and features. The file is re-read when it changes.
+  - `ADMIN_USERS_FILE` (default `backend/config/admin_users.json`, `{"admins": ["username", ...]}`) lists who may configure brands and features and who may impersonate. The file is re-read when it changes.
   - The check is on the **real** signed-in identity (never the impersonated one) and needs no `DIM_EMPLOYEE` row. Admins reach the screen from the account menu (**Configure brand features**, `#/admin`).
 - **Record scoping**
   - Any `hcp_id`, `account_id` or `call_id` outside the effective territory returns 404.

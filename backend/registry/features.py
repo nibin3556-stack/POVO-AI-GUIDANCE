@@ -9,6 +9,9 @@ default brand (DEFAULT_BRAND_CODE, POVO) is registered with every feature on.
 
 `requires` names a feature that must also be on for this one to work (the UI
 hides a child whose parent is off, and the guards check both).
+
+Impersonation is not a feature: it is a right of the admin users
+(ADMIN_USERS_FILE), whatever the brand (registry/permissions_seed.py).
 """
 from __future__ import annotations
 
@@ -39,7 +42,6 @@ COMPLIANCE_CHECK = "COMPLIANCE_CHECK"
 EXAMPLE_NOTES = "EXAMPLE_NOTES"
 VOICE_NOTES = "VOICE_NOTES"
 AI_NEXT_CALL = "AI_NEXT_CALL"
-IMPERSONATION = "IMPERSONATION"
 
 FEATURES: tuple[Feature, ...] = (
     Feature(PERFORMANCE_TAB, "Territory Performance", "The Territory Performance tab.", "Territory Performance"),
@@ -70,7 +72,6 @@ FEATURES: tuple[Feature, ...] = (
     Feature(AI_NEXT_CALL, "AI next-call messaging", "After Submit, AI suggests the next call's messaging from the "
             "HCP data and every earlier call's feedback and notes. Off: rule-based revision.",
             "Post-Call Assessment", POST_CALL_TAB),
-    Feature(IMPERSONATION, "Impersonate user", "View the app as another employee of the brand.", "General"),
 )
 
 BY_CODE = {f.code: f for f in FEATURES}

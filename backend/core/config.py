@@ -54,14 +54,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     # NoDecode: read the raw comma-separated string instead of expecting JSON.
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5175"]
-    #: Roles allowed to impersonate (DIM_EMPLOYEE.ROLE_CODE, comma-separated).
-    #: The POC offers "Impersonate user" to the signed-in rep, so reps and
-    #: managers both have it by default; set e.g. MANAGER to restrict it.
-    impersonation_roles: Annotated[list[str], NoDecode] = ["REP", "MANAGER"]
     #: Brand used when a request names none and the user works on it. At start
     #: it is registered in CFG_BRAND with every feature on (it was the only brand).
     default_brand_code: str = "POVO"
-    #: JSON file listing the usernames allowed to configure brand features.
+    #: JSON file listing the admin usernames: they configure brand features and
+    #: are the only users who can impersonate.
     admin_users_file: str = path.join(BACKEND_DIR, "config", "admin_users.json")
     app_timezone: str = "America/New_York"
     dev_fallback_username: str = "vturano"
@@ -108,13 +105,6 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [o.strip() for o in value.split(",") if o.strip()]
         return value
-
-    @field_validator("impersonation_roles", mode="before")
-    @classmethod
-    def _split_roles(cls, value):
-        if isinstance(value, str):
-            return [r.strip().upper() for r in value.split(",") if r.strip()]
-        return [str(r).upper() for r in value]
 
     @field_validator("povo_today_override", "n8n_base_url", "databricks_host",
                      "databricks_token", "databricks_warehouse_id", mode="before")

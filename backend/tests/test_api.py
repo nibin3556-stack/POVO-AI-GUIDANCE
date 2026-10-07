@@ -60,8 +60,8 @@ def test_unknown_user_403(client):
     assert r.status_code == 403 and r.json()["message"] == "Your account is not set up for POVO AI Guidance"
 
 
-def test_rep_impersonates_like_the_poc(client, rep, other_rep):
-    """Default IMPERSONATION_ROLES includes REP: the signed-in rep sees another rep's data."""
+def test_admin_rep_impersonates(client, rep, other_rep):
+    """vturano is a rep in the admin users file: admins impersonate whatever their role."""
     h = {**ident("vturano"), "X-Impersonate-Employee-Id": other_rep["EMPLOYEE_ID"]}
     me = _data(client.get("/api/v1/me", headers=h))
     assert me["is_impersonating"] and me["signed_in"]["username"] == "vturano"
@@ -73,14 +73,15 @@ def test_rep_impersonates_like_the_poc(client, rep, other_rep):
     assert {t["hcp_id"] for t in own["hs_volume"]}.isdisjoint({t["hcp_id"] for t in theirs["hs_volume"]})
 
 
-def test_rep_cannot_impersonate_when_restricted(client, other_rep, monkeypatch):
-    from core.config import get_settings
-    monkeypatch.setattr(get_settings(), "impersonation_roles", ["MANAGER"])
-    h = {**ident("vturano"), "X-Impersonate-Employee-Id": other_rep["EMPLOYEE_ID"]}
+def test_non_admin_cannot_impersonate(client, rep):
+    """Only the admin users file grants impersonation: not a role, not a brand feature."""
+    for username in ("mcastellano", "rsutherland"):  # a rep and a manager, neither an admin
+        assert "user.impersonate" not in _data(client.get("/api/v1/me", headers=ident(username)))["permissions"]
+    h = {**ident("mcastellano"), "X-Impersonate-Employee-Id": rep["EMPLOYEE_ID"]}
     assert client.get("/api/v1/me", headers=h).status_code == 403
-    assert client.get("/api/v1/employees/search?q=da", headers=ident("vturano")).status_code == 403
-    assert client.post("/api/v1/impersonation", json={"employee_id": other_rep["EMPLOYEE_ID"]},
-                       headers=ident("vturano")).status_code == 403
+    assert client.get("/api/v1/employees/search?q=da", headers=ident("mcastellano")).status_code == 403
+    assert client.post("/api/v1/impersonation", json={"employee_id": rep["EMPLOYEE_ID"]},
+                       headers=ident("mcastellano")).status_code == 403
 
 
 def test_manager_impersonates_and_scope_follows(client, manager, rep, other_rep):
