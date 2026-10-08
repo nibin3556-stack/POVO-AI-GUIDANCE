@@ -83,8 +83,8 @@ class Settings(BaseSettings):
     databricks_host: Optional[str] = None
     databricks_token: Optional[str] = None
     databricks_warehouse_id: Optional[str] = None
-    databricks_catalog: str = "povo_ai_guidance"
-    databricks_schema: str = "bronze"
+    databricks_catalog: str = "bis_prod"
+    databricks_schema: str = "bronze_trinity"
     databricks_app_schema: str = "app"
     databricks_pool_size: int = 4
 
