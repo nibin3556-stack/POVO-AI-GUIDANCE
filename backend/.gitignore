@@ -5,3 +5,5 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+# Seed copy for the Posit bundle (scripts/stage_seed.py)
+seed/

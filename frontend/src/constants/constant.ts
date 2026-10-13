@@ -2,9 +2,10 @@ export const APP_NAME = 'POVO Pulse';
 
 /**
  * Backend base URL. Empty means same origin: the Vite dev proxy locally, or a
- * backend content item on the same Posit host:port in production.
+ * backend content item on the same Posit host:port in production. A trailing
+ * slash on the pasted URL is dropped so paths never start with "//".
  */
-export const API_URL: string = import.meta.env.VITE_API_URL ?? '';
+export const API_URL: string = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '');
 export const API_PREFIX = '/api/v1';
 
 export const REQUEST_ID_HEADER = 'X-Request-ID';

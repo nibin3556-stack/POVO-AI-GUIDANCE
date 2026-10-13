@@ -31,6 +31,14 @@ _ENV_FILE = path.join(BACKEND_DIR, ".env")
 #: Per-machine overrides on top of .env; never committed.
 _ENV_LOCAL_FILE = path.join(BACKEND_DIR, ".env.local")
 
+
+def _seed_dir(name: str) -> str:
+    """databricks/seed/<name> in the repo; on Posit, where only backend/ is deployed,
+    the copy scripts/stage_seed.py puts in backend/seed/<name>."""
+    repo = path.join(REPO_DIR, "databricks", "seed", name)
+    bundled = path.join(BACKEND_DIR, "seed", name)
+    return bundled if not path.isdir(repo) and path.isdir(bundled) else repo
+
 # .env first, then .env.local wins. Real process environment variables (Posit,
 # CI, tests) still outrank both inside Settings: pydantic's normal precedence.
 load_dotenv(_ENV_FILE)
@@ -74,10 +82,10 @@ class Settings(BaseSettings):
     data_source: Literal["local", "sqlite", "databricks"] = "local"
     local_duckdb_path: str = path.join(BACKEND_DIR, ".localdata", "povo.duckdb")
     sqlite_path: str = path.join(BACKEND_DIR, ".localdata", "povo.sqlite")
-    seed_output_dir: str = path.join(REPO_DIR, "databricks", "seed", "output")
+    seed_output_dir: str = _seed_dir("output")
     #: The backend owns the content JSON; the loader falls back to it when the
     #: REF_ content tables are empty (before the seeder has run).
-    content_dir: str = path.join(REPO_DIR, "databricks", "seed", "content")
+    content_dir: str = _seed_dir("content")
     bronze_cache_seconds: int = 600
 
     databricks_host: Optional[str] = None
