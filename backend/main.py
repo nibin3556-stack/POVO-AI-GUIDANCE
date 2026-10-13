@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         logger.info("Starting %s (%s, data source %s, AI %s)", settings.app_name, settings.environment,
                     settings.data_source, "on" if settings.ai_active else "off")
-        if settings.environment != "production":
+        if settings.dev_fallback_active:
             logger.info("Dev identity fallback active -> %s", settings.dev_fallback_username)
         try:
             get_warehouse()

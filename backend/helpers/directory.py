@@ -18,10 +18,10 @@ IDENTITY_SOURCE picks one of two sources:
                4. Those rows give the territories (TERR_ID, TERR_NAME,
                   DIST_NAME), and their TEAM_NAME / TEAM_ID the brand
                   (TRINITY_BRAND_TEAMS).
-             An active employee with no sales-force row is refused, unless
-             they are an admin user (ADMIN_USERS_FILE). A home-office admin
-             gets every active brand with no territory of their own, so they
-             can configure brands and "view as" a rep.
+             Every active, non-terminated employee may sign in. One with no
+             sales-force row on a brand's team gets in as "Home office": every
+             active brand, no territory of their own. Configuring brands and
+             "view as" a rep stay with the admin users (ADMIN_USERS_FILE).
              With DATA_SOURCE local or sqlite the data is the seed, so a Trinity
              territory the seed lacks is swapped for a seed one
              (LOCAL_DATA_TERRITORY_ID): login is real, the data is not.
@@ -217,13 +217,13 @@ class TrinityDirectory:
         team = {(row.get("TEAM_NAME") or "").strip().upper(), _id(row.get("TEAM_ID")).upper()} - {""}
         return [b for b, teams in mapping.items() if team & teams]
 
-    def _people(self, emp: dict, rows: list[dict], admin_fallback: bool = True) -> list[dict]:
+    def _people(self, emp: dict, rows: list[dict], home_office: bool = True) -> list[dict]:
         by_brand: dict[str, list[dict]] = {}
         for r in rows:
             for b in self._brands_of(r):
                 by_brand.setdefault(b, []).append(r)
         people = [self._person(emp, b, rs) for b, rs in by_brand.items()]
-        if not people and admin_fallback and brands.is_admin(emp.get("EMP_USER_ID")):
+        if not people and home_office:  # any active employee off the brand teams
             people = [self._person(emp, b["BRAND_CODE"], []) for b in brands.brands()]
         return people
 
@@ -314,7 +314,7 @@ class TrinityDirectory:
             grouped.setdefault(_id(r["EMP_ID"]), (r, []))[1].append(r)
         hits = []
         for eid, (emp, sf) in grouped.items():
-            person = next((p for p in self._people(emp, sf, admin_fallback=False)
+            person = next((p for p in self._people(emp, sf, home_office=False)
                            if p["BRAND_CODE"] == brand_code), None)
             if person:
                 exact = v in (eid.lower(), person["USERNAME"], (person["HOME_TERRITORY_ID"] or "").lower())

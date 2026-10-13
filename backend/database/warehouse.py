@@ -203,11 +203,15 @@ class LocalWarehouse(Warehouse):
 
         self.settings = settings
         self._lock = threading.RLock()
-        os.makedirs(os.path.dirname(os.path.abspath(settings.local_duckdb_path)), exist_ok=True)
         self._con = duckdb.connect()
         cat = settings.databricks_catalog
-        path = os.path.abspath(settings.local_duckdb_path).replace("'", "''")
-        self._con.execute(f"ATTACH '{path}' AS {cat}")
+        if settings.data_source == "none":  # sign-in only: memory, never a file
+            self.name = "none"
+            self._con.execute(f"ATTACH ':memory:' AS {cat}")
+        else:
+            os.makedirs(os.path.dirname(os.path.abspath(settings.local_duckdb_path)), exist_ok=True)
+            path = os.path.abspath(settings.local_duckdb_path).replace("'", "''")
+            self._con.execute(f"ATTACH '{path}' AS {cat}")
         self._con.execute(f"CREATE SCHEMA IF NOT EXISTS {cat}.{settings.databricks_schema}")
         self._con.execute(f"CREATE SCHEMA IF NOT EXISTS {cat}.{settings.databricks_app_schema}")
         self.loaded_tables: list[str] = []
@@ -225,6 +229,12 @@ class LocalWarehouse(Warehouse):
         loader then falls back to the JSON files it owns).
         """
         folder = self.settings.seed_output_dir
+        if self.settings.data_source == "none":
+            for table, cols in tables.BRONZE_COLUMNS.items():
+                self._con.execute(f"CREATE OR REPLACE TABLE {tables.bronze(table)} "
+                                  f"({', '.join(f'{c} {t}' for c, t in cols)})")
+            logger.info("DATA_SOURCE=none: empty in-memory tables, no data")
+            return
         for table, cols in tables.BRONZE_COLUMNS.items():
             fqn = tables.bronze(table)
             csv_path = os.path.join(folder, f"{table}.csv")

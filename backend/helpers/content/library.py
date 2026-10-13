@@ -68,6 +68,9 @@ def _is_active(row: dict) -> bool:
 
 def _from_json(table: str) -> list[dict]:
     path = os.path.join(get_settings().content_dir, FILES[table])
+    if not os.path.isfile(path):  # e.g. only backend/ deployed with DATA_SOURCE=none: no content yet
+        logger.warning("No content file %s; %s is empty", path, table)
+        return []
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
 

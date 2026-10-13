@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import date
 from functools import lru_cache
+import os
 from os import path
 from typing import Annotated, Literal, Optional
 
@@ -30,14 +31,6 @@ REPO_DIR = path.dirname(BACKEND_DIR)
 _ENV_FILE = path.join(BACKEND_DIR, ".env")
 #: Per-machine overrides on top of .env; never committed.
 _ENV_LOCAL_FILE = path.join(BACKEND_DIR, ".env.local")
-
-
-def _seed_dir(name: str) -> str:
-    """databricks/seed/<name> in the repo; on Posit, where only backend/ is deployed,
-    the copy scripts/stage_seed.py puts in backend/seed/<name>."""
-    repo = path.join(REPO_DIR, "databricks", "seed", name)
-    bundled = path.join(BACKEND_DIR, "seed", name)
-    return bundled if not path.isdir(repo) and path.isdir(bundled) else repo
 
 # .env first, then .env.local wins. Real process environment variables (Posit,
 # CI, tests) still outrank both inside Settings: pydantic's normal precedence.
@@ -78,14 +71,16 @@ class Settings(BaseSettings):
     # --- Data ----------------------------------------------------------------
     #: local = DuckDB file (bronze reloaded from the seed CSVs at every start),
     #: sqlite = one SQLite file that keeps all its data (the interim database
-    #: until Databricks is connected), databricks = the SQL warehouse.
-    data_source: Literal["local", "sqlite", "databricks"] = "local"
+    #: until Databricks is connected), databricks = the SQL warehouse,
+    #: none = sign-in only: empty in-memory tables, nothing written to disk and
+    #: no seed data (with IDENTITY_SOURCE=trinity the user and territory are real).
+    data_source: Literal["local", "sqlite", "databricks", "none"] = "local"
     local_duckdb_path: str = path.join(BACKEND_DIR, ".localdata", "povo.duckdb")
     sqlite_path: str = path.join(BACKEND_DIR, ".localdata", "povo.sqlite")
-    seed_output_dir: str = _seed_dir("output")
+    seed_output_dir: str = path.join(REPO_DIR, "databricks", "seed", "output")
     #: The backend owns the content JSON; the loader falls back to it when the
     #: REF_ content tables are empty (before the seeder has run).
-    content_dir: str = _seed_dir("content")
+    content_dir: str = path.join(REPO_DIR, "databricks", "seed", "content")
     bronze_cache_seconds: int = 600
 
     databricks_host: Optional[str] = None
@@ -192,6 +187,17 @@ class Settings(BaseSettings):
                 out.setdefault(brand.strip().upper(), set()).update(
                     t.strip().upper() for t in teams.split("|") if t.strip())
         return out
+
+    @property
+    def on_posit(self) -> bool:
+        """Running as Posit Connect content (Connect sets these for every process)."""
+        return bool(os.environ.get("CONNECT_CONTENT_GUID") or os.environ.get("RSTUDIO_PRODUCT") == "CONNECT")
+
+    @property
+    def dev_fallback_active(self) -> bool:
+        """The DEV_FALLBACK_USERNAME stand-in: never in production and never on Posit,
+        where a request without the identity header must stay anonymous."""
+        return self.environment != "production" and not self.on_posit and bool(self.dev_fallback_username)
 
     @property
     def ai_active(self) -> bool:

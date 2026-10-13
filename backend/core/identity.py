@@ -45,7 +45,7 @@ def resolve_upstream_identity(request: Request) -> Optional[str]:
         if isinstance(payload, str) and payload.strip():
             return payload.strip()
         return raw
-    if settings.environment != "production" and settings.dev_fallback_username:
+    if settings.dev_fallback_active:
         return settings.dev_fallback_username
     return None
 

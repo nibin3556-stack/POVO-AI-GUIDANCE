@@ -35,7 +35,7 @@ from core.config import get_settings
 from core.identity import identity_via, resolve_upstream_identity
 from core.request_id import get_request_id
 from helpers import brands
-from helpers.directory import get_directory
+from helpers.directory import get_directory, user_id
 from registry.permissions_seed import USER_IMPERSONATE, permissions_for
 
 logger = logging.getLogger("povo.access")
@@ -116,6 +116,8 @@ def get_request_context(request: Request) -> RequestContext:
     rows = identity_rows(ident)
     available = user_brands(rows)
     if not available:
+        # Who, so a refusal can be traced; the user id only, never the raw header.
+        logger.warning("sign-in refused: %s is not an active, non-terminated employee", user_id(ident))
         raise HTTPException(status_code=403, detail=NOT_SET_UP)
     brand = _pick_brand(request, available)
     real = next((e for e in rows if e.get("BRAND_CODE") == brand), None)

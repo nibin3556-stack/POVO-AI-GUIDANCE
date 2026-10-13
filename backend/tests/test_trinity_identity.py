@@ -64,10 +64,14 @@ class StubTrinity(Warehouse):
 
 
 @pytest.fixture()
-def trinity(client, monkeypatch):
+def trinity(client, monkeypatch, tmp_path):
     from core.config import get_settings
     from helpers.directory import TrinityDirectory, set_directory
 
+    # Its own admin list: the real config/admin_users.json names real people.
+    admins = tmp_path / "admins.json"
+    admins.write_text('{"admins": ["vturano"]}')
+    monkeypatch.setattr(get_settings(), "admin_users_file", str(admins))
     monkeypatch.setattr(get_settings(), "identity_source", "trinity")
     monkeypatch.setattr(get_settings(), "trinity_brand_teams", "POVO:DERM")
     stub = StubTrinity()
@@ -99,13 +103,22 @@ def test_not_terminated(client, trinity, who):
 @pytest.mark.parametrize("who", [
     "p250600",   # terminated
     "p250601",   # EMP_STATUS Inactive
-    "p250700",   # active, but not in the sales force and not an admin
-    "p250800",   # in the sales force, on a team that does not sell POVO
     "nobody",    # not in DIM_EMPLOYEE
 ])
 def test_refused(client, trinity, who):
     r = _me(client, who)
     assert r.status_code == 403 and r.json()["message"] == "Your account is not set up for POVO AI Guidance"
+
+
+@pytest.mark.parametrize("who", [
+    "p250700",   # active, not in the sales force
+    "p250800",   # in the sales force, on a team that does not sell POVO
+])
+def test_any_active_employee_signs_in_as_home_office(client, trinity, who):
+    """Every active employee gets in; off the brand's teams: Home office, no territory, no "view as"."""
+    d = _me(client, who).json()["data"]
+    assert d["signed_in"]["access_level"] == "Home office" and d["signed_in"]["home_territory_id"] is None
+    assert not d["is_admin"] and "user.impersonate" not in d["permissions"]
 
 
 def test_district_manager(client, trinity):
