@@ -53,11 +53,14 @@ POVO-AI-GUIDANCE/
 ## 3. Identity, impersonation and permissions
 
 - **Real user**
-  - The backend reads the `RStudio-Connect-Credentials` header, which holds a JSON `{"user": "<username>", "groups": [...]}` or a plain username/email.
-  - It matches the value to `DIM_EMPLOYEE.USERNAME`, falling back to `EMAIL`.
+  - Okta signs the user in on Posit Connect (the VM). Posit then puts the user in the `RStudio-Connect-Credentials` header on every request, as JSON `{"user": "<username>", "email": "...", "groups": [...]}` or a plain username/email. The backend reads only this header. Nothing the browser sends (email, id, token) is trusted for identity.
+  - `IDENTITY_SOURCE` picks where the user is checked (`backend/helpers/directory.py`):
+    - `trinity` (production) follows the same gate as Mosaic. The domain is dropped (`p250048@incyte.com` becomes `p250048`), and the result must match `EMP_USER_ID` in `bis_prod.bronze_trinity.DIM_EMPLOYEE` with `EMP_STATUS = 'Active'` and no termination: `TERM_DATE` is NULL, the `1900-01-01` sentinel, or a future date. `EMP_TYPE` then picks the `DIM_SALES_FORCE_CURR` column to match `EMP_ID` against: `OHS` → `TERR_EMP_ID` (rep), `OBD` → `DIST_EMP_ID` (district manager), `ASD`/`ABD` → `AREA_EMP_ID` (area manager). The matched rows give the territories (`TERR_ID`, `TERR_NAME`, `DIST_NAME`). Their `TEAM_NAME`/`TEAM_ID` gives the brand through `TRINITY_BRAND_TEAMS`. A rep's home territory is their `TERR_ID`; a manager's is the first territory they cover. An active employee with no sales-force row is refused, unless they are an admin user, who gets every active brand with no own territory (to configure brands and "view as" a rep). Answers, refusals included, are cached for `IDENTITY_CACHE_SECONDS` (60). The Trinity tables are read over the `DATABRICKS_*` connection whatever `DATA_SOURCE` is. With `DATA_SOURCE` `local` or `sqlite` (real sign-in, seed data), a Trinity territory the seed lacks is swapped for a seed one: the seed employee with the same username's territory, else `LOCAL_DATA_TERRITORY_ID`.
+    - `app` (development) matches the app's own `DIM_EMPLOYEE.USERNAME`, falling back to `EMAIL`, with the territory from `DIM_SALES_ASSIGNMENT`. Production refuses to start with it.
+  - Every request logs one line: employee id, `EMP_TYPE`, how the identity was established (`okta-header` or `dev-fallback`), the effective employee and the brand.
   - In development only (`ENVIRONMENT != production`), a missing header falls back to `DEV_FALLBACK_USERNAME` (default `vturano`). The Vite dev proxy also injects the header from `VITE_DEV_USER`.
   - The app has no login page, no JWT and no tokens.
-- **Unknown or inactive users** get 403 with the message "Your account is not set up for POVO AI Guidance".
+- **No identity header** (production) gets 401 "Missing upstream identity context". **Unknown, inactive or terminated users** get 403 with the message "Your account is not set up for POVO AI Guidance".
 - **Permissions** are role-based and declared in `backend/registry/permissions_seed.py`:
   - `REP` and `MANAGER` get `guidance.view` and `call.assess`.
   - `user.impersonate` goes only to the admin users in `ADMIN_USERS_FILE` (`backend/config/admin_users.json`), whatever their role or brand. It is not a brand feature. Add or remove a username in that file to change who can impersonate.
@@ -78,7 +81,7 @@ POVO-AI-GUIDANCE/
   - `/me` lists the brand's enabled features; the frontend hides what is off, and every guarded endpoint answers 403 "This feature is not enabled for the selected brand".
 - **Admin users**
   - `ADMIN_USERS_FILE` (default `backend/config/admin_users.json`, `{"admins": ["username", ...]}`) lists who may configure brands and features and who may impersonate. The file is re-read when it changes.
-  - The check is on the **real** signed-in identity (never the impersonated one) and needs no `DIM_EMPLOYEE` row. Admins reach the screen from the account menu (**Configure brand features**, `#/admin`).
+  - The check is on the **real** signed-in identity (never the impersonated one) and needs no sales assignment. With `IDENTITY_SOURCE=trinity` the admin must still be an active employee in Trinity `DIM_EMPLOYEE`, and the file lists network ids (`EMP_USER_ID`, e.g. `p250048`). Admins reach the screen from the account menu (**Configure brand features**, `#/admin`).
 - **Record scoping**
   - Any `hcp_id`, `account_id` or `call_id` outside the effective territory returns 404.
   - A call belongs to its effective rep: another rep gets 404, while a manager impersonating that rep can see it.

@@ -4,6 +4,7 @@ import DonutChart from '../../components/charts/DonutChart';
 import AsyncContent from '../../components/common/AsyncContent';
 import { LABELS } from '../../constants/labels';
 import { useChartHover } from '../../hooks/useChartHover';
+import { useLaunchDate } from '../../hooks/useLaunchDate';
 import { useGetSegmentationQuery } from '../../redux/api/performanceApi';
 import type { Segment } from '../../types/models';
 import { cx } from '../../utils/cx';
@@ -17,7 +18,7 @@ interface LegendProps {
   onHover: (index: number, x: number, y: number) => void;
 }
 
-/** Legend beside the donut: swatch, full segment name and share. Hover shows the same tooltip. */
+/** Legend beside the donut: swatch, full segment name and the number of POVO Targets. Hover shows the same tooltip. */
 const SegmentLegend = memo(({ segments, activeIndex, onHover }: LegendProps) => (
   <ul className="m-0 flex min-w-0 flex-[0_0_42%] list-none flex-col gap-[9px] p-0">
     {segments.map((s, index) => (
@@ -28,7 +29,7 @@ const SegmentLegend = memo(({ segments, activeIndex, onHover }: LegendProps) => 
       >
         <i className="mt-[3px] size-[11px] rounded-[3px]" style={{ backgroundColor: s.color_hex }} />
         <span className="text-[12.6px] font-semibold leading-[1.3] text-ink2">{s.full_name}</span>
-        <b className="text-[15px] font-bold leading-[1.1] text-ink">{Math.round(s.pct)}%</b>
+        <b className="text-[15px] font-bold leading-[1.1] text-ink">{s.hcp_count}</b>
       </li>
     ))}
   </ul>
@@ -39,6 +40,7 @@ SegmentLegend.displayName = 'SegmentLegend';
 const SegmentationCard = () => {
   const { data, error, isLoading, refetch } = useGetSegmentationQuery();
   const { hover, onHover, onLeave } = useChartHover();
+  const launch = useLaunchDate();
   const slices = useMemo(
     () => (data?.segments ?? []).map((s) => ({ key: s.segment_code, value: s.hcp_count, color: s.color_hex })),
     [data],
@@ -49,6 +51,7 @@ const SegmentationCard = () => {
     <ChartCard
       title={P.segmentationTitle}
       caption={data ? P.notWritingCaption(data.not_writing, data.total_targets) : undefined}
+      captionTip={P.notWritingTip(launch)}
       hover={hover}
       tip={tip}
       onLeave={onLeave}

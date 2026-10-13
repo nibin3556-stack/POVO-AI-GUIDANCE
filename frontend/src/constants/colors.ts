@@ -61,13 +61,6 @@ export const KPI_COLORS = {
   patientsEdge: '#2E9E52',
 } as const;
 
-/** Delivered-point reception stripes: orange = not well received or still open, green = moderately or well. */
-export const DELIVERED_COLORS = {
-  good: { stripe: '#2E9E52', border: '#9FD3B1', tagBg: '#E9F5EE', tagFg: '#0F5A2C', tagBd: '#BFE0CB' },
-  bad: { stripe: '#EA580C', border: '#F4B183', tagBg: '#FFEDD5', tagFg: '#9A3412', tagBd: '#FDBA74' },
-  reinforced: { stripe: '#1B6FBF', border: '#9EC2E4' },
-} as const;
-
 export type TierCode = 'SH' | 'MED' | 'LOW';
 
 /** Tier chip colours (background / text / border). */

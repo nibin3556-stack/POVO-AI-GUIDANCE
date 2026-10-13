@@ -6,9 +6,12 @@ Every data endpoint depends on `require_permission(...)`, which resolves:
                  user's first brand. Only an ACTIVE brand (CFG_BRAND) the
                  user has an active DIM_SALES_ASSIGNMENT row in can be used
                  (else 403).
-  * real       - the employee the Posit identity header names (USERNAME, then
-                 EMAIL), in that brand. Unknown or inactive -> 403 "Your
-                 account is not set up".
+  * real       - the employee the Okta identity names (the Posit
+                 RStudio-Connect-Credentials header), looked up in the
+                 employee directory (helpers/directory.py: Trinity
+                 DIM_EMPLOYEE + DIM_SALES_FORCE_CURR in production), in that
+                 brand. No identity -> 401; unknown, inactive or terminated ->
+                 403 "Your account is not set up".
   * effective  - the employee in X-Impersonate-Employee-Id (same brand),
                  honoured ONLY when the real user holds user.impersonate (an
                  admin user, ADMIN_USERS_FILE; else 403); otherwise the real user.
@@ -22,21 +25,25 @@ right to exit impersonation and still sees exactly the rep's data.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from fastapi import Depends, HTTPException, Request
 
 from core.config import get_settings
-from core.identity import resolve_upstream_identity
+from core.identity import identity_via, resolve_upstream_identity
 from core.request_id import get_request_id
 from helpers import brands
-from helpers.territory_data import all_assignments, all_employees, get_refs, in_brand
+from helpers.directory import get_directory
 from registry.permissions_seed import USER_IMPERSONATE, permissions_for
+
+logger = logging.getLogger("povo.access")
 
 IMPERSONATE_HEADER = "X-Impersonate-Employee-Id"
 BRAND_HEADER = "X-Brand-Code"
 NOT_SET_UP = "Your account is not set up for POVO AI Guidance"
+NO_IDENTITY = "Missing upstream identity context"
 FEATURE_OFF = "This feature is not enabled for the selected brand"
 
 
@@ -51,6 +58,8 @@ class RequestContext:
     brands: list[dict] = field(default_factory=list)
     features: set[str] = field(default_factory=set)
     is_admin: bool = False
+    #: How the identity was established: okta-header (production) or dev-fallback.
+    via: str = ""
 
     @property
     def is_impersonating(self) -> bool:
@@ -69,23 +78,9 @@ def _active(e: dict) -> bool:
     return v is None or v is True or str(v).lower() in ("true", "1", "t")
 
 
-def _matches(value: str, rows: list[dict]) -> list[dict]:
-    """Rows (any brand) whose USERNAME or EMAIL is the identity."""
-    v = value.strip().lower()
-    for key in ("USERNAME", "EMAIL"):
-        hits = [e for e in rows if (e.get(key) or "").strip().lower() == v]
-        if hits:
-            return hits
-    if "@" in v:  # an email whose local part is the username
-        local = v.split("@", 1)[0]
-        return [e for e in rows if (e.get("USERNAME") or "").strip().lower() == local]
-    return []
-
-
 def identity_rows(value: str) -> list[dict]:
-    """The signed-in person in every brand they have a sales assignment in (employee-in-brand dicts)."""
-    people = {p["EMPLOYEE_ID"]: p for p in _matches(value, all_employees())}
-    return [in_brand(people[a["EMPLOYEE_ID"]], a) for a in all_assignments() if a.get("EMPLOYEE_ID") in people]
+    """The signed-in person in every brand they work on (employee-in-brand dicts), from the directory."""
+    return get_directory().lookup(value)
 
 
 def find_employee(value: str, brand_code: Optional[str] = None) -> Optional[dict]:
@@ -94,8 +89,7 @@ def find_employee(value: str, brand_code: Optional[str] = None) -> Optional[dict
 
 
 def employee_by_id(employee_id: str, brand_code: str) -> Optional[dict]:
-    eid = (employee_id or "").strip().lower()
-    return next((e for e in get_refs(brand_code).employees if (e.get("EMPLOYEE_ID") or "").lower() == eid), None)
+    return get_directory().by_id(employee_id, brand_code)
 
 
 def user_brands(rows: list[dict]) -> list[dict]:
@@ -117,7 +111,9 @@ def _pick_brand(request: Request, available: list[dict]) -> str:
 
 def get_request_context(request: Request) -> RequestContext:
     ident = resolve_upstream_identity(request)
-    rows = identity_rows(ident) if ident else []
+    if not ident:
+        raise HTTPException(status_code=401, detail=NO_IDENTITY)
+    rows = identity_rows(ident)
     available = user_brands(rows)
     if not available:
         raise HTTPException(status_code=403, detail=NOT_SET_UP)
@@ -137,7 +133,12 @@ def get_request_context(request: Request) -> RequestContext:
         if target is None or not _active(target):
             raise HTTPException(status_code=403, detail="The employee you are viewing as is not available")
         effective = target
-    return RequestContext(real, effective, perms, get_request_id(request), brand, available, features, admin)
+    via = identity_via(request)
+    # One line per request: ids only, never the identity header value.
+    logger.info("employee=%s emp_type=%s via=%s effective=%s brand=%s %s %s", real["EMPLOYEE_ID"],
+                real.get("EMP_TYPE") or real.get("ROLE_CODE"), via, effective["EMPLOYEE_ID"], brand,
+                request.method, request.url.path)
+    return RequestContext(real, effective, perms, get_request_id(request), brand, available, features, admin, via)
 
 
 def require_permission(permission: Optional[str] = None,
@@ -153,7 +154,7 @@ def require_permission(permission: Optional[str] = None,
 
 def employee_out(e: dict) -> dict:
     """The contract `Employee` shape."""
-    t = get_refs(e["BRAND_CODE"]).territories.get(e.get("HOME_TERRITORY_ID") or "", {})
+    t = get_directory().territory(e["BRAND_CODE"], e.get("HOME_TERRITORY_ID") or "") or {}
     return {"employee_id": e["EMPLOYEE_ID"], "network_id": e.get("NETWORK_ID"), "username": e.get("USERNAME"),
             "full_name": e.get("FULL_NAME"), "initials": e.get("INITIALS"),
             "business_unit": e.get("BUSINESS_UNIT"), "role_code": e.get("ROLE_CODE"),
@@ -163,6 +164,6 @@ def employee_out(e: dict) -> dict:
 
 
 def territory_out(brand_code: str, tid: str) -> dict:
-    t = get_refs(brand_code).territories.get(tid, {})
+    t = get_directory().territory(brand_code, tid) or {}
     return {"territory_id": tid, "territory_name": t.get("TERRITORY_NAME"), "city": t.get("CITY"),
             "state": t.get("STATE"), "region": t.get("REGION")}

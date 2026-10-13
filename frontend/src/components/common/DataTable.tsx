@@ -35,8 +35,10 @@ interface DataTableProps<T> {
   renderExpanded?: (row: T) => ReactNode;
   compact?: boolean;
   ariaLabel: string;
-  /** Extra classes per row (e.g. the flash after a submitted assessment). */
+  /** Extra classes per row. */
   rowClassName?: (row: T) => string | undefined;
+  /** Rows already assessed: a static green highlight that wins over the selected blue. */
+  rowDone?: (row: T) => boolean;
 }
 
 const ALIGN = { left: 'text-left', center: 'text-center', right: 'text-right' } as const;
@@ -69,7 +71,7 @@ const HeaderCell = <T,>({ column, sort, onSort, sortLabel }: { column: DataColum
 
 /** Table in the POC `.rtbl` style: sticky header, sortable columns, row selection, optional expansion. */
 function DataTable<T>(props: DataTableProps<T>) {
-  const { columns, rows, getRowKey, onRowClick, selectedKey, emptyMessage, expandedKey, renderExpanded, compact, ariaLabel, rowClassName } = props;
+  const { columns, rows, getRowKey, onRowClick, selectedKey, emptyMessage, expandedKey, renderExpanded, compact, ariaLabel, rowClassName, rowDone } = props;
   return (
     <table className="w-full table-fixed border-collapse" aria-label={ariaLabel}>
       <colgroup>
@@ -96,6 +98,7 @@ function DataTable<T>(props: DataTableProps<T>) {
           const key = getRowKey(row);
           const selected = key === selectedKey;
           const expanded = key === expandedKey && renderExpanded;
+          const done = Boolean(rowDone?.(row));
           return (
             <Fragment key={key}>
               <tr
@@ -104,11 +107,13 @@ function DataTable<T>(props: DataTableProps<T>) {
                 className={cx(
                   'transition-colors even:bg-[#F3F8FD] hover:bg-[#E3EFFA]',
                   onRowClick && 'cursor-pointer',
-                  selected && 'bg-[#D3E6F8]! shadow-[inset_4px_0_0_#1B6FBF]',
-                  expanded && 'bg-[#E3EFFA]!',
+                  selected && !done && 'bg-[#D3E6F8]! shadow-[inset_4px_0_0_#1B6FBF]',
+                  done && 'bg-[#DDF3E5]! shadow-[inset_5px_0_0_#15803D]',
+                  expanded && !done && 'bg-[#E3EFFA]!',
                   rowClassName?.(row),
                 )}
                 data-row-key={key}
+                data-done={done || undefined}
               >
                 {columns.map((c) => (
                   <td

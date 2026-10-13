@@ -20,8 +20,8 @@ describe('shell and impersonation', () => {
   it('shows the header with the real date and hides impersonation from reps', async () => {
     mockApi([{ url: '/me', respond: meRep }]);
     renderWithProviders(<AppShell />);
-    expect(await screen.findByText('October 13, 2026')).toBeInTheDocument();
-    expect(screen.getByText('POVO Sales Representative · Portland, ME territory · Northeast')).toBeInTheDocument();
+    // POVO Pulse: no app title in the header; today's date follows the role line.
+    expect(await screen.findByText('POVO Sales Representative · Portland, ME territory · Northeast · October 13, 2026')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.queryByRole('menuitem', { name: /Impersonate user/ })).toBeNull();
     expect(screen.getByText('Post-Call Assessment')).toHaveAttribute('aria-disabled', 'true');
@@ -38,7 +38,7 @@ describe('shell and impersonation', () => {
     const { store } = renderWithProviders(<AppShell />);
     await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
     await userEvent.click(screen.getByRole('menuitem', { name: /Impersonate user/ }));
-    await userEvent.type(screen.getByLabelText('Rep name, employee ID or network ID'), 'Dana');
+    await userEvent.type(screen.getByLabelText('Rep name, Employee ID or Network ID'), 'Dana');
     await userEvent.click(await screen.findByRole('option', { name: /Dana Whitaker/ }));
     await waitFor(() => expect(store.getState().session.impersonation).toEqual({ employeeId: 'p250611', name: 'Dana Whitaker' }));
     expect(sessionStorage.getItem(IMPERSONATION_STORAGE_KEY)).toContain('p250611');
@@ -69,7 +69,7 @@ describe('shell and impersonation', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
     await userEvent.click(screen.getByRole('menuitem', { name: /Impersonate user/ }));
     expect(screen.queryByText('Recent')).toBeNull();
-    await userEvent.type(screen.getByLabelText('Rep name, employee ID or network ID'), 'Dana');
+    await userEvent.type(screen.getByLabelText('Rep name, Employee ID or Network ID'), 'Dana');
     await userEvent.click(screen.getByRole('button', { name: /Look up/ }));
     await waitFor(() => expect(store.getState().session.impersonation?.employeeId).toBe('p250611'));
     expect(localStorage.getItem('povo.impersonation.recent.' + meManager.signed_in.employee_id)).toContain('p250611');
@@ -81,7 +81,7 @@ describe('shell and impersonation', () => {
     renderWithProviders(<AppShell />);
     await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
     await userEvent.click(screen.getByRole('menuitem', { name: /Impersonate user/ }));
-    await userEvent.type(screen.getByLabelText('Rep name, employee ID or network ID'), 'zz9');
+    await userEvent.type(screen.getByLabelText('Rep name, Employee ID or Network ID'), 'zz9');
     await userEvent.click(screen.getByRole('button', { name: /Look up/ }));
     expect(await screen.findByText('No employee found for “zz9”. Check the name, Employee ID or Network ID and try again')).toBeInTheDocument();
   });

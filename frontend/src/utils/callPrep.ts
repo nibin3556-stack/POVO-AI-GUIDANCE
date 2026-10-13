@@ -27,7 +27,7 @@ export const participantHasNewActivity = (p: Participant | undefined): boolean =
   Boolean(p?.interactions.some((i) => i.is_new));
 
 /** The post-call history line and the last call's Additional Notes are highlighted as new. */
-export const isPostCallBullet = (bullet: string): boolean => bullet.startsWith('Post-call') || bullet.startsWith('Last call note');
+export const isPostCallBullet = (bullet: string): boolean => /^(Post-call|Post-Call Assessment|Last call note)/.test(bullet);
 
 /** The call prep header name: "Dr. Winters, John, MD". */
 export const callPrepName = (p: Participant): string => (p.role_type === 'HCP' ? `Dr. ${p.name}, ${p.degree}` : `${p.display_name}, ${p.role_type}`);

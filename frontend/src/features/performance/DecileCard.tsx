@@ -11,6 +11,7 @@ import { decileViewSelected, type DecileView } from '../../redux/callSession/cal
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { buildBands, decileTip } from './chartTips';
 import DecileTable from './DecileTable';
+import { formatMDY } from '../../utils/format';
 
 const P = LABELS.performance;
 const LEGEND: LegendItem[] = [
@@ -35,13 +36,15 @@ const DecileCard = () => {
   const bands = useMemo(() => (data ? buildBands(data) : []), [data]);
   const row = view === 'chart' && hover ? data?.rows[hover.index] : undefined;
   const tip = row && data ? decileTip(row, data.tiers.find((t) => t.tier_code === row.tier_code), data.elapsed_pct) : null;
+  const sh = data?.tiers.find((t) => t.tier_code === 'SH');
   const toggle = <SegmentedToggle options={VIEWS} value={view} onChange={(v) => dispatch(decileViewSelected(v))} ariaLabel={P.decileViewAria} />;
   return (
     <ChartCard
       title={P.decileTitle}
       headerRight={toggle}
       legend={view === 'chart' ? LEGEND : undefined}
-      caption={data ? P.shCaption(data.super_high_not_writing, data.super_high_total, data.tiers.find((t) => t.tier_code === 'SH')?.tier_name ?? '') : undefined}
+      caption={sh && data ? P.shCaption(data.super_high_not_writing, data.super_high_total, sh.tier_name) : undefined}
+      captionTip={sh && data ? P.shTip(sh.tier_name, `D${sh.decile_max} to D${sh.decile_min}`, formatMDY(data.data_start) || null) : undefined}
       hover={hover}
       tip={tip}
       onLeave={onLeave}

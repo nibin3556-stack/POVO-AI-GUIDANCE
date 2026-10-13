@@ -5,7 +5,7 @@ import { CHART_COLORS, COLORS } from '../../constants/colors';
 import { LABELS } from '../../constants/labels';
 import type { DecileRow, Deciles, Grain, NewWriters, Segment, Segmentation, SegmentCode, Tier, WriterBucket } from '../../types/models';
 import type { ReferenceLookup } from '../../utils/reference';
-import { formatLongDate, formatMDY, formatShortMD } from '../../utils/format';
+import { formatLongDate, formatMD, formatMDY, formatMonthLong, formatMonthShort, formatShortMD } from '../../utils/format';
 
 const T = LABELS.performance.tip;
 
@@ -79,3 +79,25 @@ export const toColumns = (data: NewWriters): ColumnDatum[] =>
     total: b.total,
     partial: b.is_partial,
   }));
+
+export interface WritersCaption {
+  text: string;
+  tip: string;
+  up: boolean;
+}
+
+/**
+ * The New POVO Writers insight chip: this month to date against last month
+ * (monthly buckets; the last one is the current, partial month). ▲ green when
+ * the count is level or rising, ▼ amber when it is falling.
+ */
+export const writersCaption = (monthly: NewWriters | undefined, today: string | null | undefined): WritersCaption | null => {
+  const buckets = monthly?.grain === 'month' ? monthly.buckets : [];
+  const cur = buckets[buckets.length - 1];
+  const prev = buckets[buckets.length - 2];
+  if (!cur || !prev) return null;
+  const up = cur.total >= prev.total;
+  const text = `${up ? '▲' : '▼'} ${LABELS.performance.writersCaption(cur.total, formatMonthShort(cur.start_date), prev.total, formatMonthShort(prev.start_date))}`;
+  const tip = LABELS.performance.writersCaptionTip(formatMonthLong(cur.start_date), formatMD(cur.start_date), formatMDY(today ?? cur.end_date), formatMonthLong(prev.start_date));
+  return { text, tip, up };
+};

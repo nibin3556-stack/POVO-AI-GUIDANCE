@@ -10,7 +10,8 @@ import { useGetNewWritersQuery } from '../../redux/api/performanceApi';
 import { grainSelected } from '../../redux/callSession/callSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import type { Grain } from '../../types/models';
-import { toColumns, writerSeries, writersTip } from './chartTips';
+import { sessionApi } from '../../redux/api/sessionApi';
+import { toColumns, writerSeries, writersCaption, writersTip } from './chartTips';
 
 const P = LABELS.performance;
 const GRAINS: ToggleOption<Grain>[] = [
@@ -27,6 +28,10 @@ const NewWritersCard = () => {
   const ref = useReference();
   const grain = useAppSelector((s) => s.callSession.grain);
   const { data, error, isLoading, refetch } = useGetNewWritersQuery(grain);
+  // The insight chip always compares months, whichever grain the chart shows (cached when the grain is monthly).
+  const monthly = useGetNewWritersQuery('month');
+  const { data: me } = sessionApi.endpoints.getMe.useQueryState();
+  const caption = useMemo(() => writersCaption(monthly.data, me?.today), [monthly.data, me?.today]);
   const { hover, onHover, onLeave } = useChartHover();
   const columns = useMemo(() => (data ? toColumns(data) : []), [data]);
   const series = useMemo(() => (data ? writerSeries(data, ref) : []), [data, ref]);
@@ -38,7 +43,17 @@ const NewWritersCard = () => {
   const tip = bucket && data ? writersTip(bucket, data.grain, data.segment_codes, ref) : null;
   const toggle = <SegmentedToggle options={GRAINS} value={grain} onChange={(g) => dispatch(grainSelected(g))} ariaLabel={P.grainAria} />;
   return (
-    <ChartCard title={P.writersTitle} headerRight={toggle} legend={legend} hover={hover} tip={tip} onLeave={onLeave}>
+    <ChartCard
+      title={P.writersTitle}
+      headerRight={toggle}
+      legend={legend}
+      caption={caption?.text}
+      captionTip={caption?.tip}
+      captionUp={caption?.up}
+      hover={hover}
+      tip={tip}
+      onLeave={onLeave}
+    >
       <AsyncContent isLoading={isLoading} error={error} onRetry={() => void refetch()} isEmpty={!columns.length} emptyMessage={P.chartEmpty}>
         {data && (
           <div className="flex size-full flex-col">

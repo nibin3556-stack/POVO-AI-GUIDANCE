@@ -40,12 +40,15 @@ const KpiCard = ({ card, periodLabel, remainingDays, periodEnd }: KpiCardProps) 
       style={{ borderLeftColor: patients ? KPI_COLORS.patientsEdge : KPI_COLORS.pefEdge }}
     >
       <div className="flex items-start gap-2.5">
-        <h3 className="m-0 flex min-w-0 flex-1 flex-wrap items-center gap-x-[7px] text-[15px] font-semibold text-navyd max-bp1400:text-[14px]">
+        <h3 className="m-0 flex min-w-0 flex-1 flex-wrap items-center gap-x-[7px] text-[15px] font-semibold leading-tight text-navyd max-bp1400:text-[14px]">
           {card.title}
-          <em className="text-[12.6px] font-medium not-italic text-ink3">({periodLabel})</em>
-          {!patients && info && <InfoTip text={info} />}
+          {/* The period and the info icon stay together so a long title wraps cleanly beside the status chip. */}
+          <span className="inline-flex items-center gap-x-[7px] whitespace-nowrap">
+            <em className="text-[12.6px] font-medium not-italic text-ink3">({periodLabel})</em>
+            {!patients && info && <InfoTip text={info} />}
+          </span>
         </h3>
-        <StatusChip variant={chip.variant} className="flex-none">
+        <StatusChip variant={chip.variant} className="mt-px flex-none">
           {chip.label}
         </StatusChip>
       </div>

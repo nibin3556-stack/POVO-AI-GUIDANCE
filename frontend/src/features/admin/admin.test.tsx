@@ -32,8 +32,8 @@ describe('brands in the shell', () => {
   it('switches brand from the header and remembers it', async () => {
     mockApi([{ url: '/me', respond: twoBrands }]);
     const { store } = renderWithProviders(<AppShell />);
-    expect(await screen.findByText('POVO – AI Guidance')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('combobox', { name: 'Select brand' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Select brand' }));
+    expect(document.title).toBe('POVO Pulse');
     await userEvent.click(within(screen.getByRole('listbox')).getByText('Opzelura'));
     expect(store.getState().session.brandCode).toBe('OPZ');
     expect(localStorage.getItem(BRAND_STORAGE_KEY)).toBe('OPZ');

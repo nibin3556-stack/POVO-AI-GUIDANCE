@@ -1,4 +1,4 @@
-export const APP_NAME = 'POVO – AI Guidance';
+export const APP_NAME = 'POVO Pulse';
 
 /**
  * Backend base URL. Empty means same origin: the Vite dev proxy locally, or a

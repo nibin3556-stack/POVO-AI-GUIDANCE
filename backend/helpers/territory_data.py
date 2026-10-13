@@ -240,8 +240,9 @@ def _load(brand: str, tid: str) -> TerritoryData:
     for a in activity:
         a["EVENT_DATE"] = to_date(a["EVENT_DATE"])
     goals = wh.query(f"SELECT * FROM {bronze('FCT_TERRITORY_GOAL')} {where}", p)
-    territory = refs.territories.get(tid) or {"TERRITORY_ID": tid, "TERRITORY_NAME": tid, "CITY": None,
-                                              "STATE": None, "REGION": None}
+    from helpers.directory import get_directory  # lazy: the directory builds on this module
+    territory = (refs.territories.get(tid) or get_directory().territory(brand, tid)
+                 or {"TERRITORY_ID": tid, "TERRITORY_NAME": tid, "CITY": None, "STATE": None, "REGION": None})
     return TerritoryData(brand, tid, territory, plan_year, hcps, accounts, metrics, plan,
                          interactions, activity, goals)
 

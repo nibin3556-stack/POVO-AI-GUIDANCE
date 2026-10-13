@@ -88,6 +88,30 @@ class Settings(BaseSettings):
     databricks_app_schema: str = "app"
     databricks_pool_size: int = 4
 
+    # --- Identity (who may sign in, and their territory) -----------------------
+    #: app     = the app's own DIM_EMPLOYEE + DIM_SALES_ASSIGNMENT (seed data, dev).
+    #: trinity = Incyte's employee master on Databricks, as Mosaic does: the Okta
+    #:           user (p250048@incyte.com -> p250048) must be an active,
+    #:           non-terminated EMP_USER_ID in TRINITY DIM_EMPLOYEE, and their
+    #:           territory comes from DIM_SALES_FORCE_CURR. Read over the
+    #:           DATABRICKS_* connection whatever DATA_SOURCE is.
+    identity_source: Literal["app", "trinity"] = "app"
+    trinity_catalog: str = "bis_prod"
+    trinity_schema: str = "bronze_trinity"
+    #: Which sales-force teams sell which brand: "POVO:TEAM A|TEAM B,OPZ:TEAM C",
+    #: matched to DIM_SALES_FORCE_CURR.TEAM_NAME or TEAM_ID. Blank = every team
+    #: sells DEFAULT_BRAND_CODE.
+    trinity_brand_teams: str = ""
+    #: How long a resolved identity (or a refusal) is reused before DIM_EMPLOYEE
+    #: and DIM_SALES_FORCE_CURR are read again. The check runs on every request.
+    identity_cache_seconds: int = 60
+    #: IDENTITY_SOURCE=trinity with DATA_SOURCE local or sqlite: the real Trinity
+    #: territories have no rows in the seed data, so a signed-in user is shown a
+    #: seed territory instead. The seed employee with the same username keeps
+    #: theirs; anyone else gets this territory (e.g. NE-POR). Blank = their
+    #: Trinity territory, which has no data. Ignored with DATA_SOURCE=databricks.
+    local_data_territory_id: str = ""
+
     # --- AI and n8n ----------------------------------------------------------
     ai_enabled: bool = True
     n8n_base_url: Optional[str] = None
@@ -120,7 +144,9 @@ class Settings(BaseSettings):
         problems = []
         if self.data_source == "local":
             problems.append("DATA_SOURCE=local serves dummy data from a DuckDB file")
-        if self.data_source == "databricks" and not (
+        if self.identity_source == "app":
+            problems.append("IDENTITY_SOURCE=app signs users in from seed data; use trinity")
+        if (self.data_source == "databricks" or self.identity_source == "trinity") and not (
                 self.databricks_host and self.databricks_token and self.databricks_warehouse_id):
             problems.append("DATABRICKS_HOST, DATABRICKS_TOKEN and DATABRICKS_WAREHOUSE_ID are required")
         if self.povo_service_token.strip().lower() in _DEFAULT_TOKENS:
@@ -147,6 +173,17 @@ class Settings(BaseSettings):
             if host.startswith(prefix):
                 host = host[len(prefix):]
         return host.split("/")[0]
+
+    @property
+    def brand_teams(self) -> dict[str, set[str]]:
+        """TRINITY_BRAND_TEAMS as {BRAND_CODE: {TEAM, ...}}, upper-cased; {} when blank."""
+        out: dict[str, set[str]] = {}
+        for part in self.trinity_brand_teams.split(","):
+            brand, _, teams = part.partition(":")
+            if brand.strip() and teams.strip():
+                out.setdefault(brand.strip().upper(), set()).update(
+                    t.strip().upper() for t in teams.split("|") if t.strip())
+        return out
 
     @property
     def ai_active(self) -> bool:

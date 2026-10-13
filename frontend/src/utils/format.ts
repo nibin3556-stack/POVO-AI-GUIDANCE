@@ -28,6 +28,20 @@ export const formatYear = (iso: string | null | undefined): string => (isValidIs
 /** "Oct 13" */
 export const formatMonthDay = (iso: string | null | undefined): string => (isValidIso(iso) ? parse(iso).format('MMM D') : '');
 
+/** "Oct" */
+export const formatMonthShort = (iso: string | null | undefined): string => (isValidIso(iso) ? parse(iso).format('MMM') : '');
+
+/** "October" */
+export const formatMonthLong = (iso: string | null | undefined): string => (isValidIso(iso) ? parse(iso).format('MMMM') : '');
+
+/** "Tuesday, October 13, 2026" */
+export const formatWeekdayDate = (iso: string | null | undefined): string =>
+  isValidIso(iso) ? parse(iso).format('dddd, MMMM D, YYYY') : '';
+
+/** Whole days from `iso` to `today` (both YYYY-MM-DD); null when either is missing. */
+export const daysBetween = (iso: string | null | undefined, today: string | null | undefined): number | null =>
+  isValidIso(iso) && isValidIso(today) ? parse(today).diff(parse(iso), 'day') : null;
+
 /** Thousands separators, at most one decimal. */
 export const formatNumber = (value: number | null | undefined): string => {
   if (value === null || value === undefined || Number.isNaN(value)) return '0';

@@ -1,14 +1,17 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useCallback, useState, type ReactNode } from 'react';
 import AiSparkle from '../../components/common/AiSparkle';
 import AsyncContent from '../../components/common/AsyncContent';
 import Icon from '../../components/common/Icon';
 import RoleChip from '../../components/common/RoleChip';
+import { FEATURES } from '../../constants/constant';
 import { LABELS } from '../../constants/labels';
+import { useFeatures } from '../../hooks/useFeatures';
 import { useSelectTarget } from '../../hooks/useSelectTarget';
 import { useGetGuidanceQuery } from '../../redux/api/performanceApi';
 import type { Guidance, GuidanceFocus } from '../../types/models';
 import { cx } from '../../utils/cx';
 import { useReference } from '../../hooks/useReference';
+import PlanDayDialog from '../planDay/PlanDayDialog';
 
 const P = LABELS.performance;
 
@@ -76,11 +79,24 @@ const TopWriter = ({ writer }: { writer: TopWriterData }) => {
 /** The guidance names the top tier by its reference name ("Super High"). */
 const TOP_TIER = 'SH';
 
-const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => void }) => {
+/** "Click Here to Plan Your Day": first in the row, styled like the selected period toggle, filling its column. */
+const PlanDayButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex size-full min-h-[52px] flex-col items-center justify-center gap-[3px] rounded-[9px] border border-bluet2 bg-blue px-2.5 py-1.5 text-center text-[12.8px] font-semibold leading-[1.25] text-white transition-colors hover:bg-[#12508C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#12508C]"
+  >
+    <Icon name="event_available" className="text-xl leading-none text-white" />
+    <span>{P.planDay}</span>
+  </button>
+);
+
+const GuidanceBody = ({ data, onGo, onPlanDay }: { data: Guidance; onGo: (id: string) => void; onPlanDay: (() => void) | null }) => {
   const { tierName } = useReference();
   const top = tierName(TOP_TIER);
   return (
-  <div className="grid flex-1 grid-cols-3 gap-[7px] max-bp900:grid-cols-1">
+  <div className={cx('grid flex-1 gap-[7px] max-bp900:grid-cols-1', onPlanDay ? 'grid-cols-[minmax(118px,.5fr)_repeat(3,minmax(0,1fr))]' : 'grid-cols-3')}>
+    {onPlanDay && <PlanDayButton onClick={onPlanDay} />}
     <Column title={P.missed} tone="miss">
       <ul className="m-0 flex list-none flex-col gap-px p-0">
         {data.missed.map((m) => (
@@ -91,7 +107,7 @@ const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => vo
         ))}
         {data.super_high_not_writing > 0 && (
           <Item title={P.shNotWritingTitle(top)}>
-            <b>{P.superHigh(data.super_high_not_writing, top)}</b>
+            <b>{P.superHighTargets(data.super_high_not_writing, top)}</b>
             {P.notWriting}
           </Item>
         )}
@@ -120,10 +136,18 @@ const GuidanceBody = ({ data, onGo }: { data: Guidance; onGo: (id: string) => vo
   );
 };
 
-/** AI Guidance: missed opportunities, strong performance, recommended focus (click opens Tab 2). */
+/**
+ * POVO Pulse panel: the Plan Your Day button, then missed opportunities, strong
+ * performance and recommended focus (click opens Tab 2).
+ */
 const AiGuidancePanel = () => {
   const { data, error, isLoading, refetch } = useGetGuidanceQuery();
   const selectTarget = useSelectTarget();
+  // Plan Your Day ends in Pre-Call Planning, so it needs that tab.
+  const canPlan = useFeatures().has(FEATURES.PRE_CALL_TAB);
+  const [planOpen, setPlanOpen] = useState(false);
+  const openPlan = useCallback(() => setPlanOpen(true), []);
+  const closePlan = useCallback(() => setPlanOpen(false), []);
   return (
     <section className="flex min-w-0 animate-fade-up flex-col gap-1 rounded-xl border border-l-[6px] border-line border-l-purple bg-white px-3 pb-2 pt-1.5 shadow-e1">
       <div className="flex items-center gap-[7px]">
@@ -133,8 +157,9 @@ const AiGuidancePanel = () => {
         <b className="text-[12.9px] font-bold uppercase tracking-[.7px] text-purple2">{P.guidanceTitle}</b>
       </div>
       <AsyncContent isLoading={isLoading} error={error} onRetry={() => void refetch()} isEmpty={!data} emptyMessage={P.guidanceEmpty}>
-        {data && <GuidanceBody data={data} onGo={selectTarget} />}
+        {data && <GuidanceBody data={data} onGo={selectTarget} onPlanDay={canPlan ? openPlan : null} />}
       </AsyncContent>
+      {planOpen && <PlanDayDialog onClose={closePlan} />}
     </section>
   );
 };

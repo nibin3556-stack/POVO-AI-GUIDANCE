@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from helpers.audit import audit_ctx
 from helpers.dependency import RequestContext, employee_by_id, employee_out, require_permission
-from helpers.territory_data import get_refs
+from helpers.directory import get_directory
 from registry.permissions_seed import USER_IMPERSONATE
 from schema.impersonation import ImpersonationStart
 from schema.response_schema import ok
@@ -27,19 +27,7 @@ def _active(e: dict) -> bool:
 def search(q: str = Query(min_length=2, max_length=80), limit: int = Query(8, ge=1, le=50),
            ctx: RequestContext = Depends(require_permission(USER_IMPERSONATE))) -> dict:
     """Matches employee ID, network ID, username exactly; name or territory by substring."""
-    v = q.strip().lower()
-    refs = get_refs(ctx.brand_code)
-    hits = []
-    for e in refs.employees:
-        if not _active(e):
-            continue
-        terr = (refs.territories.get(e.get("HOME_TERRITORY_ID") or "", {}).get("TERRITORY_NAME") or "").lower()
-        exact = v in ((e.get("EMPLOYEE_ID") or "").lower(), str(e.get("NETWORK_ID") or "").lower(),
-                      (e.get("USERNAME") or "").lower())
-        if exact or v in (e.get("FULL_NAME") or "").lower() or v in terr:
-            hits.append((0 if exact else 1, e.get("FULL_NAME") or "", e))
-    hits.sort(key=lambda h: (h[0], h[1]))
-    return ok([employee_out(e) for _, _, e in hits[:limit]])
+    return ok([employee_out(e) for e in get_directory().search(q, ctx.brand_code, limit)])
 
 
 @router.post("")

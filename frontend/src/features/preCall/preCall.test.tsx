@@ -4,6 +4,7 @@ import type { InternalAxiosRequestConfig } from 'axios';
 import { describe, expect, it } from 'vitest';
 import PreCallPage from '../../pages/PreCallPage';
 import { callPrep, facets, mustWins, planTargets, profile } from '../../test/fixtures';
+import type { Category, DeliveredPoint } from '../../types/models';
 import { initialCallSessionState } from '../../redux/callSession/callSessionSlice';
 import { mockApi, renderWithProviders } from '../../test/testUtils';
 
@@ -29,7 +30,9 @@ describe('Pre-Call Planning', () => {
     expect(await screen.findByText('Dr. Sprague')).toBeInTheDocument();
     expect(await screen.findByText('Dr. Berg')).toBeInTheDocument();
     expect(screen.getByText('Showing 1–2 of 2 targets')).toBeInTheDocument();
-    expect(screen.getByText('Select a target in Must-Wins or the Call Plan Targets to see the call prep')).toBeInTheDocument();
+    expect(screen.getByText('Select a target in Must-Wins or the Call Plan Targets to see the Call Prep')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Segment' })).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(10);
     expect(screen.getAllByText('Not called').length).toBeGreaterThan(0);
   });
 
@@ -59,16 +62,19 @@ describe('Pre-Call Planning', () => {
     expect(await screen.findByRole('button', { name: /Show all accounts/ })).toBeInTheDocument();
   });
 
-  it('flashes the row of the target whose assessment was just submitted', async () => {
+  it('keeps an assessed target green in Must-Wins and Call Plan Targets, without flashing', async () => {
     mockApi(routes);
     renderWithProviders(<PreCallPage />, {
       route: '/pre-call',
       path: '/pre-call/:hcpId?',
-      preloadedState: { callSession: { ...initialCallSessionState, justSubmittedHcpId: 'H10' } },
+      preloadedState: { callSession: { ...initialCallSessionState, justSubmittedHcpId: 'H10', assessedHcpIds: ['H10', 'H2'] } },
     });
     await screen.findByText('Dr. Berg');
     const row = document.querySelector('tr[data-row-key="H10"]');
-    expect(row).toHaveClass('animate-just-done');
+    expect(row).toHaveAttribute('data-done', 'true');
+    expect(row).not.toHaveClass('animate-just-done');
+    expect(document.querySelector('button[data-row-key="H2"]')).toHaveAttribute('data-done', 'true');
+    expect(document.querySelector('button[data-row-key="H3"]')).not.toHaveAttribute('data-done');
   });
 
   it('selecting a target opens the call prep, and the AI reveals the points once', async () => {
@@ -84,8 +90,10 @@ describe('Pre-Call Planning', () => {
     expect(await within(prep).findByText('AI is preparing Suggested Messaging', undefined, { timeout: 3000 })).toBeInTheDocument();
     await waitFor(() => expect(store.getState().callSession.revealed['H2|messaging|0']).toBe(true), { timeout: 5000 });
     expect(within(prep).getByText('HiSCR50 primary endpoint met at Week 12')).toBeInTheDocument();
-    expect(within(prep).getByText('↳ Insight:')).toBeInTheDocument();
-    expect(within(prep).getByText('AI generated')).toBeInTheDocument();
+    expect(within(prep).getByText('Efficacy:')).toBeInTheDocument();
+    expect(within(prep).getByText('INSIGHT')).toBeInTheDocument();
+    expect(within(prep).getByText('124 of 133 HS patients are not on POVO yet')).toBeInTheDocument();
+    expect(within(prep).getByText('AI Generated')).toBeInTheDocument();
   }, 10000);
 
   it('shows the AI activity box with its steps, not a spinner, while the points are prepared', async () => {
@@ -114,35 +122,62 @@ describe('Pre-Call Planning', () => {
     expect(within(prep).getAllByRole('tab', { name: /Kristen Casey/ }).length).toBeGreaterThan(0);
   });
 
-  it('shows next-call tags, the banner, delivered points and Reinforce after a submitted call', async () => {
-    const revised = callPrep({
-      revision_no: 1,
-      is_revised: true,
-      revised_from_date: '2026-10-13',
-      banner: { summary: '2 delivered · 1 well received', next_best_action: 'Lead with efficacy' },
-      points: [{ point_id: 'M1~F', rank: 1, pillar: 'Efficacy', text: 'New text', detail: null, detail_label: null, tags: ['Builds on well received'], previous_text: null, previous_rank: null }],
-      delivered: [
-        { point_id: 'M1', rank: 0, pillar: 'Efficacy', text: 'Old text', detail: null, detail_label: null, tags: [], previous_text: null, previous_rank: null, delivered_date: '2026-10-13', reception: 2, label: 'Well Received', is_open: false },
-      ],
+  it('after a submitted call: next-call tags and the Insight Summary, without the banner or the delivered history', async () => {
+    const delivered = (over: Partial<DeliveredPoint>): DeliveredPoint => ({
+      point_id: 'X',
+      rank: 0,
+      pillar: null,
+      text: '',
+      detail: null,
+      detail_label: null,
+      tags: [],
+      previous_text: null,
+      previous_rank: null,
+      delivered_date: '2026-10-13',
+      reception: null,
+      label: '',
+      is_open: false,
+      ...over,
     });
-    mockApi([...routes.filter((r) => r.url !== '/call-prep'), { method: 'post', url: '/call-prep', respond: revised }]);
-    const { store } = renderWithProviders(<PreCallPage />, {
-      route: '/pre-call/H2',
-      path: '/pre-call/:hcpId?',
-      preloadedState: undefined,
-    });
+    const revised = (category: Category) =>
+      callPrep({
+        category,
+        revision_no: 1,
+        is_revised: true,
+        revised_from_date: '2026-10-13',
+        banner: { summary: '2 delivered · 1 well received', next_best_action: 'Lead with efficacy' },
+        points: [{ point_id: 'M1~F', rank: 1, pillar: 'Efficacy', text: 'New text', detail: null, detail_label: null, tags: ['Builds on well received'], previous_text: null, previous_rank: null }],
+        delivered: {
+          messaging: [delivered({ point_id: 'M1', pillar: 'Efficacy', text: 'Old text', reception: 2, label: 'Well Received' })],
+          objection: [delivered({ point_id: 'O1', text: 'I worry about the boxed warning', label: 'Still Open', is_open: true })],
+          closing: [],
+        }[category],
+      });
+    const assessed = {
+      ...profile,
+      participants: profile.participants.map((p) =>
+        p.hcp_id === 'H2'
+          ? { ...p, interactions: [{ interaction_id: 'N1', date: '2026-10-13', channel_code: 'rep' as const, team_label: 'POVO Sales', type_label: 'Direct Call', summary: 'Call assessed', is_new: true }, ...p.interactions] }
+          : p,
+      ),
+    };
+    mockApi([
+      ...routes.filter((r) => r.url !== '/call-prep' && String(r.url) !== String(/\/api\/v1\/targets\/[^/]+\/profile/)),
+      { url: /\/api\/v1\/targets\/[^/]+\/profile/, respond: assessed },
+      { method: 'post', url: '/call-prep', respond: (c: InternalAxiosRequestConfig) => revised((c.data as { category: Category }).category) },
+    ]);
+    renderWithProviders(<PreCallPage />, { route: '/pre-call/H2', path: '/pre-call/:hcpId?' });
     const prep = await screen.findByTestId('call-prep');
+    const summary = await within(prep).findByTestId('insight-summary', {}, { timeout: 5000 });
+    expect(within(summary).getByText('Last call Oct 13, 2026')).toBeInTheDocument();
+    expect(within(summary).getByText('Dr. Winters responded well to the efficacy results; build on it next call')).toBeInTheDocument();
+    expect(within(summary).getByText('JAK safety and monitoring is still a concern for Dr. Winters; address it first next call')).toBeInTheDocument();
+    expect(within(summary).getByText('No closing was tried on the last call')).toBeInTheDocument();
     await userEvent.click(await within(prep).findByRole('button', { name: 'Suggested Messaging' }));
     expect(await within(prep).findByText('Revised after the 10/13/2026 call')).toBeInTheDocument();
-    expect(within(prep).getByText(/Updated from the 10\/13\/2026 post-call assessment: 2 delivered/)).toBeInTheDocument();
-    expect(within(prep).getByText('Lead with efficacy')).toBeInTheDocument();
     await waitFor(() => expect(within(prep).getByText('Builds on well received')).toBeInTheDocument(), { timeout: 5000 });
-    const delivered = await within(prep).findByTestId('delivered-list', {}, { timeout: 5000 });
-    expect(within(delivered).getByText('Delivered on earlier calls')).toBeInTheDocument();
-    expect(within(delivered).getByText('Old text')).toBeInTheDocument();
-    expect(within(delivered).getByText('Delivered Oct 13, 2026 · Well Received')).toBeInTheDocument();
-    await userEvent.click(within(delivered).getByRole('button', { name: /Reinforce/ }));
-    expect(store.getState().callSession.reinforced['H2|messaging']).toEqual(['M1']);
-    expect(within(delivered).getByRole('button', { name: /Reinforced/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(prep).queryByText(/Updated from the 10\/13\/2026 post-call assessment/)).toBeNull();
+    expect(within(prep).queryByTestId('delivered-list')).toBeNull();
+    expect(within(prep).queryByText('Old text')).toBeNull();
   }, 10000);
 });

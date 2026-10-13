@@ -13,6 +13,7 @@ export const selectRevealed = (state: RootState) => state.callSession.revealed;
 export const selectFilters = (state: RootState) => state.callSession.filters;
 export const selectSort = (state: RootState) => state.callSession.sort;
 export const selectPage = (state: RootState) => state.callSession.page;
+export const selectAssessedHcpIds = (state: RootState) => state.callSession.assessedHcpIds;
 export const selectCompliance = (state: RootState) => state.callSession.compliance;
 export const selectComplianceDialog = (state: RootState) => state.callSession.complianceDialog;
 export const selectAssessCategory = (state: RootState) => state.callSession.assessCategory;

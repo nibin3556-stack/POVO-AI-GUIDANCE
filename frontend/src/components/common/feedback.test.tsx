@@ -76,9 +76,9 @@ describe('feedback components', () => {
 
   it('AiStatusChip switches between generating and generated', () => {
     const { rerender } = renderWithTheme(<AiStatusChip generating />);
-    expect(screen.getByRole('status')).toHaveTextContent('AI generating');
+    expect(screen.getByRole('status')).toHaveTextContent('AI Generating');
     rerender(<AiStatusChip generating={false} />);
-    expect(screen.getByRole('status')).toHaveTextContent('AI generated');
+    expect(screen.getByRole('status')).toHaveTextContent('AI Generated');
   });
 
   it('AiActivityBox shows the title and steps', () => {

@@ -99,7 +99,7 @@ describe('Post-Call Assessment', () => {
     const input = screen.getByPlaceholderText('Notes');
     await userEvent.type(input, 'damn good call with the HCP');
     fireEvent.blur(input);
-    expect(await screen.findByRole('status', { name: 'AI compliance check in progress' })).toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: 'AI Compliance Check in progress' })).toBeInTheDocument();
     expect(await screen.findByText('Non-compliant', {}, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.getAllByText('damn').length).toBeGreaterThan(0);
     expect(store.getState().callSession.compliance['H2|messaging|M1']?.status).toBe('flagged');
@@ -141,7 +141,7 @@ describe('Post-Call Assessment', () => {
     const checks = () => spy.mock.calls.filter(([c]) => c.url === '/api/v1/compliance/check').length;
     const before = checks();
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'View AI compliance report' }, { timeout: 3000 }));
+    await userEvent.click(await screen.findByRole('button', { name: 'View AI Compliance Check' }, { timeout: 3000 }));
     await waitFor(() => expect(store.getState().callSession.complianceDialog).toMatchObject({ key: 'H2|messaging|M1' }));
     expect(checks()).toBe(before);
   }, 15000);

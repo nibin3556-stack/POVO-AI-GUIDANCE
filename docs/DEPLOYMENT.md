@@ -71,8 +71,10 @@ In Posit, go to **Content → Vars** and set:
 | `POVO_SERVICE_TOKEN` | a long random secret, the same value as in n8n |
 | `APP_TIMEZONE` | `America/New_York` |
 
-- The backend **refuses to start** in production if it has local data mode, missing Databricks settings, or a default service token.
-- Identity comes from the `RStudio-Connect-Credentials` header that Posit injects. The username must match `DIM_EMPLOYEE.USERNAME` (or `EMAIL`).
+- The backend **refuses to start** in production if it has local data mode, missing Databricks settings, a default service token, or `IDENTITY_SOURCE=app`.
+- Identity comes from the `RStudio-Connect-Credentials` header that Posit injects after the Okta sign-in. Set `IDENTITY_SOURCE=trinity`: the user (`p250048@incyte.com` → `p250048`) must be an active, non-terminated `EMP_USER_ID` in `bis_prod.bronze_trinity.DIM_EMPLOYEE`, and their territory comes from `DIM_SALES_FORCE_CURR` (see ARCHITECTURE.md §3). The Databricks token needs `SELECT` on those two tables.
+- Set `TRINITY_BRAND_TEAMS` to the sales-force team(s) that sell each brand: `POVO:POVO` (TEAM_ID 33 in `DIM_SALES_FORCE_CURR`). Left blank, every team counts as `DEFAULT_BRAND_CODE`.
+- Put network ids (not first-initial usernames) in `backend/config/admin_users.json`.
 - Set the content's access to the POVO sales group, and give n8n access to the jobs endpoints: either allow the n8n host, or run the jobs through an API key per your Posit policy.
 - To verify, open `<backend content URL>/health`.
 

@@ -10,6 +10,7 @@ import type { Participant } from '../../../types/models';
 import { callPrepName, isPostCallBullet, participantHasNewActivity } from '../../../utils/callPrep';
 import { cx } from '../../../utils/cx';
 import { nameInitials } from '../../../utils/format';
+import InsightSummary from './InsightSummary';
 import InteractionList from './InteractionList';
 import RoleTabs from './RoleTabs';
 import StatTiles from './StatTiles';
@@ -21,7 +22,12 @@ interface ParticipantHistoryCardProps {
 
 const C = LABELS.callPrep;
 
-/** Card 1: who the participants are, their stats, five bullets and the interaction history. */
+/**
+ * Card 1: who the participants are, their stats, five bullets, the Insight
+ * Summary after a Post-Call Assessment, and the interaction history right below
+ * (any free space stays below the interactions). Highlights are static: no
+ * flashing in Pre-Call Planning.
+ */
 const ParticipantHistoryCard = ({ primary, participants }: ParticipantHistoryCardProps) => {
   const dispatch = useAppDispatch();
   const chosen = useAppSelector((s) => s.callSession.historyParticipantId);
@@ -60,15 +66,16 @@ const ParticipantHistoryCard = ({ primary, participants }: ParticipantHistoryCar
                 key={bullet}
                 className={cx(
                   'relative pl-[15px] text-[13.6px] font-medium leading-[1.4] text-ink2 before:absolute before:left-0 before:top-[7px] before:size-1.5 before:rounded-full before:bg-[#13A09B] short:text-[13px]',
-                  isNew && '-ml-[5px] rounded-[7px] bg-[#EAF6EE] py-[3px] pl-5 pr-2 animate-green-glow before:left-2 before:bg-green',
+                  isNew && '-ml-[5px] rounded-[7px] bg-[#EAF6EE] py-[3px] pl-5 pr-2 before:left-2 before:bg-green',
                 )}
               >
                 {bullet}
-                {isNew && <StatusChip variant="newSolid" className="ml-2 px-2! py-0!">{C.newChip}</StatusChip>}
+                {isNew && <StatusChip variant="newSolid" className="ml-2 animate-none! px-2! py-0!">{C.newChip}</StatusChip>}
               </li>
             );
           })}
         </ul>
+        {revised && <InsightSummary primaryId={primary.hcp_id} participant={active} />}
         <InteractionList participant={active} filter={filter} onFilter={(f) => dispatch(interactionFilterSelected(f))} />
       </div>
     </article>

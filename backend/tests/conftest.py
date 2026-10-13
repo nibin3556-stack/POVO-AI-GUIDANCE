@@ -37,6 +37,8 @@ os.environ.update({
     "SEED_OUTPUT_DIR": str(SEED_DIR), "POVO_TODAY_OVERRIDE": AS_OF, "AI_ENABLED": "false", "N8N_BASE_URL": "",
     "POVO_SERVICE_TOKEN": SERVICE_TOKEN, "DEV_FALLBACK_USERNAME": "vturano", "LOG_LEVEL": "WARNING",
     "BRONZE_CACHE_SECONDS": "600",
+    # Seed employees, never a developer .env's IDENTITY_SOURCE=trinity (real Databricks).
+    "IDENTITY_SOURCE": "app", "LOCAL_DATA_TERRITORY_ID": "",
 })
 
 GENERATOR = REPO / "databricks" / "seed" / "generate_seed_data.py"

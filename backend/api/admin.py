@@ -1,8 +1,9 @@
 """Brand and feature configuration, for the users in ADMIN_USERS_FILE only.
 
 The check is on the REAL signed-in identity (the Posit header), never on an
-impersonated employee, and does not need a DIM_EMPLOYEE row: an admin may
-configure a brand they do not sell. Every change is written to APP_AUDIT_LOG
+impersonated employee. It needs no sales assignment (an admin may configure a
+brand they do not sell), but with IDENTITY_SOURCE=trinity the admin must still
+be an active, non-terminated employee in Trinity DIM_EMPLOYEE. Every change is written to APP_AUDIT_LOG
 under the brand it changed.
 """
 from __future__ import annotations
@@ -11,10 +12,12 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from core.config import get_settings
 from core.identity import resolve_upstream_identity
 from core.request_id import get_request_id
 from helpers import brands
 from helpers.audit import audit
+from helpers.directory import get_directory
 from registry import features as F
 from schema.admin import BrandSave, FeatureSave
 from schema.response_schema import ok
@@ -22,10 +25,17 @@ from schema.response_schema import ok
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 
+def _is_admin(ident) -> bool:
+    """On the admin list and, with IDENTITY_SOURCE=trinity, still an active employee."""
+    if not brands.is_admin(ident):
+        return False
+    return get_settings().identity_source != "trinity" or bool(get_directory().lookup(ident))
+
+
 def require_admin(request: Request) -> str:
     """The admin's identity (username or email), or 403."""
     ident = resolve_upstream_identity(request)
-    if not brands.is_admin(ident):
+    if not _is_admin(ident):
         raise HTTPException(status_code=403, detail="Only admin users can configure brands and features")
     return ident or ""
 
@@ -53,7 +63,7 @@ def _brand_or_404(code: str) -> dict:
 @router.get("/me")
 def admin_me(request: Request) -> dict:
     ident = resolve_upstream_identity(request)
-    return ok({"username": ident, "is_admin": brands.is_admin(ident)})
+    return ok({"username": ident, "is_admin": _is_admin(ident)})
 
 
 @router.get("/brands")

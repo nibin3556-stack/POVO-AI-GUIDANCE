@@ -14,6 +14,8 @@ interface InteractionListProps {
 }
 
 const C = LABELS.callPrep;
+/** New interaction card after a Post-Call Assessment: team chip and date in one semi-dark blue (white text, 4.6:1). */
+const NEW_CHIP = 'border-[#3D79B8] bg-[#3D79B8] text-white';
 
 /** "Interactions with {name}": filter chips with counts, then 3-column interaction cards. */
 const InteractionList = ({ participant, filter, onFilter }: InteractionListProps) => {
@@ -26,7 +28,7 @@ const InteractionList = ({ participant, filter, onFilter }: InteractionListProps
     [participant.interactions, active],
   );
   return (
-    <div className="mt-auto border-t border-dashed border-line pt-2 tall:pt-3">
+    <div className="border-t border-dashed border-line pt-2 tall:pt-3">
       <div className="mb-[5px] text-[11.2px] font-bold uppercase tracking-[.6px] text-[#0B5F5D]">{C.interactionsWith(participant.display_name)}</div>
       <div role="group" aria-label={C.interactionFilterAria} className="mb-2 flex flex-wrap gap-1.5 short:mb-1.5">
         {filters.map((f) => {
@@ -63,16 +65,16 @@ const InteractionList = ({ participant, filter, onFilter }: InteractionListProps
           >
             <span className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
               <b className={cx('whitespace-nowrap text-[13.4px] font-semibold', i.is_new ? 'text-[#14532D]' : 'text-ink')}>{i.type_label}</b>
-              <span className={cx('ml-auto flex-none whitespace-nowrap rounded-full border px-2 py-0.5 text-[9.8px] font-bold uppercase tracking-[.4px]', i.is_new ? 'border-blued bg-blued text-white' : 'border-purplebd bg-purplet text-purple2')}>
+              <span className={cx('ml-auto flex-none whitespace-nowrap rounded-full border px-2 py-0.5 text-[9.8px] font-bold uppercase tracking-[.4px]', i.is_new ? NEW_CHIP : 'border-purplebd bg-purplet text-purple2')}>
                 {i.team_label}
               </span>
             </span>
             <span className="flex flex-wrap items-center gap-1.5 gap-y-0.5">
               <span className="whitespace-nowrap text-[9.6px] font-bold uppercase tracking-[.4px] text-ink3">{C.interactionDate}</span>
-              <span className={cx('rounded-[7px] border px-[7px] py-0.5 text-xs font-semibold', i.is_new ? 'border-blued bg-blued text-white' : 'border-[#CBD5E1] bg-[#F1F5F9] text-ink3')}>{formatLongDate(i.date)}</span>
+              <span className={cx('rounded-[7px] border px-[7px] py-0.5 text-xs font-semibold', i.is_new ? NEW_CHIP : 'border-[#CBD5E1] bg-[#F1F5F9] text-ink3')}>{formatLongDate(i.date)}</span>
             </span>
             <span className="text-[12.4px] font-medium leading-[1.3] text-ink3">
-              {i.is_new && <StatusChip variant="newSolid" className="mr-1.5 px-2! py-0!">{C.newChip}</StatusChip>}
+              {i.is_new && <StatusChip variant="newSolid" className="mr-1.5 animate-none! px-2! py-0!">{C.newChip}</StatusChip>}
               {i.summary}
             </span>
           </div>

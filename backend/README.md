@@ -83,6 +83,11 @@ computed in Python from per-territory data cached for `BRONZE_CACHE_SECONDS`.
 | `POVO_TODAY_OVERRIDE` | empty | `YYYY-MM-DD`, dev/tests only; refused in production |
 | `DEV_FALLBACK_USERNAME` | `vturano` | only when `ENVIRONMENT != production` and no header |
 | `POSIT_IDENTITY_HEADER` | `RStudio-Connect-Credentials` | |
+| `IDENTITY_SOURCE` | `app` | `app` = seed `DIM_EMPLOYEE`; `trinity` = `bis_prod.bronze_trinity` `DIM_EMPLOYEE` + `DIM_SALES_FORCE_CURR` (required in production) |
+| `TRINITY_CATALOG` / `TRINITY_SCHEMA` | `bis_prod` / `bronze_trinity` | read over the `DATABRICKS_*` connection |
+| `TRINITY_BRAND_TEAMS` | empty | `POVO:TEAM A\|TEAM B,OPZ:21` (TEAM_NAME or TEAM_ID); empty = every team sells `DEFAULT_BRAND_CODE` |
+| `LOCAL_DATA_TERRITORY_ID` | empty | `trinity` sign-in on `local`/`sqlite` data: seed territory (e.g. `NE-POR`) shown to a Trinity user the seed does not know; the seed user with the same username keeps theirs |
+| `IDENTITY_CACHE_SECONDS` | `60` | how long a sign-in check (or refusal) is reused |
 | `DATA_SOURCE` | `local` | `local`, `sqlite` or `databricks` |
 | `LOCAL_DUCKDB_PATH` | `backend/.localdata/povo.duckdb` | |
 | `SQLITE_PATH` | `backend/.localdata/povo.sqlite` | used when `DATA_SOURCE=sqlite` |

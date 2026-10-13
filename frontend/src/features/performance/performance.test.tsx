@@ -30,12 +30,14 @@ describe('Territory Performance', () => {
     expect(within(split).getByText('Bridge and Free Trial as of 10/13/2026')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: '9 of 17 achieved, 53% of goal' })).toBeInTheDocument();
     expect(await screen.findByText('Dr. Boland')).toBeInTheDocument();
-    expect(screen.getByText('3 Super High')).toBeInTheDocument();
+    expect(screen.getByText('3 Super High Targets')).toBeInTheDocument();
+    expect(screen.getByText('POVO Pulse')).toBeInTheDocument();
     expect(await screen.findByText('Target – HS Treatment Segmentation')).toBeInTheDocument();
     expect(await screen.findByText('▼ 59 of 83 POVO Targets yet to write POVO')).toBeInTheDocument();
-    await screen.findByText(/Super High HCP/);
-    expect(document.body).toHaveTextContent('▼ 2 of 12 Super High HCPs yet to write POVO');
-    expect(await screen.findByText('7 new POVO writers · Jul 1 – Oct 13, 2026')).toBeInTheDocument();
+    expect(await screen.findByText('▼ 2 of 12 Super High Targets yet to write POVO')).toBeInTheDocument();
+    expect(await screen.findByText('7 New POVO Writers · Jul 1 – Oct 13, 2026')).toBeInTheDocument();
+    // New insight chip: this month to date against last month.
+    expect(await screen.findByText('▼ 2 New POVO Writers in Oct to date vs 5 in Sep')).toBeInTheDocument();
   });
 
   it('shows the decile table by default and switches to the chart', async () => {

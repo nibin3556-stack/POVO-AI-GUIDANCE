@@ -46,8 +46,10 @@ export interface CallSessionState {
   decileView: DecileView;
   /** Delivered points the rep marked Reinforce, per `${participantId}|${category}`: added to the post-call list. */
   reinforced: Record<string, string[]>;
-  /** The target whose assessment was just submitted: its row flashes in Pre-Call Planning. */
+  /** The target whose assessment was just submitted: Pre-Call Planning scrolls its row into view. */
   justSubmittedHcpId: string | null;
+  /** Targets assessed in this session: their rows stay highlighted green in Must-Wins and Call Plan Targets. */
+  assessedHcpIds: string[];
   /** The note field a voice note is recording into (Submit waits for it). */
   recordingKey: string | null;
   assessParticipantId: string | null;
@@ -75,6 +77,7 @@ export const initialCallSessionState: CallSessionState = {
   decileView: 'table',
   reinforced: {},
   justSubmittedHcpId: null,
+  assessedHcpIds: [],
   recordingKey: null,
   assessParticipantId: null,
   assessCategory: 'messaging',
@@ -243,6 +246,7 @@ const callSessionSlice = createSlice({
       state.scrollToPrep = true;
       state.reinforced = {};
       state.justSubmittedHcpId = hcpId;
+      if (!state.assessedHcpIds.includes(hcpId)) state.assessedHcpIds.push(hcpId);
     },
     submittedFlashDone: (state) => {
       state.justSubmittedHcpId = null;

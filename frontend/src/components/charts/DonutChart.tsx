@@ -29,10 +29,10 @@ const CentreLabel = ({ viewBox, total, label }: CentreProps) => {
   const cy = box.cy ?? 0;
   return (
     <g>
-      <text x={cx} y={cy - 4} textAnchor="middle" fontSize={28} fontWeight={700} fill={COLORS.ink}>
+      <text x={cx} y={cy - 8} textAnchor="middle" fontSize={28} fontWeight={700} fill={COLORS.ink}>
         {total}
       </text>
-      <text x={cx} y={cy + 16} textAnchor="middle" fontSize={12.5} fontWeight={600} fill={COLORS.ink3}>
+      <text x={cx} y={cy + 20} textAnchor="middle" fontSize={12.5} fontWeight={600} fill={COLORS.ink3}>
         {label}
       </text>
     </g>

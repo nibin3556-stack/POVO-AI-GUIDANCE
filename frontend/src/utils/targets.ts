@@ -4,6 +4,12 @@ import type { FilterGroup, RoleType, Participant, Target, TargetFilters, TargetS
 export const targetFullName = (t: Pick<Target, 'role_type' | 'name' | 'display_name' | 'degree'>): string =>
   t.role_type === 'HCP' ? `Dr. ${t.name}, ${t.degree}` : `${t.display_name}, ${t.role_type}`;
 
+/** A non-breaking space. */
+const NBSP = String.fromCharCode(160);
+
+/** "Dr." stays glued to the name (no break after the title); only the last name may wrap. */
+export const gluedName = (name: string): string => name.replace(/^(Dr\.) /,`$1${NBSP}`);
+
 export const participantFullName = (p: Participant): string => targetFullName(p);
 
 export const EMPTY_FILTERS: TargetFilters = { focus: [], segment: [], tier: [], account: [], role: [] };

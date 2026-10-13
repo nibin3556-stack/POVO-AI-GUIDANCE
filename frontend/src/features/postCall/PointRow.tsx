@@ -114,6 +114,8 @@ const PointRow = ({ itemKey, participantId, category, point, index, open, contex
         </span>
         <span className={cx('flex size-[22px] flex-none items-center justify-center rounded-md text-xs font-bold', asked ? 'bg-[#CDE8D6] text-green' : 'bg-bluet text-blued')}>{index + 1}</span>
         <span className="flex-1 text-sm font-semibold leading-[1.4] text-ink2">
+          {/* The client call prep format: the pillar leads the point in bold. */}
+          {point.pillar && <b className="font-bold text-ink">{point.pillar}: </b>}
           {point.text}
           {reinforced && (
             <StatusChip variant="days" className="ml-2 align-[1px]">

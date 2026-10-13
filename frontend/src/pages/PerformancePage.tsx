@@ -7,8 +7,8 @@ import SegmentationCard from '../features/performance/SegmentationCard';
 import { useFeatures } from '../hooks/useFeatures';
 import { cx } from '../utils/cx';
 
-/** The POC proportions for all three charts; fewer charts share the row equally. */
-const THREE = 'grid-cols-[minmax(0,.88fr)_minmax(0,1.55fr)_minmax(0,1fr)] max-bp1400:grid-cols-[minmax(0,1fr)_minmax(0,1.42fr)_minmax(0,1.08fr)]';
+/** POVO Pulse chart order: donut, bar, decile (the wide decile card on the right); fewer charts share the row equally. */
+const THREE = 'grid-cols-[minmax(0,.88fr)_minmax(0,1fr)_minmax(0,1.55fr)] max-bp1400:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)_minmax(0,1.42fr)]';
 const FEWER: Record<number, string> = { 1: 'grid-cols-1', 2: 'grid-cols-2' };
 
 /** Tab 1: fits the viewport on desktop; the charts take whatever height is left. Each card is a brand feature. */
@@ -16,8 +16,8 @@ const PerformancePage = () => {
   const features = useFeatures();
   const charts = [
     features.has(FEATURES.SEGMENTATION) && <SegmentationCard key="seg" />,
-    features.has(FEATURES.DECILES) && <DecileCard key="dec" />,
     features.has(FEATURES.NEW_WRITERS) && <NewWritersCard key="wr" />,
+    features.has(FEATURES.DECILES) && <DecileCard key="dec" />,
   ].filter(Boolean);
   return (
     <div className="flex min-h-[600px] flex-1 flex-col gap-2.5" data-testid="performance-page">

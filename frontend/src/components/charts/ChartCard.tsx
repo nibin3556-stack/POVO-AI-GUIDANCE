@@ -1,3 +1,4 @@
+import { Tooltip } from '@mui/material';
 import { memo, useState, type ReactNode } from 'react';
 import type { ChartHover } from '../../hooks/useChartHover';
 import { cx } from '../../utils/cx';
@@ -20,6 +21,10 @@ interface ChartCardProps {
   headerRight?: ReactNode;
   legend?: LegendItem[];
   caption?: string;
+  /** Hover / focus definition of the caption (POVO Pulse: every caption explains its count). */
+  captionTip?: string;
+  /** Green caption for a rising count (▲); the default is the amber shortfall caption. */
+  captionUp?: boolean;
   hover: ChartHover | null;
   tip: ChartTip | null;
   onLeave: () => void;
@@ -28,7 +33,7 @@ interface ChartCardProps {
 }
 
 /** Chart container (POC `.gc`): title, optional legend, the chart filling the space, a caption, and the side tooltip. */
-const ChartCard = ({ title, headerRight, legend, caption, hover, tip, onLeave, children, className }: ChartCardProps) => {
+const ChartCard = ({ title, headerRight, legend, caption, captionTip, captionUp = false, hover, tip, onLeave, children, className }: ChartCardProps) => {
   const [cardEl, setCardEl] = useState<HTMLElement | null>(null);
   return (
     <section
@@ -52,9 +57,23 @@ const ChartCard = ({ title, headerRight, legend, caption, hover, tip, onLeave, c
       )}
       <div className="mt-1 min-h-[120px] min-w-0 flex-1">{children}</div>
       {caption && (
-        <div className="mx-0 mb-1 mt-1.5 flex-none rounded-lg border border-warnbd bg-warnbg px-2.5 py-1 text-center text-[14.5px] font-bold text-warn max-bp1500:text-[13px] short:mb-0.5 short:mt-1 short:py-0.5 short:text-[12.6px]">
-          <HcpsText text={caption} />
-        </div>
+        <Tooltip
+          title={captionTip ? <span className="block text-[12.5px] font-medium leading-[1.45]">{captionTip}</span> : ''}
+          placement="top"
+          enterDelay={120}
+          describeChild
+        >
+          <div
+            tabIndex={captionTip ? 0 : undefined}
+            className={cx(
+              'mx-0 mb-1 mt-1.5 flex-none rounded-lg border px-2.5 py-1 text-center text-[14.5px] font-bold max-bp1500:text-[13px] short:mb-0.5 short:mt-1 short:py-0.5 short:text-[12.6px]',
+              captionUp ? 'border-greenbd bg-greenbg text-green' : 'border-warnbd bg-warnbg text-warn',
+              captionTip && 'cursor-help',
+            )}
+          >
+            <HcpsText text={caption} />
+          </div>
+        </Tooltip>
       )}
       {tip && <ChartTooltip anchorEl={cardEl} hover={hover} title={tip.title} rows={tip.rows} footer={tip.footer} />}
     </section>

@@ -7,6 +7,7 @@ import { ROUTES } from '../constants/constant';
 import { LABELS } from '../constants/labels';
 import type { Me } from '../types/models';
 import { cx } from '../utils/cx';
+import { formatLongDate } from '../utils/format';
 
 interface AccountMenuProps {
   me: Me;
@@ -41,7 +42,7 @@ const AccountMenu = ({ me, canImpersonate, onImpersonate, onExit }: AccountMenuP
         <span className="text-right">
           <b className="block text-[13.5px] font-semibold text-white">{eff.full_name}</b>
           <span className="block text-[11px] font-medium text-[#DCEAF7] max-bp760:hidden">
-            {LABELS.header.roleLine(eff.role_title, eff.territory_name, eff.region)}
+            {LABELS.header.roleDateLine(eff.role_title, eff.territory_name, eff.region, formatLongDate(me.today))}
           </span>
         </span>
         <Avatar initials={eff.initials} variant="header" size="sm" />
