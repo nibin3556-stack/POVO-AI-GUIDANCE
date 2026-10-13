@@ -178,3 +178,15 @@ def test_trinity_territory_shown_on_seed_data(client, trinity, monkeypatch):
     d = _me(client, "p250901").json()["data"]
     assert d["territory"]["territory_id"] == "NE-HFD" and d["territory"]["territory_name"] == "Hartford, CT territory"
     assert d["signed_in"]["full_name"] == "New Hire" and d["signed_in"]["access_level"] == "Rep level, 1 territory"
+
+
+def test_demo_data_for_home_office(client, trinity, monkeypatch):
+    """DATA_SOURCE=demo: a Home office user (no territory) sees the POC rep's seed territory."""
+    from core.config import get_settings
+    from helpers.directory import get_directory
+
+    monkeypatch.setattr(get_settings(), "data_source", "demo")
+    get_directory().clear()
+    d = _me(client, "p250700").json()["data"]
+    assert d["signed_in"]["access_level"] == "Home office" and d["territory"]["territory_id"] == "NE-POR"
+    assert client.get("/api/v1/targets", headers=ident("p250700")).json()["total_items"] > 0

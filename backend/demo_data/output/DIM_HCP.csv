@@ -1,0 +1,658 @@
+HCP_ID,BRAND_CODE,NPI,FIRST_NAME,LAST_NAME,DEGREE,ROLE_TYPE,SPECIALTY,ACCOUNT_ID,PARENT_HCP_ID,TERRITORY_ID,TERRITORY_NAME,REGION,CITY,STATE,ZIP
+H000001,POVO,1797770355,John,Winters,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000002,POVO,1972608073,Kristen,Casey,PA,PA,Dermatology,A00001,H000001,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000003,POVO,1895926024,Jamie,Theriault,NP,NP,Dermatology,A00001,H000001,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000004,POVO,1177531401,Marcia,Sprague,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000005,POVO,1244707224,Dana,Whitcomb,NP,NP,Dermatology,A00002,H000004,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000006,POVO,1652562301,Paul,Renaud,PA,PA,Dermatology,A00002,H000004,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000007,POVO,1172300380,Daniel,Berg,DO,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000008,POVO,1706843616,Alicia,Moreno,NP,NP,Dermatology,A00003,H000007,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000009,POVO,1903112955,Grant,Keller,PA,PA,Dermatology,A00003,H000007,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000010,POVO,1666318237,Anne,Pelletier,MD,HCP,Dermatology,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000011,POVO,1743428066,Rachel,Cote,PA,PA,Dermatology,A00004,H000010,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000012,POVO,1558830497,Ben,Morin,NP,NP,Dermatology,A00004,H000010,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000013,POVO,1749046110,Theresa,Boland,MD,HCP,Dermatology,A00005,,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000014,POVO,1304047313,Rita,Doyle,PA,PA,Dermatology,A00005,H000013,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000015,POVO,1138290808,Sam,Ober,NP,NP,Dermatology,A00005,H000013,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000016,POVO,1541927780,Paul,Eisemann,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000017,POVO,1172809646,Lena,Frost,NP,NP,Dermatology,A00001,H000016,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000018,POVO,1836654321,Owen,Mackey,PA,PA,Dermatology,A00001,H000016,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000019,POVO,1920066275,Michael,Carver,MD,HCP,Dermatology,A00006,,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000020,POVO,1292735408,Molly,Hart,PA,PA,Dermatology,A00006,H000019,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000021,POVO,1408345704,Evan,Leblanc,NP,NP,Dermatology,A00006,H000019,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000022,POVO,1225959760,Erin,Bonnem,MD,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000023,POVO,1919869416,Cara,Lin,PA,PA,Dermatology,A00003,H000022,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000024,POVO,1331306716,Nate,Shelby,NP,NP,Dermatology,A00003,H000022,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000025,POVO,1603014097,Marc,Ouellette,DO,HCP,Dermatology,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000026,POVO,1330860861,Julie,Roy,NP,NP,Dermatology,A00004,H000025,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000027,POVO,1685572475,Tom,Gagnon,PA,PA,Dermatology,A00004,H000025,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000028,POVO,1234353070,Laura,Dunham,MD,HCP,General Surgery,A00005,,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000029,POVO,1416411787,Amy,Pratt,PA,PA,Dermatology,A00005,H000028,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000030,POVO,1803080922,Luke,Bragdon,NP,NP,Dermatology,A00005,H000028,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000031,POVO,1978770398,Karen,Morrow,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000032,POVO,1642759496,Erin,Walsh,NP,NP,Dermatology,A00002,H000031,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000033,POVO,1714437732,Chris,Dube,PA,PA,Dermatology,A00002,H000031,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000034,POVO,1998087963,Robert,Fisk,DO,HCP,Dermatology,A00006,,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000035,POVO,1877517346,Holly,Ames,PA,PA,Dermatology,A00006,H000034,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000036,POVO,1816525681,Sean,Poirier,NP,NP,Dermatology,A00006,H000034,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000037,POVO,1838106635,Denise,Lavoie,MD,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000038,POVO,1409402637,Kara,Libby,NP,NP,Dermatology,A00003,H000037,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000039,POVO,1161747799,Matt,Currier,PA,PA,Dermatology,A00003,H000037,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000040,POVO,1946167669,Greg,Harmon,MD,HCP,Dermatology,A00005,,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000041,POVO,1653378293,Joan,Theberge,PA,PA,Dermatology,A00005,H000040,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000043,POVO,1867862652,Nina,Baxter,MD,HCP,Dermatology,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000044,POVO,1844422273,Tina,Grover,NP,NP,Dermatology,A00004,H000043,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000046,POVO,1589189400,Lisa,Abbott,DO,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000049,POVO,1577715935,Tom,Barnes,DO,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000050,POVO,1184927329,Ilse,Sargent,PA,PA,Dermatology,A00001,H000049,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000051,POVO,1268179730,Megan,Cole,MD,HCP,General Surgery,A00006,,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000052,POVO,1379766011,Hope,Fairbanks,NP,NP,Dermatology,A00006,H000051,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000054,POVO,1728498993,Eric,Dunn,DO,HCP,Dermatology,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000060,POVO,1496544382,Mark,Foster,DO,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000061,POVO,1866616836,Priya,Newman,NP,NP,Dermatology,A00002,H000060,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000062,POVO,1360077196,Helen,Gray,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000064,POVO,1135189243,Victor,Hale,MD,HCP,Dermatology,A00005,,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000066,POVO,1987143389,Jill,Irwin,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000068,POVO,1777622055,Carl,Jensen,MD,HCP,Dermatology,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000071,POVO,1526825561,Donna,Kerr,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000074,POVO,1873403111,Frank,Lowe,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000076,POVO,1466159658,Tara,Mills,MD,HCP,Dermatology,A00006,,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000085,POVO,1603217351,Ryan,Page,MD,HCP,General Surgery,A00005,,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000086,POVO,1204969087,Alice,Quint,MD,HCP,Dermatology,A00006,,NE-POR,"Portland, ME territory",Northeast,Brunswick,ME,04011
+H000089,POVO,1949537942,Dennis,Rowe,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000091,POVO,1389760459,Ilse,Barlow,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000092,POVO,1253942258,Jill,Sokol,PA,PA,Dermatology,A00002,H000091,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000093,POVO,1264534979,Carl,Blanchard,NP,NP,Dermatology,A00002,H000091,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000094,POVO,1495405676,Pablo,Navarro,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000097,POVO,1108137211,Laura,Abrams,DO,HCP,Dermatology,A00005,,NE-POR,"Portland, ME territory",Northeast,Biddeford,ME,04005
+H000099,POVO,1214765749,Faith,Bancroft,DO,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000100,POVO,1248509568,Clara,Kirby,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000106,POVO,1434987693,Paula,Lee,DO,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000109,POVO,1483436246,Hector,Gordon,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000112,POVO,1525891457,Faith,Sampson,DO,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000114,POVO,1488830856,Ursula,Aldrich,NP,NP,Dermatology,A00003,H000112,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000115,POVO,1407222995,Colin,Eaton,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000120,POVO,1436529501,Paul,Dahl,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000122,POVO,1209423726,Ethan,Bergeron,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000125,POVO,1195796259,Fiona,Sloan,MD,HCP,General Surgery,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000126,POVO,1219171216,Derek,Wojcik,MD,HCP,Dermatology,A00002,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000129,POVO,1102180613,Carl,Bauer,MD,HCP,Dermatology,A00001,,NE-POR,"Portland, ME territory",Northeast,Portland,ME,04101
+H000135,POVO,1619036720,Neil,Nowak,DO,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000136,POVO,1262243508,Cyrus,Prescott,PA,PA,Dermatology,A00003,H000135,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000137,POVO,1246958445,Neil,Castro,NP,NP,Dermatology,A00003,H000135,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000138,POVO,1185544875,Heidi,Kimball,MD,HCP,Dermatology,A00004,,NE-POR,"Portland, ME territory",Northeast,Lewiston,ME,04240
+H000140,POVO,1137622100,Tara,Dixon,MD,HCP,Dermatology,A00003,,NE-POR,"Portland, ME territory",Northeast,South Portland,ME,04106
+H000143,POVO,1735130829,Grace,Okafor,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000144,POVO,1171498045,Maria,Santos,PA,PA,Dermatology,A00009,H000143,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000145,POVO,1585847860,Tom,Brennan,NP,NP,Dermatology,A00009,H000143,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000146,POVO,1447008529,Erik,Lindqvist,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000147,POVO,1553987227,Julie,Park,NP,NP,Dermatology,A00010,H000146,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000148,POVO,1482188442,Chris,Dolan,PA,PA,Dermatology,A00010,H000146,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000149,POVO,1587671185,Samir,Haddad,DO,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000150,POVO,1566733451,Nadia,Rahman,PA,PA,Dermatology,A00011,H000149,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000151,POVO,1168220436,Leo,Carter,NP,NP,Dermatology,A00011,H000149,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000152,POVO,1469894699,Ana,Pereira,MD,HCP,Dermatology,A00012,,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000153,POVO,1197299864,Emma,Ruiz,NP,NP,Dermatology,A00012,H000152,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000154,POVO,1511361481,Dev,Patel,PA,PA,Dermatology,A00012,H000152,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000155,POVO,1710586839,Kevin,Walsh,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000156,POVO,1849262997,Holly,Grant,PA,PA,Dermatology,A00009,H000155,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000157,POVO,1556228736,Ian,Moore,NP,NP,Dermatology,A00009,H000155,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000158,POVO,1212451680,Linh,Nguyen,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000159,POVO,1617309152,Sara,Kim,NP,NP,Dermatology,A00010,H000158,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000160,POVO,1896369414,Omar,Aziz,PA,PA,Dermatology,A00010,H000158,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000161,POVO,1576252732,Sean,Murphy,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000162,POVO,1950134183,Kate,Doherty,PA,PA,Dermatology,A00011,H000161,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000163,POVO,1960454597,Ryan,Cole,NP,NP,Dermatology,A00011,H000161,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000164,POVO,1609981182,Rachel,Feld,MD,HCP,Dermatology,A00012,,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000165,POVO,1400212571,Nina,Shah,NP,NP,Dermatology,A00012,H000164,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000166,POVO,1759147113,Joe,Ricci,PA,PA,Dermatology,A00012,H000164,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000167,POVO,1661867915,Luis,Costa,DO,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000168,POVO,1992749501,Lisa,Tran,PA,PA,Dermatology,A00009,H000167,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000169,POVO,1193615766,Mark,Bell,NP,NP,Dermatology,A00009,H000167,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000170,POVO,1144228057,Kim,Barrett,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000171,POVO,1483217059,Ella,Burke,NP,NP,Dermatology,A00011,H000170,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000172,POVO,1804095614,Dan,Kerr,PA,PA,Dermatology,A00011,H000170,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000173,POVO,1938229246,Neil,Ortiz,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000175,POVO,1598696155,Caleb,Rafferty,DO,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000177,POVO,1357231343,Amir,Spencer,NP,NP,Dermatology,A00009,H000175,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000178,POVO,1871181446,Emil,Sargent,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000180,POVO,1434889071,Ivan,Burke,MD,HCP,General Surgery,A00014,,NE-BOS,"Boston, MA territory",Northeast,Cambridge,MA,02138
+H000183,POVO,1733426542,Jasper,Norris,DO,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000186,POVO,1671540833,Neil,Adams,DO,HCP,Dermatology,A00014,,NE-BOS,"Boston, MA territory",Northeast,Cambridge,MA,02138
+H000189,POVO,1229005412,Joel,Porter,MD,HCP,Dermatology,A00015,,NE-BOS,"Boston, MA territory",Northeast,Quincy,MA,02169
+H000192,POVO,1962189134,Tomas,Whitman,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000194,POVO,1481627127,Jill,Crane,DO,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000197,POVO,1119190878,Brian,Pickering,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000198,POVO,1720181449,Zoe,Nolin,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000200,POVO,1310434166,Zoe,Thorne,NP,NP,Dermatology,A00009,H000198,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000201,POVO,1337578631,Luke,Noble,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000203,POVO,1959651021,Paul,Tucker,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000206,POVO,1159818065,Hope,Theriot,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000208,POVO,1324799182,Bettina,Valdez,DO,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000211,POVO,1942931506,Glen,Bancroft,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000214,POVO,1433589888,Oscar,Joyce,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000215,POVO,1641780097,Hiro,Randall,NP,NP,Dermatology,A00009,H000214,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000216,POVO,1900416516,Mark,Dalton,PA,PA,Dermatology,A00009,H000214,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000217,POVO,1661145601,Liam,Fowler,MD,HCP,Dermatology,A00015,,NE-BOS,"Boston, MA territory",Northeast,Quincy,MA,02169
+H000220,POVO,1396270153,Clara,Zhou,DO,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000221,POVO,1373091085,Hector,Lamb,PA,PA,Dermatology,A00009,H000220,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000222,POVO,1827294830,Hector,Oakes,DO,HCP,Dermatology,A00015,,NE-BOS,"Boston, MA territory",Northeast,Quincy,MA,02169
+H000223,POVO,1268116476,Daria,Simard,NP,NP,Dermatology,A00015,H000222,NE-BOS,"Boston, MA territory",Northeast,Quincy,MA,02169
+H000224,POVO,1590380808,Adam,Shepherd,PA,PA,Dermatology,A00015,H000222,NE-BOS,"Boston, MA territory",Northeast,Quincy,MA,02169
+H000225,POVO,1570290894,Dmitri,Vance,DO,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000227,POVO,1219824731,Glen,Cormier,NP,NP,Dermatology,A00010,H000225,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000228,POVO,1664249574,Lena,Boucher,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000234,POVO,1127251787,Kate,Harper,MD,HCP,Dermatology,A00014,,NE-BOS,"Boston, MA territory",Northeast,Cambridge,MA,02138
+H000235,POVO,1168378358,Keith,Lang,MD,HCP,Dermatology,A00015,,NE-BOS,"Boston, MA territory",Northeast,Quincy,MA,02169
+H000238,POVO,1945431876,Evan,Talbot,DO,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000239,POVO,1862753823,Diane,Orr,PA,PA,Dermatology,A00009,H000238,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000240,POVO,1251146555,Glen,Kowal,NP,NP,Dermatology,A00009,H000238,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000243,POVO,1388327599,Yara,Chandra,MD,HCP,Dermatology,A00013,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000245,POVO,1283302739,Keith,Sullivan,NP,NP,Dermatology,A00013,H000243,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000246,POVO,1687592380,Ethan,Sherman,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000249,POVO,1184757577,Gwen,Gilman,DO,HCP,General Surgery,A00013,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000252,POVO,1535320182,Derek,Bergeron,MD,HCP,Dermatology,A00012,,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000258,POVO,1130867868,Nora,Rioux,DO,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000263,POVO,1339916490,Gavin,Monroe,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000265,POVO,1151163684,Priya,Winslow,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000267,POVO,1116629753,Victor,Shea,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000268,POVO,1702085295,Daria,Sawyer,MD,HCP,General Surgery,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000271,POVO,1394404630,Irene,Ingram,MD,HCP,Dermatology,A00010,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000273,POVO,1776080461,Colin,Gilbride,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000274,POVO,1171885563,Leah,Yates,MD,HCP,Dermatology,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000277,POVO,1878631922,Owen,Dixon,MD,HCP,Dermatology,A00009,,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000278,POVO,1935514004,Lena,Plante,NP,NP,Dermatology,A00009,H000277,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000279,POVO,1405324512,Tony,Guerrero,PA,PA,Dermatology,A00009,H000277,NE-BOS,"Boston, MA territory",Northeast,Boston,MA,02114
+H000280,POVO,1303986883,Sara,Eaton,MD,HCP,General Surgery,A00011,,NE-BOS,"Boston, MA territory",Northeast,Burlington,MA,01805
+H000283,POVO,1501354900,Tomas,Gallant,MD,HCP,Dermatology,A00012,,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000284,POVO,1348232731,Elena,Farah,PA,PA,Dermatology,A00012,H000283,NE-BOS,"Boston, MA territory",Northeast,Newton,MA,02462
+H000285,POVO,1229425958,Anthony,Russo,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000286,POVO,1231537873,Avery,Stone,PA,PA,Dermatology,A00018,H000285,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000287,POVO,1356666663,Jordan,Blake,NP,NP,Dermatology,A00018,H000285,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000288,POVO,1263323952,Miriam,Kaplan,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000289,POVO,1822135301,Casey,Reed,NP,NP,Dermatology,A00019,H000288,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000290,POVO,1489609341,Morgan,Hale,PA,PA,Dermatology,A00019,H000288,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000291,POVO,1754799942,Raj,Mehta,DO,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000292,POVO,1934240577,Taylor,Quinn,PA,PA,Dermatology,A00020,H000291,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000293,POVO,1458738535,Riley,Shaw,NP,NP,Dermatology,A00020,H000291,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000294,POVO,1453253068,Claire,Brennan,MD,HCP,Dermatology,A00021,,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000295,POVO,1972106458,Jamie,Cross,NP,NP,Dermatology,A00021,H000294,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000296,POVO,1762515363,Drew,Ellis,PA,PA,Dermatology,A00021,H000294,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000297,POVO,1792636387,Jorge,Castillo,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000298,POVO,1175947492,Parker,Lane,PA,PA,Dermatology,A00018,H000297,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000299,POVO,1339434759,Skyler,Moss,NP,NP,Dermatology,A00018,H000297,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000300,POVO,1251056200,Peter,Novak,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000301,POVO,1434363234,Reese,Hart,NP,NP,Dermatology,A00019,H000300,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000302,POVO,1962391052,Kendall,Fox,PA,PA,Dermatology,A00019,H000300,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000303,POVO,1958666673,Laura,Hughes,DO,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000304,POVO,1453057337,Logan,Pierce,PA,PA,Dermatology,A00020,H000303,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000306,POVO,1224348585,Eva,Lindgren,MD,HCP,Dermatology,A00021,,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000307,POVO,1819198056,Hayden,Cole,NP,NP,Dermatology,A00021,H000306,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000309,POVO,1121904894,Paul,Moreau,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000310,POVO,1288866647,Emerson,Wade,PA,PA,Dermatology,A00018,H000309,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000312,POVO,1417845611,Grace,Chen,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000313,POVO,1629251780,Sage,Holt,NP,NP,Dermatology,A00019,H000312,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000315,POVO,1583665900,Kevin,Doyle,DO,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000316,POVO,1570775514,Harper,Quill,PA,PA,Dermatology,A00020,H000315,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000318,POVO,1549224255,Janet,Price,MD,HCP,Dermatology,A00021,,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000319,POVO,1586387494,Jesse,Monroe,NP,NP,Dermatology,A00021,H000318,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000321,POVO,1756669796,Simon,Ward,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000322,POVO,1320757861,Cameron,Voss,PA,PA,Dermatology,A00018,H000321,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000324,POVO,1700941085,Nora,Farley,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000325,POVO,1319633685,Shawn,Pike,NP,NP,Dermatology,A00019,H000324,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000327,POVO,1254775574,Alan,Keene,DO,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000328,POVO,1357047632,Devon,Lark,PA,PA,Dermatology,A00020,H000327,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000335,POVO,1316977382,Hiro,Wheeler,MD,HCP,Dermatology,A00022,,NE-HFD,"Hartford, CT territory",Northeast,New Britain,CT,06051
+H000336,POVO,1443353887,Cecile,Parker,NP,NP,Dermatology,A00022,H000335,NE-HFD,"Hartford, CT territory",Northeast,New Britain,CT,06051
+H000337,POVO,1975494364,Ivan,Lang,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000340,POVO,1995634155,Emil,Isaacs,MD,HCP,Dermatology,A00021,,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000341,POVO,1675521714,Priya,Noble,PA,PA,Dermatology,A00021,H000340,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000342,POVO,1876340070,Anya,Sawyer,NP,NP,Dermatology,A00021,H000340,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000343,POVO,1340262926,Kenji,Mulligan,MD,HCP,General Surgery,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000345,POVO,1796886178,Maya,Sokol,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000347,POVO,1874253242,Selena,Fitzgerald,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000350,POVO,1136206822,Vera,Whitney,MD,HCP,Dermatology,A00022,,NE-HFD,"Hartford, CT territory",Northeast,New Britain,CT,06051
+H000351,POVO,1241332604,Bruno,Mahoney,PA,PA,Dermatology,A00022,H000350,NE-HFD,"Hartford, CT territory",Northeast,New Britain,CT,06051
+H000352,POVO,1967096565,Colin,Bergeron,DO,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000354,POVO,1555874720,Jasper,Carlisle,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000357,POVO,1869319560,Seth,Stanton,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000362,POVO,1362441390,Joel,Daigle,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000365,POVO,1126422108,Molly,Landry,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000366,POVO,1615128307,Rhea,Lim,NP,NP,Dermatology,A00020,H000365,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000367,POVO,1146844232,Isaac,Osborne,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000370,POVO,1821893454,Vera,Nyberg,DO,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000371,POVO,1452270642,Diane,Desai,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000374,POVO,1814818708,Graham,Boucher,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000379,POVO,1117508170,Vera,Carter,DO,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000381,POVO,1261207959,Diane,Dahl,MD,HCP,Dermatology,A00021,,NE-HFD,"Hartford, CT territory",Northeast,Danbury,CT,06810
+H000384,POVO,1176381170,Oscar,Wojcik,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000386,POVO,1400342030,Faith,Herrera,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000389,POVO,1747819542,Glen,Whitman,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000392,POVO,1767344728,Daria,Lowry,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000395,POVO,1263513065,Gavin,Lund,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000396,POVO,1104607522,Yusuf,Bowen,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000398,POVO,1264509914,Glen,Bianchi,NP,NP,Dermatology,A00019,H000396,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000399,POVO,1711705131,Bettina,Theriot,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000401,POVO,1761228349,Seth,Malik,MD,HCP,Dermatology,A00022,,NE-HFD,"Hartford, CT territory",Northeast,New Britain,CT,06051
+H000404,POVO,1939980367,Jasper,Rourke,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000405,POVO,1875239653,Kira,Hensley,NP,NP,Dermatology,A00018,H000404,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000406,POVO,1938684747,Rosa,Vance,PA,PA,Dermatology,A00018,H000404,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000407,POVO,1814731703,Anya,Ives,MD,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000410,POVO,1166503247,Jill,Monroe,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000411,POVO,1118739998,Omar,Dorsey,NP,NP,Dermatology,A00020,H000410,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000412,POVO,1756782763,Wendy,Adams,PA,PA,Dermatology,A00020,H000410,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000413,POVO,1683984318,Wendy,Abrams,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000415,POVO,1744048509,Anya,Burke,DO,HCP,Dermatology,A00018,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000419,POVO,1718956323,Nora,Norcross,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000420,POVO,1934734090,Bruno,Ingram,PA,PA,Dermatology,A00020,H000419,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000422,POVO,1141714539,Olive,Bauer,MD,HCP,Dermatology,A00019,,NE-HFD,"Hartford, CT territory",Northeast,Farmington,CT,06030
+H000424,POVO,1873638377,Heidi,Park,MD,HCP,Dermatology,A00020,,NE-HFD,"Hartford, CT territory",Northeast,Hartford,CT,06106
+H000427,POVO,1229246073,Sofia,Almeida,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000428,POVO,1495694295,Avery,Stone,PA,PA,Dermatology,A00026,H000427,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000429,POVO,1723738880,Jordan,Blake,NP,NP,Dermatology,A00026,H000427,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000430,POVO,1386977684,Marc,Fontaine,MD,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000431,POVO,1447541875,Casey,Reed,NP,NP,Dermatology,A00027,H000430,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000432,POVO,1751518626,Morgan,Hale,PA,PA,Dermatology,A00027,H000430,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000433,POVO,1253296200,Rose,Gallagher,DO,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000434,POVO,1439755673,Taylor,Quinn,PA,PA,Dermatology,A00028,H000433,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000435,POVO,1397641022,Riley,Shaw,NP,NP,Dermatology,A00028,H000433,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000436,POVO,1726449840,Samir,Iqbal,MD,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000437,POVO,1110010919,Jamie,Cross,NP,NP,Dermatology,A00029,H000436,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000438,POVO,1382989808,Drew,Ellis,PA,PA,Dermatology,A00029,H000436,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000439,POVO,1118224348,Lucia,Duarte,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000440,POVO,1182875546,Parker,Lane,PA,PA,Dermatology,A00026,H000439,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000441,POVO,1336368471,Skyler,Moss,NP,NP,Dermatology,A00026,H000439,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000442,POVO,1989812999,Colin,Maher,MD,HCP,General Surgery,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000443,POVO,1279892909,Reese,Hart,NP,NP,Dermatology,A00027,H000442,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000445,POVO,1109042444,Renata,Silva,DO,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000446,POVO,1285316653,Logan,Pierce,PA,PA,Dermatology,A00028,H000445,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000448,POVO,1477654515,Grant,Tobin,MD,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000449,POVO,1430313696,Hayden,Cole,NP,NP,Dermatology,A00029,H000448,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000451,POVO,1191792633,Molly,Ahern,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000452,POVO,1272464821,Emerson,Wade,PA,PA,Dermatology,A00026,H000451,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000454,POVO,1309681041,Nuno,Vieira,MD,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000455,POVO,1350994731,Sage,Holt,NP,NP,Dermatology,A00027,H000454,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000457,POVO,1355772298,Diane,Carr,DO,HCP,General Surgery,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000458,POVO,1742369923,Harper,Quill,PA,PA,Dermatology,A00028,H000457,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000460,POVO,1730444183,Ben,Lomax,MD,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000463,POVO,1959700158,Clara,Pinto,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000466,POVO,1547271712,Tom,Rourke,MD,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000469,POVO,1391817883,Gina,Esposito,DO,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000473,POVO,1363405253,Petra,Evans,MD,HCP,Dermatology,A00031,,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000476,POVO,1120100148,Isaac,Andersen,MD,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000482,POVO,1645006499,Caleb,Mahoney,MD,HCP,Dermatology,A00030,,NE-PVD,"Providence, RI territory",Northeast,Cranston,RI,02920
+H000483,POVO,1876249875,Hope,Strand,DO,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000485,POVO,1866711546,Mona,Hensley,PA,PA,Dermatology,A00027,H000483,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000486,POVO,1483432351,Eli,Holt,MD,HCP,Dermatology,A00031,,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000489,POVO,1435822105,Clara,Patton,MD,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000491,POVO,1792124657,Felix,Newman,NP,NP,Dermatology,A00027,H000489,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000492,POVO,1294885821,Wade,Nichols,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000495,POVO,1673428763,Alice,Orr,MD,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000498,POVO,1465429730,Colin,Goodwin,MD,HCP,Dermatology,A00030,,NE-PVD,"Providence, RI territory",Northeast,Cranston,RI,02920
+H000499,POVO,1204316743,Yara,Lynch,PA,PA,Dermatology,A00030,H000498,NE-PVD,"Providence, RI territory",Northeast,Cranston,RI,02920
+H000500,POVO,1668442605,Omar,Nolin,DO,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000504,POVO,1287483154,Aaron,Emerson,MD,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000507,POVO,1334642570,Lena,Healey,DO,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000510,POVO,1211671171,Petra,Thorne,DO,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000511,POVO,1638800254,Hanna,Simard,PA,PA,Dermatology,A00026,H000510,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000512,POVO,1664555244,Sara,Abbas,DO,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000513,POVO,1384213090,Cecile,Bergeron,NP,NP,Dermatology,A00028,H000512,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000514,POVO,1419672716,Ethan,Sutton,PA,PA,Dermatology,A00028,H000512,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000515,POVO,1394495794,Cecile,Marsh,DO,HCP,Dermatology,A00031,,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000518,POVO,1202010595,Heidi,Stanton,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000521,POVO,1204255396,Una,Lamb,MD,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000522,POVO,1563375447,Diane,Gordon,PA,PA,Dermatology,A00028,H000521,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000523,POVO,1373030190,Alice,Navarro,NP,NP,Dermatology,A00028,H000521,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000524,POVO,1870376492,Joy,Vega,DO,HCP,Dermatology,A00031,,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000525,POVO,1535204782,Petra,Leary,NP,NP,Dermatology,A00031,H000524,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000526,POVO,1959419791,Heidi,Huang,PA,PA,Dermatology,A00031,H000524,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000527,POVO,1227226283,Olive,Mccarthy,DO,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000528,POVO,1863726729,Isaac,Cormier,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000529,POVO,1759903960,Felix,Greco,MD,HCP,Dermatology,A00030,,NE-PVD,"Providence, RI territory",Northeast,Cranston,RI,02920
+H000532,POVO,1610126355,Dmitri,Cho,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000534,POVO,1287334373,Ethan,Vachon,NP,NP,Dermatology,A00026,H000532,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000535,POVO,1884587217,Hiro,Castro,DO,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000536,POVO,1957330339,Nadia,Fletcher,PA,PA,Dermatology,A00027,H000535,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000538,POVO,1681764399,Mona,Abrams,MD,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000541,POVO,1164386371,Amir,Oakes,DO,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000543,POVO,1302542000,Una,Cullen,MD,HCP,General Surgery,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000545,POVO,1823310663,Colin,Wojcik,DO,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000546,POVO,1772282327,Paul,Wong,DO,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000549,POVO,1588208334,Zoe,Knox,DO,HCP,Dermatology,A00031,,NE-PVD,"Providence, RI territory",Northeast,Woonsocket,RI,02895
+H000551,POVO,1176879520,Dana,Garner,DO,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000554,POVO,1157199930,Yusuf,Aldrich,MD,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000557,POVO,1257156236,Yusuf,Bancroft,MD,HCP,Dermatology,A00029,,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000558,POVO,1548471600,Glen,Dorsey,PA,PA,Dermatology,A00029,H000557,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000559,POVO,1846537649,Yara,Holm,NP,NP,Dermatology,A00029,H000557,NE-PVD,"Providence, RI territory",Northeast,Pawtucket,RI,02860
+H000560,POVO,1902728090,Hiro,Salazar,MD,HCP,Dermatology,A00026,,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000561,POVO,1314326095,Carl,Mercer,PA,PA,Dermatology,A00026,H000560,NE-PVD,"Providence, RI territory",Northeast,Providence,RI,02903
+H000563,POVO,1975883947,Lucia,Park,MD,HCP,Dermatology,A00028,,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000564,POVO,1742655867,Jasper,Malik,NP,NP,Dermatology,A00028,H000563,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000565,POVO,1308859366,Selena,Clayton,PA,PA,Dermatology,A00028,H000563,NE-PVD,"Providence, RI territory",Northeast,Newport,RI,02840
+H000566,POVO,1349118640,Sara,Zhou,MD,HCP,Dermatology,A00027,,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000567,POVO,1570649511,Carl,Zimmer,NP,NP,Dermatology,A00027,H000566,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000568,POVO,1101070245,Ines,Iyer,PA,PA,Dermatology,A00027,H000566,NE-PVD,"Providence, RI territory",Northeast,Warwick,RI,02886
+H000569,POVO,1109721757,Tess,Dorsey,MD,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000572,POVO,1143240293,Flora,Haddock,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000573,POVO,1206411591,Hope,Fields,NP,NP,Dermatology,A00038,H000572,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000574,POVO,1103532960,Alice,Dean,PA,PA,Dermatology,A00038,H000572,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000575,POVO,1640433987,Omar,Chandra,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000578,POVO,1251030403,Zoe,Donovan,MD,HCP,General Surgery,A00036,,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000580,POVO,1194467837,Emil,Todd,NP,NP,Dermatology,A00036,H000578,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000581,POVO,1456524127,Jill,Clayton,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000584,POVO,1950927321,Kate,Torres,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000587,POVO,1984855803,Tony,Mahoney,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000589,POVO,1436269488,Tess,Hobbs,PA,PA,Dermatology,A00034,H000587,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000590,POVO,1140918644,Tara,Tate,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000593,POVO,1783480597,Mark,Rafferty,MD,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000596,POVO,1425887738,Rosa,Lynch,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000598,POVO,1195613900,Ethan,Ouimet,PA,PA,Dermatology,A00034,H000596,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000599,POVO,1378825081,Theo,Reyes,MD,HCP,Dermatology,A00036,,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000600,POVO,1249093026,Heidi,Carter,NP,NP,Dermatology,A00036,H000599,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000602,POVO,1153776368,Oscar,Sherman,MD,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000603,POVO,1525725994,Victor,Salazar,DO,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000604,POVO,1941991097,Heidi,Underwood,NP,NP,Dermatology,A00037,H000603,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000606,POVO,1883572509,Yara,McCoy,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000607,POVO,1286699123,Zoe,Desai,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000608,POVO,1812119778,Tomas,Dixon,NP,NP,Dermatology,A00038,H000607,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000610,POVO,1559273283,Nadia,Rao,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000613,POVO,1961788613,Amir,Dalton,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000615,POVO,1825437886,Tomas,Noble,DO,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000618,POVO,1991735618,Laura,Porter,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000619,POVO,1999690799,Rafael,Sawyer,PA,PA,Dermatology,A00034,H000618,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000620,POVO,1263142097,Ines,Vance,NP,NP,Dermatology,A00034,H000618,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000621,POVO,1542332170,Kenji,Gibbs,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000622,POVO,1563888852,Sanjay,Paquette,MD,HCP,Dermatology,A00036,,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000625,POVO,1709098200,Fiona,Isaacs,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000626,POVO,1357121940,Rosa,Ramsey,NP,NP,Dermatology,A00038,H000625,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000627,POVO,1147014488,Olive,Levesque,PA,PA,Dermatology,A00038,H000625,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000628,POVO,1288326139,Pablo,Norris,MD,HCP,Dermatology,A00039,,NE-MAN,"Manchester, NH territory",Northeast,Lebanon,NH,03766
+H000631,POVO,1245162460,Uri,Rush,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000634,POVO,1605021975,Vincent,Gupta,DO,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000635,POVO,1402150647,Joel,Ramos,NP,NP,Dermatology,A00038,H000634,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000636,POVO,1546101738,Nora,Lachance,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000639,POVO,1519319416,Isaac,Finch,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000640,POVO,1648913931,Hiro,Strand,PA,PA,Dermatology,A00034,H000639,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000641,POVO,1828214316,Beth,Hogan,NP,NP,Dermatology,A00034,H000639,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000642,POVO,1174525125,Derek,Vachon,DO,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000645,POVO,1321509220,Theo,Thayer,MD,HCP,General Surgery,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000646,POVO,1958989638,Wendy,Nasser,PA,PA,Dermatology,A00037,H000645,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000647,POVO,1114390549,Elena,Berglund,NP,NP,Dermatology,A00037,H000645,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000648,POVO,1614507550,Mark,Mcdonough,MD,HCP,Dermatology,A00036,,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000649,POVO,1106351657,Bruno,Joshi,PA,PA,Dermatology,A00036,H000648,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000650,POVO,1180024774,Ethan,Healey,NP,NP,Dermatology,A00036,H000648,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000654,POVO,1717264471,Diane,Lowry,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000655,POVO,1585435054,Beth,Parker,PA,PA,Dermatology,A00035,H000654,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000657,POVO,1628710596,Theo,Herrera,MD,HCP,Dermatology,A00036,,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000658,POVO,1686951629,Jill,Fuller,NP,NP,Dermatology,A00036,H000657,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000659,POVO,1441738782,Wes,Lawson,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000662,POVO,1260630102,Rafael,Saleh,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000663,POVO,1840824035,Scott,Caron,MD,HCP,General Surgery,A00039,,NE-MAN,"Manchester, NH territory",Northeast,Lebanon,NH,03766
+H000665,POVO,1937000762,Xena,Winslow,NP,NP,Dermatology,A00039,H000663,NE-MAN,"Manchester, NH territory",Northeast,Lebanon,NH,03766
+H000666,POVO,1764174003,Vera,Pruitt,DO,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000667,POVO,1677097614,Tomas,Lyle,PA,PA,Dermatology,A00034,H000666,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000668,POVO,1783742376,Bianca,Rollins,NP,NP,Dermatology,A00034,H000666,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000669,POVO,1908285095,Kate,Simard,MD,HCP,Dermatology,A00039,,NE-MAN,"Manchester, NH territory",Northeast,Lebanon,NH,03766
+H000671,POVO,1761742042,Tara,Sethi,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000672,POVO,1992318810,Una,Aldrich,PA,PA,Dermatology,A00035,H000671,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000673,POVO,1325637340,Ruth,Lambert,NP,NP,Dermatology,A00035,H000671,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000674,POVO,1500362177,Faith,Vaughn,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000675,POVO,1756490151,Omar,Jarvis,PA,PA,Dermatology,A00038,H000674,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000676,POVO,1864276096,Anya,Prescott,NP,NP,Dermatology,A00038,H000674,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000677,POVO,1404156774,Fiona,Obrien,MD,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000679,POVO,1981943859,Hope,Adams,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000680,POVO,1684088598,Greta,Vega,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000682,POVO,1867306627,Wade,Beaulieu,NP,NP,Dermatology,A00035,H000680,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000685,POVO,1976198295,Adam,Fletcher,MD,HCP,Dermatology,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000691,POVO,1190785190,Hector,Emerson,MD,HCP,Dermatology,A00038,,NE-MAN,"Manchester, NH territory",Northeast,Derry,NH,03038
+H000694,POVO,1385099506,Caleb,Newman,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000695,POVO,1345747541,Isaac,Harper,PA,PA,Dermatology,A00034,H000694,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000696,POVO,1176396780,Victor,Evans,NP,NP,Dermatology,A00034,H000694,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000697,POVO,1102624917,Tomas,Rioux,MD,HCP,Dermatology,A00034,,NE-MAN,"Manchester, NH territory",Northeast,Manchester,NH,03101
+H000700,POVO,1512209945,Uri,Hensley,DO,HCP,Dermatology,A00036,,NE-MAN,"Manchester, NH territory",Northeast,Concord,NH,03301
+H000703,POVO,1529624235,Una,Whitney,MD,HCP,Dermatology,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000705,POVO,1367362922,Bruno,Wade,MD,HCP,General Surgery,A00035,,NE-MAN,"Manchester, NH territory",Northeast,Nashua,NH,03060
+H000707,POVO,1722372525,Flora,Chase,DO,HCP,General Surgery,A00037,,NE-MAN,"Manchester, NH territory",Northeast,Portsmouth,NH,03801
+H000710,POVO,1912668062,Seth,Tucker,DO,HCP,Dermatology,A00039,,NE-MAN,"Manchester, NH territory",Northeast,Lebanon,NH,03766
+H000711,POVO,1563964992,Ethan,Talbot,MD,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000714,POVO,1103214023,Kate,Bauer,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000716,POVO,1624405779,Uri,Moretti,MD,HCP,Dermatology,A00047,,NE-BTV,"Burlington, VT territory",Northeast,Barre,VT,05641
+H000719,POVO,1669039574,Una,Randall,MD,HCP,General Surgery,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000722,POVO,1959231352,Gavin,Dwyer,DO,HCP,General Surgery,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000724,POVO,1334175845,Kira,Rush,NP,NP,Dermatology,A00043,H000722,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000725,POVO,1106890605,Petra,Bergeron,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000726,POVO,1853195745,Glen,Vega,NP,NP,Dermatology,A00045,H000725,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000727,POVO,1532292194,Oscar,Brady,DO,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000730,POVO,1302818855,Ines,Kapoor,MD,HCP,Dermatology,A00047,,NE-BTV,"Burlington, VT territory",Northeast,Barre,VT,05641
+H000733,POVO,1991949755,Wendy,Pelkey,MD,HCP,Dermatology,A00046,,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000736,POVO,1242293250,Olive,Lathrop,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000737,POVO,1492093145,Daria,Chandra,NP,NP,Dermatology,A00043,H000736,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000738,POVO,1991219118,Rosa,Jordan,PA,PA,Dermatology,A00043,H000736,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000739,POVO,1480273253,Petra,Dixon,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000741,POVO,1865363174,Derek,Rollins,NP,NP,Dermatology,A00043,H000739,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000742,POVO,1975767728,Flora,Gibbs,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000743,POVO,1343402891,Caleb,York,PA,PA,Dermatology,A00043,H000742,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000745,POVO,1189070430,Bettina,Lim,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000748,POVO,1481067100,Ruth,Maddox,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000750,POVO,1593583390,Mona,Hurst,NP,NP,Dermatology,A00045,H000748,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000751,POVO,1115713327,Rosa,Roche,DO,HCP,Dermatology,A00046,,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000754,POVO,1276990896,Cyrus,Holt,MD,HCP,General Surgery,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000755,POVO,1441321845,Heidi,Cullen,NP,NP,Dermatology,A00043,H000754,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000756,POVO,1133440465,Colin,Iyer,PA,PA,Dermatology,A00043,H000754,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000757,POVO,1383109992,Sara,Tanner,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000758,POVO,1894236631,Yara,Hogan,NP,NP,Dermatology,A00045,H000757,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000760,POVO,1559247188,Maya,Sheehan,MD,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000761,POVO,1399727399,Oscar,Thibault,PA,PA,Dermatology,A00042,H000760,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000762,POVO,1740179019,Bianca,Gordon,NP,NP,Dermatology,A00042,H000760,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000763,POVO,1111674192,Yusuf,Wojcik,MD,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000765,POVO,1618134153,Alice,Rhodes,NP,NP,Dermatology,A00042,H000763,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000766,POVO,1554912646,Zoe,Joyce,MD,HCP,General Surgery,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000769,POVO,1913765131,Felix,Wong,MD,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000772,POVO,1479281861,Luke,Stanton,DO,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000775,POVO,1121764728,Jasper,Garner,DO,HCP,Dermatology,A00047,,NE-BTV,"Burlington, VT territory",Northeast,Barre,VT,05641
+H000776,POVO,1641037415,Liam,Dean,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000779,POVO,1529934477,Ursula,Yamada,MD,HCP,Dermatology,A00046,,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000780,POVO,1300562836,Nathan,Winslow,DO,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000783,POVO,1484899558,Joy,Wade,MD,HCP,Dermatology,A00047,,NE-BTV,"Burlington, VT territory",Northeast,Barre,VT,05641
+H000786,POVO,1771849811,Fiona,Tanaka,DO,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000787,POVO,1919381578,Cyrus,Goodwin,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000790,POVO,1627995743,Faith,Kimball,MD,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000793,POVO,1341561219,Eli,Baird,DO,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000794,POVO,1343657106,Laura,Sweeney,PA,PA,Dermatology,A00044,H000793,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000795,POVO,1615385725,Quentin,Delaney,NP,NP,Dermatology,A00044,H000793,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000796,POVO,1891094314,Vera,Clayton,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000799,POVO,1616486654,Oscar,Trudeau,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000800,POVO,1145343566,Scott,Saleh,PA,PA,Dermatology,A00043,H000799,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000801,POVO,1931764918,Kira,Hudson,NP,NP,Dermatology,A00043,H000799,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000802,POVO,1509497685,Cecile,Adams,MD,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000803,POVO,1710266382,Seth,Monroe,PA,PA,Dermatology,A00042,H000802,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000805,POVO,1540800277,Ethan,Lambert,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000807,POVO,1248827721,Joy,Abrams,NP,NP,Dermatology,A00045,H000805,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000808,POVO,1157179346,Adam,Dorsey,MD,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000809,POVO,1183360241,Marcus,Haddock,MD,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000812,POVO,1119536294,Zoe,Flores,MD,HCP,Dermatology,A00046,,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000813,POVO,1353089398,Felix,Owens,PA,PA,Dermatology,A00046,H000812,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000814,POVO,1841435583,Tomas,Fitzgerald,NP,NP,Dermatology,A00046,H000812,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000815,POVO,1299242218,Petra,Eaton,MD,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000816,POVO,1772838680,Seth,Kent,NP,NP,Dermatology,A00042,H000815,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000818,POVO,1586142634,Gwen,Paquette,DO,HCP,Dermatology,A00046,,NE-BTV,"Burlington, VT territory",Northeast,St. Albans,VT,05478
+H000820,POVO,1519471001,Molly,Newman,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000826,POVO,1220341923,Beth,Fuller,MD,HCP,Dermatology,A00047,,NE-BTV,"Burlington, VT territory",Northeast,Barre,VT,05641
+H000829,POVO,1253429561,Selena,Burke,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000832,POVO,1604087795,Wade,Romano,DO,HCP,Dermatology,A00047,,NE-BTV,"Burlington, VT territory",Northeast,Barre,VT,05641
+H000835,POVO,1574986554,Emil,Abbas,MD,HCP,Dermatology,A00043,,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000836,POVO,1868324934,Dana,Leary,PA,PA,Dermatology,A00043,H000835,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000837,POVO,1384037101,Jonah,McCoy,NP,NP,Dermatology,A00043,H000835,NE-BTV,"Burlington, VT territory",Northeast,South Burlington,VT,05403
+H000838,POVO,1811087364,Sanjay,Lynch,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000839,POVO,1519255198,Rafael,Thayer,PA,PA,Dermatology,A00045,H000838,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000840,POVO,1923115269,Alice,Sethi,NP,NP,Dermatology,A00045,H000838,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000841,POVO,1441833187,Sara,Sokol,DO,HCP,Dermatology,A00042,,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000842,POVO,1322910104,Seth,Sargent,NP,NP,Dermatology,A00042,H000841,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000843,POVO,1986751356,Omar,Shepherd,PA,PA,Dermatology,A00042,H000841,NE-BTV,"Burlington, VT territory",Northeast,Burlington,VT,05401
+H000844,POVO,1889837518,Gavin,Desjardins,MD,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000845,POVO,1467234013,Hector,Medina,NP,NP,Dermatology,A00044,H000844,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000846,POVO,1107360988,Zoe,Gauthier,PA,PA,Dermatology,A00044,H000844,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000847,POVO,1284066838,Yusuf,Crowley,MD,HCP,Dermatology,A00044,,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000848,POVO,1630769002,Dmitri,Hobbs,NP,NP,Dermatology,A00044,H000847,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000849,POVO,1687286264,Ines,Dubois,PA,PA,Dermatology,A00044,H000847,NE-BTV,"Burlington, VT territory",Northeast,Rutland,VT,05701
+H000850,POVO,1697849499,Owen,Parker,MD,HCP,Dermatology,A00045,,NE-BTV,"Burlington, VT territory",Northeast,Montpelier,VT,05602
+H000853,POVO,1990561734,Liam,Delaney,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000854,POVO,1763832098,Una,Sherman,NP,NP,Dermatology,A00050,H000853,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000855,POVO,1470919436,Wade,Jarvis,PA,PA,Dermatology,A00050,H000853,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000856,POVO,1988184788,Ruth,Marino,MD,HCP,Dermatology,A00051,,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000857,POVO,1181830690,Theo,Thibault,PA,PA,Dermatology,A00051,H000856,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000859,POVO,1867532636,Rosa,Lambert,MD,HCP,Dermatology,A00052,,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000860,POVO,1114047073,Bianca,Sloan,MD,HCP,Dermatology,A00055,,NE-WOR,"Worcester, MA territory",Northeast,Shrewsbury,MA,01545
+H000863,POVO,1607143496,Kenji,Strand,MD,HCP,Dermatology,A00056,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000864,POVO,1664241928,Beth,Nyberg,NP,NP,Dermatology,A00056,H000863,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000866,POVO,1876685631,Adam,Dean,MD,HCP,Dermatology,A00052,,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000867,POVO,1509232330,Greta,Norris,PA,PA,Dermatology,A00052,H000866,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000868,POVO,1946354283,Rosa,Cullen,NP,NP,Dermatology,A00052,H000866,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000869,POVO,1449035744,Rhea,Todd,MD,HCP,Dermatology,A00056,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000872,POVO,1779990260,Brian,Thorne,MD,HCP,General Surgery,A00052,,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000873,POVO,1284555855,Zoe,Leary,NP,NP,Dermatology,A00052,H000872,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000874,POVO,1688165392,Joel,Watts,PA,PA,Dermatology,A00052,H000872,NE-WOR,"Worcester, MA territory",Northeast,Leominster,MA,01453
+H000881,POVO,1352956753,Quentin,McCoy,MD,HCP,General Surgery,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000884,POVO,1373426471,Luke,Flynn,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000887,POVO,1243967894,Victor,Nichols,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000888,POVO,1838719817,Wes,Joyce,NP,NP,Dermatology,A00050,H000887,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000889,POVO,1323092076,Theo,Tate,PA,PA,Dermatology,A00050,H000887,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000891,POVO,1221389269,Nora,Albright,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000894,POVO,1146965300,Liam,Crane,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000895,POVO,1106182870,Ivan,Barlow,PA,PA,Dermatology,A00050,H000894,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000896,POVO,1336922251,Uri,Garrity,NP,NP,Dermatology,A00050,H000894,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000897,POVO,1950566301,Hope,Cormier,DO,HCP,Dermatology,A00056,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000900,POVO,1753822190,Beth,Sweeney,DO,HCP,General Surgery,A00054,,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000903,POVO,1507727554,Luke,Norcross,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000904,POVO,1766170843,Marcus,Hebert,PA,PA,Dermatology,A00050,H000903,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000905,POVO,1104973007,Sanjay,Patton,NP,NP,Dermatology,A00050,H000903,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000906,POVO,1438500872,Mark,Nadeau,MD,HCP,Dermatology,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000907,POVO,1120423466,Una,Mendoza,NP,NP,Dermatology,A00053,H000906,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000908,POVO,1970839019,Evan,Hickey,PA,PA,Dermatology,A00053,H000906,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000909,POVO,1100997687,Hiro,Archer,MD,HCP,Dermatology,A00055,,NE-WOR,"Worcester, MA territory",Northeast,Shrewsbury,MA,01545
+H000911,POVO,1640709105,Sara,Carlisle,DO,HCP,Dermatology,A00056,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000914,POVO,1252081421,Derek,Lee,DO,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000917,POVO,1945932964,Theo,Sutton,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000918,POVO,1471897276,Elena,Theriot,NP,NP,Dermatology,A00050,H000917,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000919,POVO,1635006640,Joel,Callahan,PA,PA,Dermatology,A00050,H000917,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000920,POVO,1752419725,Luke,Santoro,MD,HCP,Dermatology,A00054,,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000921,POVO,1546518006,Victor,Gilbride,PA,PA,Dermatology,A00054,H000920,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000923,POVO,1423915200,Delia,Upton,MD,HCP,Dermatology,A00055,,NE-WOR,"Worcester, MA territory",Northeast,Shrewsbury,MA,01545
+H000926,POVO,1787552581,Lena,Wikstrom,MD,HCP,Dermatology,A00054,,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000928,POVO,1939805325,Cyrus,Gibbs,PA,PA,Dermatology,A00054,H000926,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000929,POVO,1208527089,Vincent,Mahoney,MD,HCP,Dermatology,A00054,,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000930,POVO,1526186766,Hanna,Evans,MD,HCP,Dermatology,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000933,POVO,1779246846,Keith,Huang,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000934,POVO,1360729705,Tara,Cloutier,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000935,POVO,1304790581,Kenji,Jimenez,PA,PA,Dermatology,A00050,H000934,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000936,POVO,1245691716,Theo,Zhou,NP,NP,Dermatology,A00050,H000934,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000937,POVO,1353985405,Ruth,Shea,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000940,POVO,1535462653,Maya,Farah,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000941,POVO,1185052960,Luke,Dalton,PA,PA,Dermatology,A00050,H000940,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000942,POVO,1187139641,Molly,Castro,NP,NP,Dermatology,A00050,H000940,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000943,POVO,1401911791,Neil,Saleh,MD,HCP,Dermatology,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000944,POVO,1446496345,Elena,Rush,PA,PA,Dermatology,A00053,H000943,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000945,POVO,1266851272,Bianca,Gauthier,NP,NP,Dermatology,A00053,H000943,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000946,POVO,1250446972,Kenji,Parker,DO,HCP,Dermatology,A00054,,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000947,POVO,1796495426,Tara,Rioux,PA,PA,Dermatology,A00054,H000946,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000949,POVO,1553972542,Tess,Lynch,DO,HCP,Dermatology,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000951,POVO,1361354537,Tony,Jennings,PA,PA,Dermatology,A00053,H000949,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000952,POVO,1712001522,Owen,Sargent,DO,HCP,Dermatology,A00054,,NE-WOR,"Worcester, MA territory",Northeast,Fitchburg,MA,01420
+H000955,POVO,1328580612,Kira,Wallace,MD,HCP,Dermatology,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000957,POVO,1155496551,Hope,Alvarez,PA,PA,Dermatology,A00053,H000955,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000958,POVO,1512297031,Caleb,Goodwin,DO,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000961,POVO,1176653222,Marcus,Pruitt,MD,HCP,Dermatology,A00051,,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000964,POVO,1266316946,Felix,Navarro,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000967,POVO,1688063514,Pablo,Lachance,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000970,POVO,1213729274,Irene,Medina,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000977,POVO,1982243960,Hanna,Dunmore,MD,HCP,Dermatology,A00051,,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000978,POVO,1769957022,Zoe,Bianchi,NP,NP,Dermatology,A00051,H000977,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000979,POVO,1626345957,Isaac,Neal,PA,PA,Dermatology,A00051,H000977,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000980,POVO,1984623946,Paul,Torres,MD,HCP,Dermatology,A00050,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000983,POVO,1301839175,Eli,Guerrero,MD,HCP,Dermatology,A00051,,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000986,POVO,1260674688,Derek,Cavanaugh,MD,HCP,Dermatology,A00055,,NE-WOR,"Worcester, MA territory",Northeast,Shrewsbury,MA,01545
+H000988,POVO,1744636550,Rafael,Gallant,PA,PA,Dermatology,A00055,H000986,NE-WOR,"Worcester, MA territory",Northeast,Shrewsbury,MA,01545
+H000989,POVO,1744845565,Leah,Salazar,MD,HCP,Dermatology,A00053,,NE-WOR,"Worcester, MA territory",Northeast,Marlborough,MA,01752
+H000991,POVO,1193745860,Liam,Riggs,MD,HCP,Dermatology,A00051,,NE-WOR,"Worcester, MA territory",Northeast,Framingham,MA,01702
+H000992,POVO,1121808798,Ethan,Reardon,MD,HCP,Dermatology,A00056,,NE-WOR,"Worcester, MA territory",Northeast,Worcester,MA,01605
+H000995,POVO,1719455549,Vera,Young,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H000997,POVO,1700359148,Hiro,Cloutier,PA,PA,Dermatology,A00061,H000995,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H000998,POVO,1429326881,Rhea,Jordan,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001001,POVO,1191042302,Glen,Simard,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001002,POVO,1569808029,Hanna,Sethi,NP,NP,Dermatology,A00059,H001001,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001003,POVO,1542029487,Yusuf,Rourke,PA,PA,Dermatology,A00059,H001001,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001004,POVO,1934831672,Tony,Lawson,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001005,POVO,1652400932,Hector,Sampson,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001006,POVO,1243153909,Luke,Mercer,NP,NP,Dermatology,A00061,H001005,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001008,POVO,1609968775,Marcus,Mccarthy,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001009,POVO,1498050933,Diane,Larson,PA,PA,Dermatology,A00061,H001008,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001010,POVO,1278868389,Eli,Lathrop,NP,NP,Dermatology,A00061,H001008,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001011,POVO,1546567227,Jasper,Herrera,MD,HCP,Dermatology,A00063,,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001014,POVO,1816388130,Olive,Vaughn,DO,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001017,POVO,1738035371,Xena,Yamada,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001019,POVO,1861721763,Nora,Wallace,PA,PA,Dermatology,A00059,H001017,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001020,POVO,1373894728,Lena,Clayton,DO,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001022,POVO,1140244165,Caleb,Wade,PA,PA,Dermatology,A00059,H001020,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001023,POVO,1515015117,Rosa,Bowen,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001026,POVO,1385614528,Clara,Burke,MD,HCP,General Surgery,A00063,,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001029,POVO,1336185826,Liam,Finch,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001032,POVO,1426927178,Quentin,Ortiz,MD,HCP,Dermatology,A00064,,NE-SPR,"Springfield, MA territory",Northeast,Pittsfield,MA,01201
+H001035,POVO,1439980834,Owen,Rollins,DO,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001038,POVO,1810727010,Flora,Sullivan,MD,HCP,Dermatology,A00063,,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001041,POVO,1585177847,Hector,Gallant,MD,HCP,Dermatology,A00063,,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001042,POVO,1909766408,Oscar,Abbas,NP,NP,Dermatology,A00063,H001041,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001044,POVO,1967357660,Ruth,Chapman,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001047,POVO,1712103427,Farid,Lachance,MD,HCP,Dermatology,A00060,,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001048,POVO,1238163905,Glen,Alvarez,PA,PA,Dermatology,A00060,H001047,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001049,POVO,1137856419,Glen,Crane,NP,NP,Dermatology,A00060,H001047,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001050,POVO,1185762063,Paul,Kapoor,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001051,POVO,1113730547,Yara,Valdez,DO,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001054,POVO,1479328993,Seth,Rhodes,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001057,POVO,1465371908,Adam,Cho,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001059,POVO,1685265492,Delia,Russell,PA,PA,Dermatology,A00059,H001057,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001060,POVO,1262942711,Rafael,Voss,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001063,POVO,1975216817,Selena,Riggs,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001066,POVO,1487789053,Neil,Paquette,MD,HCP,Dermatology,A00063,,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001069,POVO,1622084360,Oscar,Stanton,MD,HCP,Dermatology,A00064,,NE-SPR,"Springfield, MA territory",Northeast,Pittsfield,MA,01201
+H001072,POVO,1717611234,Eli,Nowak,MD,HCP,Dermatology,A00060,,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001075,POVO,1568875433,Maya,Mcdonough,MD,HCP,Dermatology,A00060,,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001076,POVO,1975128061,Seth,Patton,NP,NP,Dermatology,A00060,H001075,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001077,POVO,1576366524,Dana,Fox,PA,PA,Dermatology,A00060,H001075,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001078,POVO,1399749641,Glen,Sutton,MD,HCP,Dermatology,A00064,,NE-SPR,"Springfield, MA territory",Northeast,Pittsfield,MA,01201
+H001079,POVO,1829559289,Graham,Hayes,PA,PA,Dermatology,A00064,H001078,NE-SPR,"Springfield, MA territory",Northeast,Pittsfield,MA,01201
+H001080,POVO,1425059742,Dana,Nolin,NP,NP,Dermatology,A00064,H001078,NE-SPR,"Springfield, MA territory",Northeast,Pittsfield,MA,01201
+H001081,POVO,1680244112,Vera,Ferraro,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001084,POVO,1480425226,Cecile,Noble,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001085,POVO,1935774079,Marcus,Callahan,PA,PA,Dermatology,A00061,H001084,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001086,POVO,1343952598,Clara,Medina,NP,NP,Dermatology,A00061,H001084,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001087,POVO,1800046520,Jill,Ramsey,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001088,POVO,1604229348,Olive,Spencer,DO,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001089,POVO,1572408429,Olive,Torres,PA,PA,Dermatology,A00059,H001088,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001090,POVO,1277486571,Anya,Abrams,NP,NP,Dermatology,A00059,H001088,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001091,POVO,1211910298,Cyrus,Zielinski,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001092,POVO,1388705463,Jill,Wojcik,PA,PA,Dermatology,A00061,H001091,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001093,POVO,1262793064,Farid,Sherman,NP,NP,Dermatology,A00061,H001091,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001094,POVO,1422555684,Vera,Zhou,DO,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001097,POVO,1889734194,Laura,Kirby,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001098,POVO,1316469232,Graham,Lambert,PA,PA,Dermatology,A00059,H001097,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001099,POVO,1373868664,Rosa,Cormier,NP,NP,Dermatology,A00059,H001097,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001100,POVO,1226040347,Paul,Hickey,MD,HCP,General Surgery,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001101,POVO,1643285301,Lucia,Baird,NP,NP,Dermatology,A00062,H001100,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001102,POVO,1699490433,Alice,Rao,PA,PA,Dermatology,A00062,H001100,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001103,POVO,1140367172,Gavin,Farah,MD,HCP,Dermatology,A00059,,NE-SPR,"Springfield, MA territory",Northeast,Springfield,MA,01199
+H001106,POVO,1193418716,Wes,Sokol,MD,HCP,Dermatology,A00063,,NE-SPR,"Springfield, MA territory",Northeast,Chicopee,MA,01013
+H001107,POVO,1472099302,Omar,Bergeron,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001109,POVO,1904827668,Marcus,Fowler,PA,PA,Dermatology,A00062,H001107,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001110,POVO,1159414709,Bettina,Reyes,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001113,POVO,1507652919,Keith,Pelkey,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001116,POVO,1161501774,Vera,Delgado,DO,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001117,POVO,1570720510,Molly,Joshi,PA,PA,Dermatology,A00061,H001116,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001118,POVO,1254489069,Hugo,Moretti,NP,NP,Dermatology,A00061,H001116,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001119,POVO,1708805191,Pablo,Chase,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001122,POVO,1234655243,Kate,Lynch,MD,HCP,Dermatology,A00061,,NE-SPR,"Springfield, MA territory",Northeast,Northampton,MA,01060
+H001125,POVO,1525660357,Quentin,York,MD,HCP,Dermatology,A00062,,NE-SPR,"Springfield, MA territory",Northeast,Westfield,MA,01085
+H001128,POVO,1611148275,Carl,Malik,MD,HCP,Dermatology,A00060,,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001131,POVO,1452822202,Greta,Boucher,MD,HCP,Dermatology,A00060,,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001133,POVO,1442344929,Carl,Beaulieu,PA,PA,Dermatology,A00060,H001131,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001134,POVO,1886143704,Hector,Gupta,DO,HCP,Dermatology,A00060,,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040
+H001135,POVO,1433370578,Tess,Sloan,NP,NP,Dermatology,A00060,H001134,NE-SPR,"Springfield, MA territory",Northeast,Holyoke,MA,01040

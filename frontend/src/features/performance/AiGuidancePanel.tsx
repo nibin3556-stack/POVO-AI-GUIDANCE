@@ -115,11 +115,13 @@ const GuidanceBody = ({ data, onGo, onPlanDay }: { data: Guidance; onGo: (id: st
     </Column>
     <Column title={P.strong} tone="good">
       <ul className="m-0 flex list-none flex-col gap-px p-0">
-        <Item title={P.trialTitle(data.strong.best_segment.short_name)}>
-          <b>{data.strong.best_segment.short_name}</b>
-          {P.trialAt}
-          <b>{data.strong.best_segment.trial_pct}%</b>
-        </Item>
+        {data.strong.best_segment && (
+          <Item title={P.trialTitle(data.strong.best_segment.short_name)}>
+            <b>{data.strong.best_segment.short_name}</b>
+            {P.trialAt}
+            <b>{data.strong.best_segment.trial_pct}%</b>
+          </Item>
+        )}
         {data.strong.top_writer && <TopWriter writer={data.strong.top_writer} />}
         <Item title={P.reachTitle(top)}>
           {P.superHighReach(top)}

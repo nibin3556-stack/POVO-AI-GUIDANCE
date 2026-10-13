@@ -1,0 +1,67 @@
+ACCOUNT_ID,BRAND_CODE,TERRITORY_ID,ACCOUNT_NAME,CITY,STATE,ZIP,CLAIMS_INDICATION_PATIENTS,CLAIMS_BRAND_PATIENTS,CLAIMS_MAIN_FOCUS,IS_CLAIMS_ONLY
+A00001,POVO,NE-POR,Maine Medical Partners Dermatology,Portland,ME,04101,343,12,jak,false
+A00002,POVO,NE-POR,Northern Light Mercy Dermatology,Portland,ME,04101,241,8,jak,false
+A00003,POVO,NE-POR,InterMed Dermatology,South Portland,ME,04106,241,10,jak,false
+A00004,POVO,NE-POR,Central Maine Dermatology,Lewiston,ME,04240,167,3,conventional,false
+A00005,POVO,NE-POR,Southern Maine Health Care Dermatology,Biddeford,ME,04005,133,1,conventional,false
+A00006,POVO,NE-POR,Mid Coast Dermatology,Brunswick,ME,04011,121,3,conventional,false
+A00007,POVO,NE-POR,Saco Bay Surgical Associates,Saco,ME,04072,23,0,cosentyx,true
+A00008,POVO,NE-POR,Portland Wound and Skin Clinic,Portland,ME,04101,37,0,cosentyx,true
+A00009,POVO,NE-BOS,Mass General Dermatology Associates,Boston,MA,02114,422,18,jak,false
+A00010,POVO,NE-BOS,Brigham Dermatology Associates,Boston,MA,02114,238,10,jak,false
+A00011,POVO,NE-BOS,Beth Israel Lahey Dermatology,Burlington,MA,01805,304,9,conventional,false
+A00012,POVO,NE-BOS,Newton-Wellesley Dermatology,Newton,MA,02462,118,9,jak,false
+A00013,POVO,NE-BOS,Tufts Medical Center Dermatology,Boston,MA,02114,32,0,conventional,false
+A00014,POVO,NE-BOS,Cambridge Health Alliance Dermatology,Cambridge,MA,02138,52,3,conventional,false
+A00015,POVO,NE-BOS,South Shore Dermatology,Quincy,MA,02169,63,0,conventional,false
+A00016,POVO,NE-BOS,Brookline Surgical Associates,Brookline,MA,02445,55,0,humira,true
+A00017,POVO,NE-BOS,Boston Wound and Skin Clinic,Boston,MA,02114,24,0,conventional,true
+A00018,POVO,NE-HFD,Hartford HealthCare Dermatology,Hartford,CT,06106,441,10,jak,false
+A00019,POVO,NE-HFD,UConn Health Dermatology,Farmington,CT,06030,335,9,jak,false
+A00020,POVO,NE-HFD,Saint Francis Dermatology,Hartford,CT,06106,393,6,jak,false
+A00021,POVO,NE-HFD,Danbury Dermatology Associates,Danbury,CT,06810,165,8,jak,false
+A00022,POVO,NE-HFD,Connecticut Skin Institute,New Britain,CT,06051,74,2,jak,false
+A00023,POVO,NE-HFD,Manchester Dermatology Group,Manchester,CT,06040,0,0,conventional,false
+A00024,POVO,NE-HFD,Bristol Surgical Associates,Bristol,CT,06010,60,0,humira,true
+A00025,POVO,NE-HFD,Capitol Region Wound Center,Hartford,CT,06106,59,0,humira,true
+A00026,POVO,NE-PVD,Lifespan Dermatology,Providence,RI,02903,382,13,jak,false
+A00027,POVO,NE-PVD,Rhode Island Dermatology Institute,Warwick,RI,02886,366,10,conventional,false
+A00028,POVO,NE-PVD,Newport Coastal Dermatology,Newport,RI,02840,322,12,conventional,false
+A00029,POVO,NE-PVD,Blackstone Valley Dermatology,Pawtucket,RI,02860,213,5,conventional,false
+A00030,POVO,NE-PVD,Cranston Skin Center,Cranston,RI,02920,56,0,conventional,false
+A00031,POVO,NE-PVD,Northern Rhode Island Dermatology,Woonsocket,RI,02895,85,0,conventional,false
+A00032,POVO,NE-PVD,Kent County Surgical Group,Warwick,RI,02886,54,0,cosentyx,true
+A00033,POVO,NE-PVD,Providence Wound Care Clinic,Providence,RI,02903,26,0,conventional,true
+A00034,POVO,NE-MAN,Granite State Dermatology,Manchester,NH,03101,400,11,conventional,false
+A00035,POVO,NE-MAN,Nashua Dermatology Associates,Nashua,NH,03060,218,6,jak,false
+A00036,POVO,NE-MAN,Concord Skin and Laser,Concord,NH,03301,196,4,conventional,false
+A00037,POVO,NE-MAN,Seacoast Dermatology,Portsmouth,NH,03801,235,4,conventional,false
+A00038,POVO,NE-MAN,Derry Family Dermatology,Derry,NH,03038,191,7,jak,false
+A00039,POVO,NE-MAN,Upper Valley Dermatology,Lebanon,NH,03766,205,7,jak,false
+A00040,POVO,NE-MAN,Merrimack Valley Surgical Associates,Nashua,NH,03060,48,0,cosentyx,true
+A00041,POVO,NE-MAN,Queen City Wound Care,Manchester,NH,03101,29,0,conventional,true
+A00042,POVO,NE-BTV,Champlain Valley Dermatology,Burlington,VT,05401,183,6,jak,false
+A00043,POVO,NE-BTV,Green Mountain Dermatology,South Burlington,VT,05403,448,8,jak,false
+A00044,POVO,NE-BTV,Rutland Regional Dermatology,Rutland,VT,05701,169,6,jak,false
+A00045,POVO,NE-BTV,Capital Dermatology,Montpelier,VT,05602,242,5,jak,false
+A00046,POVO,NE-BTV,Northwest Vermont Dermatology,St. Albans,VT,05478,189,3,jak,false
+A00047,POVO,NE-BTV,Barre Skin Center,Barre,VT,05641,118,2,jak,false
+A00048,POVO,NE-BTV,Lake Champlain Surgical Group,Burlington,VT,05401,48,0,humira,true
+A00049,POVO,NE-BTV,Central Vermont Wound Clinic,Barre,VT,05641,28,0,cosentyx,true
+A00050,POVO,NE-WOR,Worcester Dermatology Associates,Worcester,MA,01605,519,18,jak,false
+A00051,POVO,NE-WOR,MetroWest Dermatology,Framingham,MA,01702,155,6,jak,false
+A00052,POVO,NE-WOR,Nashoba Valley Dermatology,Leominster,MA,01453,130,8,conventional,false
+A00053,POVO,NE-WOR,Marlborough Skin Center,Marlborough,MA,01752,170,4,conventional,false
+A00054,POVO,NE-WOR,Montachusett Dermatology,Fitchburg,MA,01420,137,3,jak,false
+A00055,POVO,NE-WOR,Shrewsbury Dermatology Group,Shrewsbury,MA,01545,90,3,conventional,false
+A00056,POVO,NE-WOR,Central Mass Skin Institute,Worcester,MA,01605,133,3,jak,false
+A00057,POVO,NE-WOR,Wachusett Surgical Associates,Leominster,MA,01453,37,0,conventional,true
+A00058,POVO,NE-WOR,Worcester Wound Care Center,Worcester,MA,01605,23,0,humira,true
+A00059,POVO,NE-SPR,Pioneer Valley Dermatology,Springfield,MA,01199,465,17,jak,false
+A00060,POVO,NE-SPR,Holyoke Dermatology Associates,Holyoke,MA,01040,138,3,conventional,false
+A00061,POVO,NE-SPR,Northampton Skin Center,Northampton,MA,01060,307,6,jak,false
+A00062,POVO,NE-SPR,Westfield Dermatology,Westfield,MA,01085,172,4,conventional,false
+A00063,POVO,NE-SPR,Chicopee Family Dermatology,Chicopee,MA,01013,136,5,conventional,false
+A00064,POVO,NE-SPR,Berkshire Dermatology,Pittsfield,MA,01201,111,2,jak,false
+A00065,POVO,NE-SPR,Connecticut River Surgical Group,Springfield,MA,01199,32,0,conventional,true
+A00066,POVO,NE-SPR,Hampden Wound Clinic,Chicopee,MA,01013,60,0,humira,true

@@ -205,8 +205,8 @@ class LocalWarehouse(Warehouse):
         self._lock = threading.RLock()
         self._con = duckdb.connect()
         cat = settings.databricks_catalog
-        if settings.data_source == "none":  # sign-in only: memory, never a file
-            self.name = "none"
+        if settings.data_source in ("none", "demo"):  # memory, never a file
+            self.name = settings.data_source
             self._con.execute(f"ATTACH ':memory:' AS {cat}")
         else:
             os.makedirs(os.path.dirname(os.path.abspath(settings.local_duckdb_path)), exist_ok=True)

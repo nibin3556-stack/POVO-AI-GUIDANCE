@@ -161,7 +161,8 @@ export interface Guidance {
   missed: GuidanceMissed[];
   super_high_not_writing: number;
   strong: {
-    best_segment: { segment_code: SegmentCode; short_name: string; trial_pct: number };
+    /** null when the territory has no targets yet. */
+    best_segment: { segment_code: SegmentCode; short_name: string; trial_pct: number } | null;
     /** `ties` names every physician tied for the most POVO patients (the first is `display_name`). */
     top_writer: { hcp_id: string; display_name: string; povo_patients: number; ties: string[] } | null;
     super_high_reach_pct: number;

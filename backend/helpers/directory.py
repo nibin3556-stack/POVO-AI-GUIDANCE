@@ -255,18 +255,19 @@ class TrinityDirectory:
                 "ROLE_CODE": "REP" if level == "TERR_EMP_ID" else "MANAGER", "ROLE_TITLE": emp.get("JOB_TITLE"),
                 "EMP_TYPE": (emp.get("EMP_TYPE") or "").strip().upper(),
                 "ACCESS_LEVEL": access, "ACCESS_REGIONS": regions, "IS_ACTIVE": True, "BRAND_CODE": brand_code,
-                "HOME_TERRITORY_ID": self._data_territory(uid, brand_code, terrs[0][0]) if terrs else None}
+                "HOME_TERRITORY_ID": self._data_territory(uid, brand_code, terrs[0][0] if terrs else None)}
 
     @staticmethod
-    def _data_territory(uid: str, brand_code: str, tid: str) -> str:
+    def _data_territory(uid: str, brand_code: str, tid: Optional[str]) -> Optional[str]:
         """The territory whose data the person sees. With DATA_SOURCE=databricks, their own.
 
         Off Databricks the data is the seed, keyed by seed territory ids: a Trinity
         territory the seed has is kept; else the seed employee with the same
         username's territory; else LOCAL_DATA_TERRITORY_ID (see core/config.py).
+        No territory (Home office) stays none, except with DATA_SOURCE=demo.
         """
         s = get_settings()
-        if s.data_source == "databricks":
+        if s.data_source == "databricks" or (tid is None and s.data_source != "demo"):
             return tid
         seed = get_refs(brand_code).territories
         if tid in seed:
@@ -275,6 +276,11 @@ class TrinityDirectory:
         if same and same.get("HOME_TERRITORY_ID") in seed:
             return same["HOME_TERRITORY_ID"]
         fallback = s.local_data_territory_id.strip()
+        if s.data_source == "demo" and fallback not in seed and seed:
+            # The POC's own rep (DEV_FALLBACK_USERNAME, vturano: Portland, ME), else the first.
+            poc = next((p for p in AppDirectory().lookup(s.dev_fallback_username or "")
+                        if p["BRAND_CODE"] == brand_code), None)
+            fallback = poc["HOME_TERRITORY_ID"] if poc and poc.get("HOME_TERRITORY_ID") in seed else sorted(seed)[0]
         return fallback if fallback in seed else tid
 
     # --- the directory interface ------------------------------------------------

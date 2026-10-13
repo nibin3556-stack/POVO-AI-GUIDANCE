@@ -1,0 +1,122 @@
+{
+  "brand_code": "POVO",
+  "as_of": "2026-10-13",
+  "data_start": "2026-07-01",
+  "seed": 20260930,
+  "plan_year": 2026,
+  "generated_at": "2026-10-13T17:58:02+00:00",
+  "row_counts": {
+    "DIM_ACCOUNT": 66,
+    "DIM_CALL_PLAN_TARGET": 657,
+    "DIM_EMPLOYEE": 10,
+    "DIM_HCP": 657,
+    "DIM_SALES_ASSIGNMENT": 10,
+    "FCT_BRAND_ACTIVITY": 1110,
+    "FCT_HCP_METRICS": 657,
+    "FCT_INTERACTION": 5526,
+    "FCT_TERRITORY_GOAL": 144,
+    "REF_COMPETITIVE_FOCUS": 5,
+    "REF_COMPLIANCE_RULE": 14,
+    "REF_COMPLIANCE_TEXT": 12,
+    "REF_HOLIDAY": 16,
+    "REF_INTERACTION_CHANNEL": 17,
+    "REF_OBJECTION_RULE": 10,
+    "REF_TALKING_POINT": 62
+  },
+  "content": {
+    "REF_TALKING_POINT": 62,
+    "REF_OBJECTION_RULE": 10,
+    "REF_COMPLIANCE_RULE": 14,
+    "REF_COMPLIANCE_TEXT": 12
+  },
+  "territories": {
+    "NE-POR": {
+      "targets": 83,
+      "physicians": 47,
+      "np_pa": 36,
+      "accounts": 8,
+      "writers": 24,
+      "jak_writers": 15,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 37,
+      "goal_new_patients_to_year_end": 89
+    },
+    "NE-BOS": {
+      "targets": 84,
+      "physicians": 50,
+      "np_pa": 34,
+      "accounts": 9,
+      "writers": 27,
+      "jak_writers": 16,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 49,
+      "goal_new_patients_to_year_end": 99
+    },
+    "NE-HFD": {
+      "targets": 81,
+      "physicians": 49,
+      "np_pa": 32,
+      "accounts": 8,
+      "writers": 23,
+      "jak_writers": 14,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 35,
+      "goal_new_patients_to_year_end": 82
+    },
+    "NE-PVD": {
+      "targets": 85,
+      "physicians": 50,
+      "np_pa": 35,
+      "accounts": 8,
+      "writers": 19,
+      "jak_writers": 11,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 40,
+      "goal_new_patients_to_year_end": 76
+    },
+    "NE-MAN": {
+      "targets": 82,
+      "physicians": 51,
+      "np_pa": 31,
+      "accounts": 8,
+      "writers": 23,
+      "jak_writers": 14,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 39,
+      "goal_new_patients_to_year_end": 80
+    },
+    "NE-BTV": {
+      "targets": 82,
+      "physicians": 50,
+      "np_pa": 32,
+      "accounts": 8,
+      "writers": 22,
+      "jak_writers": 13,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 30,
+      "goal_new_patients_to_year_end": 75
+    },
+    "NE-WOR": {
+      "targets": 79,
+      "physicians": 47,
+      "np_pa": 32,
+      "accounts": 9,
+      "writers": 24,
+      "jak_writers": 16,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 45,
+      "goal_new_patients_to_year_end": 94
+    },
+    "NE-SPR": {
+      "targets": 81,
+      "physicians": 50,
+      "np_pa": 31,
+      "accounts": 8,
+      "writers": 23,
+      "jak_writers": 15,
+      "data_start": "2026-07-01",
+      "new_patients_in_window": 37,
+      "goal_new_patients_to_year_end": 84
+    }
+  }
+}

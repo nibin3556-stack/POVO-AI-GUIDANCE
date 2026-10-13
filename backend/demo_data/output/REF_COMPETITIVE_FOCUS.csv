@@ -1,0 +1,6 @@
+FOCUS_ID,BRAND_CODE,FOCUS_CODE,LABEL,COLOR_HEX,SORT_ORDER
+POVO|cosentyx,POVO,cosentyx,Cosentyx,#0E8A8A,1
+POVO|bimzelx,POVO,bimzelx,Bimzelx,#8A6A12,2
+POVO|humira,POVO,humira,Humira,#7C3AED,3
+POVO|jak,POVO,jak,JAK,#156CB4,4
+POVO|conventional,POVO,conventional,Conventional therapy,#64748B,5

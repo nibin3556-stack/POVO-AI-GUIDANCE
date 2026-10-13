@@ -2,7 +2,9 @@
 
 "Today" is the real current date in APP_TIMEZONE (America/New_York by
 default), not the server's clock zone: a Posit VM in UTC would otherwise flip
-to tomorrow at 8 pm Eastern. POVO_TODAY_OVERRIDE pins it for tests and demos.
+to tomorrow at 8 pm Eastern. POVO_TODAY_OVERRIDE pins it for tests and demos;
+with DATA_SOURCE=demo it is the demo data's own as-of date (_manifest.json),
+so the fixed dummy data never looks stale.
 
 Working days are weekdays minus US holidays (REF_HOLIDAY). If that table is
 empty, the POC's own holiday set is computed (the 8 federal holidays the POC
@@ -11,11 +13,26 @@ lists, with weekend observance), so KPI math never silently counts a holiday.
 from __future__ import annotations
 
 import calendar
+import json
 import math
+import os
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from core.config import get_settings
+
+_demo_as_of: dict[str, date | None] = {}
+
+
+def _demo_today(folder: str) -> date | None:
+    """The as_of date in <SEED_OUTPUT_DIR>/_manifest.json, read once; None if absent."""
+    if folder not in _demo_as_of:
+        try:
+            with open(os.path.join(folder, "_manifest.json"), encoding="utf-8") as fh:
+                _demo_as_of[folder] = date.fromisoformat(json.load(fh)["as_of"])
+        except (OSError, ValueError, KeyError):
+            _demo_as_of[folder] = None
+    return _demo_as_of[folder]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August",
           "September", "October", "November", "December"]
@@ -26,6 +43,8 @@ def today() -> date:
     s = get_settings()
     if s.povo_today_override:
         return s.povo_today_override
+    if s.data_source == "demo" and (pinned := _demo_today(s.seed_output_dir)):
+        return pinned
     return datetime.now(ZoneInfo(s.app_timezone)).date()
 
 

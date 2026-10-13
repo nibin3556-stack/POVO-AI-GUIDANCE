@@ -1,0 +1,11 @@
+EMPLOYEE_ID,BRAND_CODE,NETWORK_ID,USERNAME,EMAIL,FIRST_NAME,LAST_NAME,FULL_NAME,INITIALS,BUSINESS_UNIT,ROLE_CODE,ROLE_TITLE,ACCESS_LEVEL,ACCESS_REGIONS,IS_ACTIVE
+p250488,POVO,3297,vturano,vturano@incyte.com,Vince,Turano,Vince Turano,VT,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250519,POVO,3322,mcastellano,mcastellano@incyte.com,Megan,Castellano,Megan Castellano,MC,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250611,POVO,3418,dwhitaker,dwhitaker@incyte.com,Dana,Whitaker,Dana Whitaker,DW,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250702,POVO,3526,lortega,lortega@incyte.com,Luis,Ortega,Luis Ortega,LO,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250733,POVO,3561,krobichaud,krobichaud@incyte.com,Kyle,Robichaud,Kyle Robichaud,KR,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250758,POVO,3589,hlefebvre,hlefebvre@incyte.com,Hannah,Lefebvre,Hannah Lefebvre,HL,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250776,POVO,3604,nbarros,nbarros@incyte.com,Nicole,Barros,Nicole Barros,NB,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250791,POVO,3617,ekowalski,ekowalski@incyte.com,Ethan,Kowalski,Ethan Kowalski,EK,COMMERCIAL,REP,POVO Sales Representative,"Rep level, 1 territory",Northeast,true
+p250544,POVO,3351,bdrake,bdrake@incyte.com,Barbara,Drake,Barbara Drake,BD,COMMERCIAL,MANAGER,"Manager, Field Sales Enablement","Team level, POVO team, 8 territories",Northeast,true
+p250563,POVO,3372,rsutherland,rsutherland@incyte.com,Raymond,Sutherland,Raymond Sutherland,RS,COMMERCIAL,MANAGER,"Manager, Field Sales Enablement","Team level, POVO team, 8 territories",Northeast,true

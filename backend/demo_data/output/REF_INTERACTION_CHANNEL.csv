@@ -1,0 +1,18 @@
+REF_ID,BRAND_CODE,REF_TYPE,CODE,NAME,SHORT_NAME,DESCRIPTION,TEAM_LABEL,COLOR_HEX,ARCHETYPE_NAME,ARCHETYPE_DESC,DECILE_MIN,DECILE_MAX,CALLS_PER_YEAR,REACH_GOAL_PCT,EVENT_TYPE,UNIT,PARAM_VALUE,SORT_ORDER
+POVO|CHANNEL|rep,POVO,CHANNEL,rep,Direct call,,,POVO Sales,,,,,,,,,,,1
+POVO|CHANNEL|adfa,POVO,CHANNEL,adfa,ADFA visit,,,ADFA,,,,,,,,,,,2
+POVO|CHANNEL|opz,POVO,CHANNEL,opz,Opz Sales call,,,Opz Sales,,,,,,,,,,,3
+POVO|CHANNEL|msl,POVO,CHANNEL,msl,MSL visit,,,MSL,,,,,,,,,,,4
+POVO|CHANNEL|spkr,POVO,CHANNEL,spkr,Speaker program,,,Speaker,,,,,,,,,,,5
+POVO|CHANNEL|pr,POVO,CHANNEL,pr,PR visit,,,PR,,,,,,,,,,,6
+POVO|TIER|SH,POVO,TIER,SH,Super High,,,,,,,7,10,40,95,,,,1
+POVO|TIER|MED,POVO,TIER,MED,Medium,,,,,,,5,6,28,95,,,,2
+POVO|TIER|LOW,POVO,TIER,LOW,Low,,,,,,,2,4,20,75,,,,3
+POVO|SEGMENT|imm,POVO,SEGMENT,imm,Advanced without JAK Inhibitors,Advanced without JAK,"Treating HS patients with a biologic (Humira, Cosentyx or Bimzelx) and no JAK inhibitor",,#156CB4,Tara,losing control on a biologic,,,,,,,,1
+POVO|SEGMENT|exp,POVO,SEGMENT,exp,Advanced Biologics plus JAK Inhibitors,Advanced Biologics plus JAK,"Treating HS patients with a JAK inhibitor (off label in HS), with or without a biologic",,#7C6BD6,Tara,now on an off-label JAK inhibitor,,,,,,,,2
+POVO|SEGMENT|conv,POVO,SEGMENT,conv,Conventional,Conventional,Managing HS patients with conventional therapy only (no biologic or JAK inhibitor),,#0E8A8A,Marcus,still cycling antibiotics,,,,,,,,3
+POVO|KPI_METRIC|PEF,POVO,KPI_METRIC,PEF,Patient Enrollment Forms,,,,,,,,,,,PEF,PEFs,,1
+POVO|KPI_METRIC|NEW_PATIENTS,POVO,KPI_METRIC,NEW_PATIENTS,Total Patients Receiving POVO,,,,,,,,,,,NEW_PATIENT,new patients,,2
+POVO|KPI_PARAMETER|PAID_PERSISTENCE,POVO,KPI_PARAMETER,PAID_PERSISTENCE,,,Share of patients started before the period still on paid POVO,,,,,,,,,,,0.85,1
+POVO|KPI_PARAMETER|PENDING_ON_THERAPY,POVO,KPI_PARAMETER,PENDING_ON_THERAPY,,,Share of PEFs without a paid start that are on Bridge or Free Trial,,,,,,,,,,,0.7,2
+POVO|KPI_PARAMETER|BRIDGE_SHARE,POVO,KPI_PARAMETER,BRIDGE_SHARE,,,Share of those pending patients on Bridge (the rest are on Free Trial),,,,,,,,,,,0.55,3

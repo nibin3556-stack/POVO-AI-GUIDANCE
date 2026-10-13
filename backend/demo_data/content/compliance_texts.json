@@ -1,0 +1,122 @@
+[
+ {
+  "TEXT_ID": "TPL_MESSAGING",
+  "KIND": "template",
+  "TEXT_KEY": "messaging",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "{who} [response to the message]; next step: [action]",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 1,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "TPL_OBJECTION",
+  "KIND": "template",
+  "TEXT_KEY": "objection",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "{who} raised [objection]; addressed with approved data; objection [resolved / still open]",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 2,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "TPL_CLOSING",
+  "KIND": "template",
+  "TEXT_KEY": "closing",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "{who} [agreed / asked for follow-up]; next step: [action]",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 3,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "TPL_ADDITIONAL",
+  "KIND": "template",
+  "TEXT_KEY": "additional",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "Also discussed [topic] with {who}. {who} [response]; next step: [action]",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 4,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "REP_OFF",
+  "KIND": "replacement",
+  "TEXT_KEY": "off",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "Off-label question sent to Medical Information",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 5,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "REP_AE",
+  "KIND": "replacement",
+  "TEXT_KEY": "ae",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "Safety information reported to Pharmacovigilance",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 6,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "REP_PRICE",
+  "KIND": "replacement",
+  "TEXT_KEY": "price",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "Access questions referred to IncyteCARES",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 7,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "REP_PHI_NAME",
+  "KIND": "replacement",
+  "TEXT_KEY": "phi_name",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "a patient",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 8,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "REWORD_HATE",
+  "KIND": "reword",
+  "TEXT_KEY": "lang",
+  "PATTERN": "\bhate[sd]?\b",
+  "TEXT_TEMPLATE": "was not receptive to",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 9,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "CUT_WHY",
+  "KIND": "cut_off",
+  "TEXT_KEY": "why",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "The note stops mid-sentence, so the call record does not say what was discussed or agreed",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 10,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "CUT_FIX",
+  "KIND": "cut_off",
+  "TEXT_KEY": "fix",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "Finish the sentence: what was discussed, how the HCP responded and the agreed next step",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 11,
+  "IS_ACTIVE": true
+ },
+ {
+  "TEXT_ID": "CUT_PLACEHOLDER",
+  "KIND": "cut_off",
+  "TEXT_KEY": "placeholder",
+  "PATTERN": null,
+  "TEXT_TEMPLATE": "[rest of the sentence]",
+  "CONTENT_VERSION": "2026.2",
+  "SORT_ORDER": 12,
+  "IS_ACTIVE": true
+ }
+]

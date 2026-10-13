@@ -6,6 +6,10 @@ import type { Period } from '../types/models';
 
 const plural = (n: number, one: string, many: string): string => (n === 1 ? one : many);
 
+type Maybe = string | null | undefined;
+/** "a · b · c" from the parts that are present. */
+const dotJoin = (...parts: Maybe[]): string => parts.filter((p): p is string => Boolean(p && p.trim())).join(' · ');
+
 export const LABELS = {
   app: {
     title: 'POVO Pulse',
@@ -30,8 +34,9 @@ export const LABELS = {
     configure: 'Configure brand features',
     signedInAs: (name: string) => `Signed in as ${name}`,
     /** The header carries today's date after the role line (the app title is no longer shown). */
-    roleDateLine: (role: string, territory: string, region: string, date: string) => `${role} · ${territory} · ${region} · ${date}`,
-    territoryLine: (territory: string, region: string) => `${territory} · ${region}`,
+    // Missing parts (a Home office user has no territory or region) are left out, never "null".
+    roleDateLine: (role: Maybe, territory: Maybe, region: Maybe, date: string) => dotJoin(role, territory, region, date),
+    territoryLine: (territory: Maybe, region: Maybe) => dotJoin(territory, region),
   },
   impersonationBar: {
     viewingAs: 'Viewing as',

@@ -1,0 +1,11 @@
+ASSIGNMENT_ID,BRAND_CODE,EMPLOYEE_ID,TERRITORY_ID,TERRITORY_NAME,CITY,STATE,REGION,TIME_ZONE,IS_ACTIVE
+POVO|p250488,POVO,p250488,NE-POR,"Portland, ME territory",Portland,ME,Northeast,America/New_York,true
+POVO|p250519,POVO,p250519,NE-BOS,"Boston, MA territory",Boston,MA,Northeast,America/New_York,true
+POVO|p250611,POVO,p250611,NE-HFD,"Hartford, CT territory",Hartford,CT,Northeast,America/New_York,true
+POVO|p250702,POVO,p250702,NE-PVD,"Providence, RI territory",Providence,RI,Northeast,America/New_York,true
+POVO|p250733,POVO,p250733,NE-MAN,"Manchester, NH territory",Manchester,NH,Northeast,America/New_York,true
+POVO|p250758,POVO,p250758,NE-BTV,"Burlington, VT territory",Burlington,VT,Northeast,America/New_York,true
+POVO|p250776,POVO,p250776,NE-WOR,"Worcester, MA territory",Worcester,MA,Northeast,America/New_York,true
+POVO|p250791,POVO,p250791,NE-SPR,"Springfield, MA territory",Springfield,MA,Northeast,America/New_York,true
+POVO|p250544,POVO,p250544,NE-BOS,"Boston, MA territory",Boston,MA,Northeast,America/New_York,true
+POVO|p250563,POVO,p250563,NE-WOR,"Worcester, MA territory",Worcester,MA,Northeast,America/New_York,true

@@ -1,0 +1,13 @@
+TEXT_ID,BRAND_CODE,CONTENT_VERSION,KIND,TEXT_KEY,PATTERN,TEXT_TEMPLATE,SORT_ORDER,IS_ACTIVE
+TPL_MESSAGING,POVO,2026.2,template,messaging,,{who} [response to the message]; next step: [action],1,true
+TPL_OBJECTION,POVO,2026.2,template,objection,,{who} raised [objection]; addressed with approved data; objection [resolved / still open],2,true
+TPL_CLOSING,POVO,2026.2,template,closing,,{who} [agreed / asked for follow-up]; next step: [action],3,true
+TPL_ADDITIONAL,POVO,2026.2,template,additional,,Also discussed [topic] with {who}. {who} [response]; next step: [action],4,true
+REP_OFF,POVO,2026.2,replacement,off,,Off-label question sent to Medical Information,5,true
+REP_AE,POVO,2026.2,replacement,ae,,Safety information reported to Pharmacovigilance,6,true
+REP_PRICE,POVO,2026.2,replacement,price,,Access questions referred to IncyteCARES,7,true
+REP_PHI_NAME,POVO,2026.2,replacement,phi_name,,a patient,8,true
+REWORD_HATE,POVO,2026.2,reword,lang,hate[sd]?,was not receptive to,9,true
+CUT_WHY,POVO,2026.2,cut_off,why,,"The note stops mid-sentence, so the call record does not say what was discussed or agreed",10,true
+CUT_FIX,POVO,2026.2,cut_off,fix,,"Finish the sentence: what was discussed, how the HCP responded and the agreed next step",11,true
+CUT_PLACEHOLDER,POVO,2026.2,cut_off,placeholder,,[rest of the sentence],12,true
